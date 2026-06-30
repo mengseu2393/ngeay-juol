@@ -1,0 +1,519 @@
+/*
+ | RentWise — modern Filament admin theme
+ | Raw CSS overrides targeting Filament's stable `fi-*` classes.
+ | Injected via a render hook in AdminPanelProvider (HEAD_END).
+ | No build step: edit this file and refresh. Dark mode = `.fi.dark` scope.
+ |
+ | Filament exposes its palette as RGB channels, e.g. rgb(var(--primary-600)).
+ | We lean on --primary-* / --gray-* so this stays in sync with ->colors().
+*/
+
+:root {
+    --rw-radius-card: 1rem;
+    --rw-radius-control: 0.625rem;
+    --rw-radius-nav: 0.75rem;
+    --rw-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --rw-dur: 180ms;
+
+    /* Soft, layered ambient shadow used across cards */
+    --rw-shadow: 0 1px 2px -1px rgb(0 0 0 / 0.06),
+                 0 4px 12px -4px rgb(0 0 0 / 0.08);
+    --rw-shadow-lg: 0 4px 8px -2px rgb(0 0 0 / 0.06),
+                    0 16px 32px -8px rgb(0 0 0 / 0.14);
+}
+
+/* Smooth out interactive elements globally */
+.fi-sidebar-item-button,
+.fi-btn,
+.fi-dropdown-list-item,
+.fi-ta-row {
+    transition: background-color var(--rw-dur) var(--rw-ease),
+                color var(--rw-dur) var(--rw-ease),
+                box-shadow var(--rw-dur) var(--rw-ease),
+                transform var(--rw-dur) var(--rw-ease);
+}
+
+/* ----------------------------------------------------------------------------
+ | App background — subtle depth
+ | -------------------------------------------------------------------------- */
+.fi-body {
+    background-color: rgb(var(--gray-50));
+    background-image: radial-gradient(
+        120% 80% at 100% 0%,
+        rgb(var(--primary-50) / 0.5) 0%,
+        transparent 45%
+    );
+    background-attachment: fixed;
+}
+.fi.dark .fi-body {
+    background-color: rgb(var(--gray-950));
+    background-image: radial-gradient(
+        120% 80% at 100% 0%,
+        rgb(var(--primary-950) / 0.45) 0%,
+        transparent 45%
+    );
+}
+
+/* ----------------------------------------------------------------------------
+ | Sidebar shell
+ | -------------------------------------------------------------------------- */
+.fi-sidebar {
+    border-right: 1px solid rgb(var(--gray-200) / 0.7);
+    background-color: rgb(255 255 255 / 0.55);
+    backdrop-filter: blur(12px);
+}
+.fi.dark .fi-sidebar {
+    border-right-color: rgb(var(--gray-800) / 0.7);
+    background-color: rgb(var(--gray-900) / 0.4);
+}
+
+/* Brand / logo header */
+.fi-sidebar-header {
+    border-bottom: 1px solid rgb(var(--gray-200) / 0.6);
+    background-color: transparent;
+    box-shadow: none;
+}
+.fi.dark .fi-sidebar-header {
+    border-bottom-color: rgb(var(--gray-800) / 0.6);
+}
+.fi-sidebar-header .fi-logo {
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-size: 1.35rem;
+    background: linear-gradient(
+        135deg,
+        rgb(var(--primary-600)),
+        rgb(var(--primary-400))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* ----------------------------------------------------------------------------
+ | Nav groups + items
+ | -------------------------------------------------------------------------- */
+.fi-sidebar-nav {
+    padding: 0.75rem 0.625rem;
+    gap: 0.125rem;
+}
+
+.fi-sidebar-group + .fi-sidebar-group {
+    margin-top: 0.5rem;
+}
+
+.fi-sidebar-group-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: rgb(var(--gray-400));
+    padding-inline: 0.5rem;
+}
+
+/* Each nav link becomes a soft pill */
+.fi-sidebar-item-button {
+    border-radius: var(--rw-radius-nav);
+    padding: 0.55rem 0.625rem;
+    font-weight: 500;
+    position: relative;
+}
+.fi-sidebar-item-button:hover {
+    background-color: rgb(var(--primary-50));
+    color: rgb(var(--primary-700));
+}
+.fi.dark .fi-sidebar-item-button:hover {
+    background-color: rgb(var(--gray-800) / 0.7);
+    color: rgb(var(--gray-50));
+}
+
+/* Active item: gradient pill with a soft brand glow */
+.fi-sidebar-item-active .fi-sidebar-item-button {
+    background-image: linear-gradient(
+        135deg,
+        rgb(var(--primary-600)),
+        rgb(var(--primary-500))
+    );
+    color: #fff;
+    box-shadow: 0 4px 12px -2px rgb(var(--primary-500) / 0.5),
+                0 2px 4px -2px rgb(var(--primary-600) / 0.4);
+}
+.fi-sidebar-item-active .fi-sidebar-item-button:hover {
+    color: #fff;
+}
+.fi-sidebar-item-active .fi-sidebar-item-icon {
+    color: #fff;
+}
+/* The label element carries its own color from Filament — force it white too,
+   otherwise the active text stays muted (notably in light mode). */
+.fi-sidebar-item-active .fi-sidebar-item-label {
+    color: #fff;
+}
+.fi.dark .fi-sidebar-item-active .fi-sidebar-item-button {
+    box-shadow: 0 4px 14px -2px rgb(var(--primary-500) / 0.45);
+}
+
+.fi-sidebar-item-icon {
+    transition: color var(--rw-dur) var(--rw-ease);
+}
+
+/* Collapsed (icon-only) state keeps the pill centered */
+.fi-sidebar-collapsed .fi-sidebar-item-button {
+    border-radius: var(--rw-radius-nav);
+}
+
+/* ----------------------------------------------------------------------------
+ | Topbar — frosted glass
+ | -------------------------------------------------------------------------- */
+.fi-topbar > nav {
+    border-bottom: 1px solid rgb(var(--gray-200) / 0.7);
+    background-color: rgb(255 255 255 / 0.7);
+    backdrop-filter: blur(12px) saturate(140%);
+}
+.fi.dark .fi-topbar > nav {
+    border-bottom-color: rgb(var(--gray-800) / 0.7);
+    background-color: rgb(var(--gray-900) / 0.7);
+}
+
+/* ----------------------------------------------------------------------------
+ | Content cards / sections / widgets / tables
+ | -------------------------------------------------------------------------- */
+.fi-section,
+.fi-wi-stats-overview-stat,
+.fi-ta-ctn,
+.fi-fo-component-ctn > .fi-section {
+    border-radius: var(--rw-radius-card);
+    border: 1px solid rgb(var(--gray-200) / 0.7);
+    box-shadow: var(--rw-shadow);
+}
+.fi.dark .fi-section,
+.fi.dark .fi-wi-stats-overview-stat,
+.fi.dark .fi-ta-ctn {
+    border-color: rgb(var(--gray-800) / 0.7);
+}
+
+/* Stat widgets: lift on hover + colored accent value */
+.fi-wi-stats-overview-stat {
+    transition: transform var(--rw-dur) var(--rw-ease),
+                box-shadow var(--rw-dur) var(--rw-ease);
+}
+.fi-wi-stats-overview-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--rw-shadow-lg);
+}
+.fi-wi-stats-overview-stat-value {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* Table rows: gentle hover */
+.fi-ta-row:hover {
+    background-color: rgb(var(--primary-50) / 0.5);
+}
+.fi.dark .fi-ta-row:hover {
+    background-color: rgb(var(--gray-800) / 0.4);
+}
+
+/* Page heading */
+.fi-header-heading {
+    letter-spacing: -0.025em;
+    font-weight: 700;
+}
+
+/* ----------------------------------------------------------------------------
+ | Controls — buttons, inputs, badges, dropdowns, modals
+ | -------------------------------------------------------------------------- */
+.fi-btn {
+    border-radius: var(--rw-radius-control);
+    font-weight: 600;
+}
+.fi-btn:not(.fi-btn-size-sm):active {
+    transform: translateY(0.5px);
+}
+
+/* Primary buttons get the same gradient treatment as the active nav */
+.fi-btn.fi-color-primary[class*="fi-btn-color"] {
+    background-image: linear-gradient(
+        135deg,
+        rgb(var(--primary-600)),
+        rgb(var(--primary-500))
+    );
+    box-shadow: 0 2px 8px -2px rgb(var(--primary-500) / 0.45);
+}
+
+.fi-input,
+.fi-select-input,
+.fi-fo-field-wrp .fi-input-wrp {
+    border-radius: var(--rw-radius-control);
+}
+
+.fi-badge {
+    border-radius: 9999px;
+    font-weight: 600;
+}
+
+.fi-dropdown-panel,
+.fi-modal-window {
+    border-radius: var(--rw-radius-card);
+    box-shadow: var(--rw-shadow-lg);
+    background-color: #fff;
+    z-index: 60;
+}
+.fi.dark .fi-dropdown-panel,
+.fi.dark .fi-modal-window {
+    background-color: rgb(var(--gray-900));
+}
+.fi-dropdown-list-item:hover {
+    background-color: rgb(var(--primary-50));
+}
+.fi.dark .fi-dropdown-list-item:hover {
+    background-color: rgb(var(--gray-800));
+}
+
+/* Avatar ring */
+.fi-avatar {
+    box-shadow: 0 0 0 2px rgb(var(--gray-50)), 0 0 0 3px rgb(var(--primary-400) / 0.3);
+}
+.fi.dark .fi-avatar {
+    box-shadow: 0 0 0 2px rgb(var(--gray-900)), 0 0 0 3px rgb(var(--primary-500) / 0.35);
+}
+
+/* ----------------------------------------------------------------------------
+ | Login / simple pages
+ | -------------------------------------------------------------------------- */
+.fi-simple-main {
+    border-radius: var(--rw-radius-card);
+    border: 1px solid rgb(var(--gray-200) / 0.7);
+    box-shadow: var(--rw-shadow-lg);
+}
+.fi.dark .fi-simple-main {
+    border-color: rgb(var(--gray-800) / 0.7);
+}
+
+/* ----------------------------------------------------------------------------
+ | Density / sizing — make the panel more compact
+ | Filament is rem-based, so nudging the root font-size scales the whole UI
+ | down proportionally (text + spacing). Then we slim buttons explicitly.
+ | -------------------------------------------------------------------------- */
+html {
+    font-size: 14px !important; /* default 16px — drop to 87.5% for a compact feel */
+}
+
+/* Buttons: slimmer padding + smaller label (!important to beat Filament utilities) */
+.fi-btn {
+    font-size: 0.8125rem !important;
+    padding-block: 0.4375rem !important;
+    padding-inline: 0.75rem !important;
+    gap: 0.375rem !important;
+}
+.fi-btn-size-sm {
+    font-size: 0.75rem !important;
+    padding-block: 0.3125rem !important;
+    padding-inline: 0.5625rem !important;
+}
+.fi-btn-size-lg {
+    font-size: 0.8125rem !important;
+    padding-block: 0.5rem !important;
+    padding-inline: 0.875rem !important;
+}
+.fi-btn .fi-icon,
+.fi-btn svg {
+    width: 1rem !important;
+    height: 1rem !important;
+}
+
+/* Page heading: smaller */
+.fi-header-heading {
+    font-size: 1.25rem !important;
+}
+
+/* Sidebar links: tighter */
+.fi-sidebar-item-button {
+    font-size: 0.8125rem !important;
+}
+
+/* ----------------------------------------------------------------------------
+ | Custom scrollbars
+ | -------------------------------------------------------------------------- */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--gray-300)) transparent;
+}
+.fi.dark * {
+    scrollbar-color: rgb(var(--gray-700)) transparent;
+}
+*::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--gray-300));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--gray-400));
+}
+.fi.dark *::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--gray-700));
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ----------------------------------------------------------------------------
+ | Property context switcher (sidebar header — SIDEBAR_NAV_START)
+ | -------------------------------------------------------------------------- */
+.rw-switcher {
+    padding: 0.625rem 0.75rem 0.875rem;
+    margin: 0 0.5rem 0.5rem;
+    border-bottom: 1px solid rgb(var(--gray-200) / 0.7);
+    background: rgb(var(--gray-100) / 0.4);
+    border-radius: var(--rw-radius-card);
+}
+.fi.dark .rw-switcher {
+    border-color: rgb(var(--gray-800) / 0.5);
+    background: rgb(var(--gray-900) / 0.3);
+}
+.rw-switcher__label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgb(var(--gray-500));
+    margin-bottom: 0.375rem;
+    padding-left: 0.125rem;
+}
+.rw-switcher__label-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: rgb(var(--primary-500));
+}
+.rw-switcher__control {
+    position: relative;
+}
+.rw-switcher__select {
+    width: 100%;
+    appearance: none;
+    border-radius: var(--rw-radius-control);
+    border: 1px solid rgb(var(--gray-300));
+    background-color: #fff;
+    padding: 0.625rem 2rem 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgb(var(--gray-900));
+    cursor: pointer;
+    transition: border-color var(--rw-dur) var(--rw-ease),
+                box-shadow var(--rw-dur) var(--rw-ease),
+                background-color var(--rw-dur) var(--rw-ease);
+    /* chevron */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.1rem;
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 transparent),
+                0 1px 2px 0 rgb(0 0 0 / 0.03);
+}
+.rw-switcher__select:hover {
+    border-color: rgb(var(--primary-400));
+    background-color: rgb(var(--primary-50) / 0.4);
+}
+.rw-switcher__select:focus {
+    outline: none;
+    border-color: rgb(var(--primary-500));
+    box-shadow: 0 0 0 3px rgb(var(--primary-500) / 0.15);
+    background-color: #fff;
+}
+.fi.dark .rw-switcher__select {
+    background-color: rgb(var(--gray-900));
+    border-color: rgb(var(--gray-700));
+    color: rgb(var(--gray-100));
+}
+.fi.dark .rw-switcher__select:hover {
+    background-color: rgb(var(--gray-800));
+    border-color: rgb(var(--primary-500));
+}
+.fi.dark .rw-switcher__select:focus {
+    background-color: rgb(var(--gray-900));
+    border-color: rgb(var(--primary-500));
+    box-shadow: 0 0 0 3px rgb(var(--primary-500) / 0.25);
+}
+.rw-switcher__spinner {
+    position: absolute;
+    right: 2.1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1rem;
+    height: 1rem;
+    color: rgb(var(--primary-500));
+}
+.rw-switcher__cta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--rw-radius-control);
+    border: 1px dashed rgb(var(--primary-400));
+    background-color: rgb(var(--primary-500) / 0.06);
+    color: rgb(var(--primary-700));
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+.rw-switcher__cta:hover {
+    background-color: rgb(var(--primary-500) / 0.12);
+}
+.fi.dark .rw-switcher__cta {
+    color: rgb(var(--primary-300));
+}
+.rw-switcher__cta-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+}
+.rw-switcher__notice {
+    font-size: 0.75rem;
+    color: rgb(var(--gray-500));
+    line-height: 1.3;
+}
+
+/* ----------------------------------------------------------------------------
+ | Collapsed sidebar — compact the switcher to a centered icon
+ | Collapsed state = the sidebar lacks the `.fi-sidebar-open` class. We hide the
+ | label text + dropdown and keep only the building icon so it matches the
+ | icon-only nav instead of staying full width.
+ | -------------------------------------------------------------------------- */
+.fi-sidebar:not(.fi-sidebar-open) .rw-switcher {
+    padding: 0.5rem 0;
+    display: flex;
+    justify-content: center;
+    border-bottom: 0;
+}
+.fi-sidebar:not(.fi-sidebar-open) .rw-switcher__control,
+.fi-sidebar:not(.fi-sidebar-open) .rw-switcher__notice,
+.fi-sidebar:not(.fi-sidebar-open) .rw-switcher__cta span {
+    display: none;
+}
+.fi-sidebar:not(.fi-sidebar-open) .rw-switcher__label {
+    margin: 0;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    font-size: 0; /* hides the "Current property" text, keeps the icon */
+}
+.fi-sidebar:not(.fi-sidebar-open) .rw-switcher__label-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+.fi-sidebar:not(.fi-sidebar-open) .rw-switcher__cta {
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+/* Center the nav item icons when collapsed */
+.fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-button {
+    justify-content: center;
+}
