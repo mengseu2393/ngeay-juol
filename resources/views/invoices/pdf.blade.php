@@ -3,40 +3,51 @@
       - thermal  : narrow single-column receipt (80mm / 65mm rolls)
       - standard : professional A4 / A5 invoice
     dompdf supports only a CSS subset: no flexbox/grid — tables are used for
-    all layout. Money is '$' . number_format(..., 2); dates are null-safe.
+    all layout. Money is '$' . number_format(..., 2); dates are validated +
+    formatted via Invoice::displayDate() so corrupt values (e.g. year 0011)
+    never print as a broken range. The address is de-duplicated by the Property
+    model so it isn't repeated field-by-field.
 --}}
 @php
     /** @var \App\Models\Invoice $invoice */
-    $money = fn ($v) => '$' . number_format((float) $v, 2);
-    $date = fn ($d) => $d ? $d->format('d M Y') : '—';
+    use App\Models\Invoice;
 
-    $business = optional($invoice->property)->name
-        ?? optional(optional($invoice->rental)->unit?->property)->name
-        ?? config('app.name');
+    $money = fn ($v) => '$' . number_format((float) $v, 2);
+    // ASCII separator/placeholder: the bundled Khmer font has no en/em dash glyph.
+    $date = fn ($d) => Invoice::displayDate($d, 'd M Y', '-');
+    $period = $invoice->billingPeriodLabel('d M Y', ' - ', '-');
+    $qty = fn ($v) => rtrim(rtrim(number_format((float) $v, 3), '0'), '.');
+
+    $property = $invoice->property ?? $invoice->rental?->unit?->property;
+    $business = $property?->name ?? config('app.name');
+    $address = $property?->formatted_address;
+
+    $initials = collect(preg_split('/\s+/', trim((string) $business)))
+        ->filter()
+        ->take(2)
+        ->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))
+        ->implode('') ?: 'R';
 
     // Tenant / room display, falling back across the relation chain.
-    $tenantName = optional($invoice->tenant)->name
-        ?? optional($invoice->rental)->occupant_name
-        ?? '—';
-    $roomNumber = optional(optional($invoice->rental)->unit)->room_number;
-
-    // Assemble the property's postal address from whatever parts exist.
-    $property = $invoice->property ?? optional($invoice->rental)->unit?->property;
-    $addressParts = [];
-    if ($property) {
-        foreach (['address_line', 'street', 'village', 'commune', 'district', 'city', 'postal_code'] as $part) {
-            if (! empty($property->{$part})) {
-                $addressParts[] = $property->{$part};
-            }
-        }
-    }
-    $address = implode(', ', $addressParts);
+    $tenantName = $invoice->tenant?->name ?? $invoice->rental?->occupant_name ?? '—';
+    $roomNumber = $invoice->rental?->unit?->room_number;
 
     $lines = $invoice->lines;
     $payments = $invoice->payments;
 
     $subtotal = $lines->sum(fn ($l) => (float) $l->amount);
-    $status = optional($invoice->payment_status)->getLabel();
+    $status = $invoice->payment_status?->getLabel();
+    $owing = (float) $invoice->balance > 0.005;
+
+    // Status pill palette keyed by the enum's Filament colour name.
+    $palette = [
+        'success' => ['bg' => '#d1fae5', 'fg' => '#065f46', 'bd' => '#a7f3d0'],
+        'warning' => ['bg' => '#fef3c7', 'fg' => '#92400e', 'bd' => '#fde68a'],
+        'info'    => ['bg' => '#dbeafe', 'fg' => '#1e40af', 'bd' => '#bfdbfe'],
+        'danger'  => ['bg' => '#fee2e2', 'fg' => '#991b1b', 'bd' => '#fecaca'],
+        'gray'    => ['bg' => '#f1f5f9', 'fg' => '#475569', 'bd' => '#e2e8f0'],
+    ];
+    $badge = $palette[$invoice->payment_status?->getColor() ?? 'gray'] ?? $palette['gray'];
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -58,21 +69,20 @@
         }
 
         * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; }
-        @if ($thermal)
-            /* Receipts print edge-to-edge on narrow rolls. */
-            @page { margin: 0; }
-        @else
-            /* A4 / A5 get real printable margins on every side. */
-            @page { margin: 36px 40px; }
-        @endif
+        html { margin: 0; padding: 0; }
+        /* dompdf 3.x ignores @page margins here; page margins are set on <body>
+           (which repeats on every page). Thermal receipts stay edge-to-edge. */
+        @page { margin: 0; }
         body {
+            margin: 0;
+            padding: 0;
             font-family: 'NotoSansKhmer', sans-serif;
-            color: #1f2937;
+            color: #0f172a;
             @if ($thermal)
                 font-size: 10px;
                 line-height: 1.4;
             @else
+                margin: 44px 52px;
                 font-size: 12px;
                 line-height: 1.5;
             @endif
@@ -80,16 +90,16 @@
         table { border-collapse: collapse; width: 100%; }
         .right { text-align: right; }
         .center { text-align: center; }
-        .muted { color: #6b7280; }
+        .muted { color: #64748b; }
         .bold { font-weight: bold; }
 
         @if ($thermal)
             /* ---------- Thermal receipt (narrow single column) ---------- */
             .wrap { padding: 6px 6px 10px 6px; }
-            .biz { font-size: 13px; font-weight: bold; text-align: center; }
+            .biz { font-size: 13px; font-weight: bold; text-align: center; color: #059669; }
             .biz-addr { font-size: 8px; text-align: center; color: #4b5563; margin-top: 2px; }
             .doc-title { font-size: 11px; font-weight: bold; text-align: center; margin-top: 4px; letter-spacing: 1px; }
-            .doc-no { font-size: 10px; text-align: center; margin-top: 1px; }
+            .doc-no { font-size: 10px; text-align: center; margin-top: 1px; color: #059669; }
             .rule { border-top: 1px dashed #9ca3af; margin: 6px 0; }
             .meta td { padding: 1px 0; font-size: 9px; vertical-align: top; }
             .meta td.k { color: #6b7280; padding-right: 6px; white-space: nowrap; }
@@ -99,7 +109,7 @@
             .qty { color: #6b7280; font-size: 8px; }
             .totals td { padding: 1px 0; font-size: 9px; }
             .totals td.amt { text-align: right; }
-            .totals tr.grand td { font-size: 11px; font-weight: bold; padding-top: 3px; }
+            .totals tr.grand td { font-size: 11px; font-weight: bold; padding-top: 3px; color: #059669; }
             .pay td { padding: 1px 0; font-size: 8px; vertical-align: top; }
             .pay td.amt { text-align: right; white-space: nowrap; }
             .notes { font-size: 8px; margin-top: 4px; color: #374151; }
@@ -107,55 +117,74 @@
             .waived { color: #6b7280; font-size: 8px; }
         @else
             /* ---------- Standard A4 / A5 invoice ---------- */
-            .page { padding: 4px 0; }
-            .header-tbl td { vertical-align: top; }
-            .biz { font-size: 18px; font-weight: bold; color: #111827; }
-            .biz-addr { font-size: 11px; color: #6b7280; margin-top: 4px; max-width: 280px; }
-            .doc-label { font-size: 22px; font-weight: bold; color: #111827; letter-spacing: 1px; }
-            .doc-no { font-size: 13px; color: #374151; margin-top: 2px; }
+            .logo { width: 34px; height: 34px; background: #059669; color: #ffffff; text-align: center; line-height: 34px; font-size: 15px; font-weight: bold; border-radius: 8px; }
+            .biz { font-size: 18px; font-weight: bold; color: #0f172a; letter-spacing: -0.2px; }
+            .biz-addr { font-size: 10px; color: #64748b; margin-top: 3px; max-width: 260px; line-height: 1.4; }
+            .doc-label { font-size: 13px; font-weight: bold; color: #94a3b8; letter-spacing: 3px; text-transform: uppercase; }
+            .doc-no { font-size: 15px; font-weight: bold; color: #0f172a; margin-top: 2px; }
             .status {
                 display: inline-block;
-                margin-top: 6px;
-                padding: 3px 10px;
-                border: 1px solid #d1d5db;
-                border-radius: 3px;
-                font-size: 11px;
+                margin-top: 7px;
+                padding: 3px 11px;
+                border-radius: 9999px;
+                font-size: 9px;
                 font-weight: bold;
-                color: #374151;
-                background: #f3f4f6;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
-            .section-title { font-size: 11px; font-weight: bold; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
-            .billto { font-size: 13px; font-weight: bold; color: #111827; }
-            .billto-sub { font-size: 11px; color: #4b5563; margin-top: 2px; }
-            .meta-tbl { margin-top: 18px; border: 1px solid #e5e7eb; }
-            .meta-tbl td { padding: 8px 12px; font-size: 11px; border-right: 1px solid #e5e7eb; width: 33%; }
-            .meta-tbl td:last-child { border-right: 0; }
-            .meta-tbl .k { color: #6b7280; font-size: 9px; text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 2px; }
-            .items-tbl { margin-top: 18px; }
-            .items-tbl th {
-                background: #111827; color: #ffffff; font-size: 10px; font-weight: bold;
-                text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px; text-align: left;
+            .head-rule { border-bottom: 1px solid #e2e8f0; }
+
+            .section-title { font-size: 9px; font-weight: bold; color: #059669; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+            .billto { font-size: 14px; font-weight: bold; color: #0f172a; }
+            .billto-sub { font-size: 11px; color: #475569; margin-top: 3px; }
+            .room-tag { display: inline-block; margin-top: 4px; padding: 1px 8px; background: #ecfdf5; color: #047857; border-radius: 5px; font-size: 10px; font-weight: bold; }
+
+            .defs td { padding: 3px 0; font-size: 11px; vertical-align: top; }
+            .defs td.dk { color: #64748b; padding-right: 14px; white-space: nowrap; }
+            .defs td.dv { text-align: right; font-weight: bold; color: #0f172a; }
+            .defs td.dv.due { color: #059669; }
+
+            .items-tbl { margin-top: 24px; }
+            .items-tbl thead th {
+                color: #64748b; font-size: 9px; font-weight: bold;
+                text-transform: uppercase; letter-spacing: 0.5px; padding: 0 10px 7px; text-align: left;
+                border-bottom: 2px solid #059669;
             }
-            .items-tbl th.num, .items-tbl td.num { text-align: right; }
-            .items-tbl td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-size: 11px; vertical-align: top; }
-            .items-tbl tr.waived td { color: #9ca3af; }
-            .waived-tag { font-style: italic; color: #9ca3af; font-size: 10px; }
-            .totals-tbl { margin-top: 14px; }
+            .items-tbl thead th.num { text-align: right; }
+            .items-tbl tbody td { padding: 9px 10px; border-bottom: 1px solid #eef2f7; font-size: 11px; vertical-align: top; }
+            .items-tbl tbody td.num { text-align: right; white-space: nowrap; }
+            .items-tbl .desc { font-weight: bold; color: #0f172a; }
+            .items-tbl .amt { font-weight: bold; color: #0f172a; }
+            .items-tbl tr.waived .desc, .items-tbl tr.waived .amt { color: #94a3b8; }
+            .line-type { color: #94a3b8; font-size: 9px; margin-top: 2px; }
+            .waived-tag { font-style: italic; color: #94a3b8; font-size: 9px; }
+            .usage { color: #64748b; font-size: 9px; margin-top: 3px; line-height: 1.35; }
+
             .totals-tbl td { padding: 5px 10px; font-size: 12px; }
-            .totals-tbl td.k { text-align: right; color: #4b5563; }
-            .totals-tbl td.v { text-align: right; width: 120px; }
-            .totals-tbl tr.grand td { font-size: 14px; font-weight: bold; color: #111827; border-top: 2px solid #111827; }
-            .totals-tbl tr.balance td { font-weight: bold; }
-            .pay-tbl { margin-top: 22px; }
-            .pay-tbl th {
-                background: #f3f4f6; color: #374151; font-size: 10px; font-weight: bold;
-                text-transform: uppercase; letter-spacing: .5px; padding: 6px 10px; text-align: left;
-                border-bottom: 1px solid #d1d5db;
+            .totals-tbl td.k { color: #64748b; }
+            .totals-tbl td.v { text-align: right; font-weight: 600; color: #0f172a; }
+            .totals-tbl tr.grand td { border-top: 1px solid #e2e8f0; padding-top: 8px; }
+            .totals-tbl tr.grand td.k { font-weight: bold; color: #0f172a; font-size: 13px; }
+            .totals-tbl tr.grand td.v { font-weight: bold; color: #059669; font-size: 13px; }
+            .totals-tbl tr.balance td { background: #ecfdf5; font-weight: bold; padding-top: 8px; padding-bottom: 8px; }
+            .totals-tbl tr.balance td.k { color: #065f46; }
+            .totals-tbl tr.balance td.v { color: #065f46; font-size: 15px; }
+            .totals-tbl tr.balance.owing td { background: #fef2f2; }
+            .totals-tbl tr.balance.owing td.k, .totals-tbl tr.balance.owing td.v { color: #991b1b; }
+
+            .pay-tbl { margin-top: 26px; }
+            .pay-tbl thead th {
+                color: #64748b; font-size: 9px; font-weight: bold;
+                text-transform: uppercase; letter-spacing: 0.5px; padding: 0 10px 6px; text-align: left;
+                border-bottom: 1px solid #e2e8f0;
             }
-            .pay-tbl th.num, .pay-tbl td.num { text-align: right; }
-            .pay-tbl td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 11px; }
-            .notes-box { margin-top: 22px; border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px 12px; font-size: 11px; color: #374151; }
-            .footer { margin-top: 28px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 10px; }
+            .pay-tbl thead th.num { text-align: right; }
+            .pay-tbl tbody td { padding: 7px 10px; border-bottom: 1px solid #eef2f7; font-size: 11px; }
+            .pay-tbl tbody td.num { text-align: right; white-space: nowrap; }
+            .pay-tbl tbody tr:last-child td { border-bottom: 0; }
+
+            .notes-box { margin-top: 26px; border: 1px solid #eef2f7; border-left: 3px solid #059669; background: #f8fafc; padding: 10px 12px; font-size: 11px; color: #334155; border-radius: 5px; }
+            .footer { margin-top: 34px; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; }
         @endif
     </style>
 </head>
@@ -185,12 +214,10 @@
                     <td>{{ $roomNumber }}</td>
                 </tr>
             @endif
-            @if ($invoice->period_start || $invoice->period_end)
-                <tr>
-                    <td class="k">{{ __('Period') }}</td>
-                    <td>{{ $date($invoice->period_start) }} – {{ $date($invoice->period_end) }}</td>
-                </tr>
-            @endif
+            <tr>
+                <td class="k">{{ __('Period') }}</td>
+                <td>{{ $period }}</td>
+            </tr>
             <tr>
                 <td class="k">{{ __('Issued') }}</td>
                 <td>{{ $date($invoice->issue_date) }}</td>
@@ -205,7 +232,6 @@
 
         <div class="rule"></div>
 
-        {{-- Line items: description + qty on one row, amount aligned right --}}
         <table class="items">
             @foreach ($lines as $line)
                 <tr>
@@ -215,7 +241,7 @@
                             <span class="waived">({{ __('Waived') }})</span>
                         @endif
                         @if ((float) $line->quantity != 1.0)
-                            <div class="qty">{{ rtrim(rtrim(number_format((float) $line->quantity, 3), '0'), '.') }} × {{ $money($line->unit_price) }}</div>
+                            <div class="qty">{{ $qty($line->quantity) }} × {{ $money($line->unit_price) }}</div>
                         @endif
                     </td>
                     <td class="amt">{{ $line->is_waived ? $money(0) : $money($line->amount) }}</td>
@@ -246,12 +272,12 @@
 
         @if ($payments->isNotEmpty())
             <div class="rule"></div>
-            <div class="bold" style="font-size: 9px;">{{ __('Payments') }}</div>
+            <div class="bold" style="font-size: 9px; color: #059669;">{{ __('Payments') }}</div>
             <table class="pay">
                 @foreach ($payments as $payment)
                     <tr>
                         <td>
-                            {{ optional($payment->paid_at)->format('d M Y') }}
+                            {{ $date($payment->paid_at) }}
                             · {{ optional($payment->method)->getLabel() }}
                             @if ($payment->receipt_number)
                                 · {{ $payment->receipt_number }}
@@ -275,52 +301,63 @@
     {{-- ========================= STANDARD INVOICE ========================= --}}
     <div class="page">
 
-        {{-- Header: business / address on the left, doc title + status on the right --}}
+        {{-- Header --}}
         <table class="header-tbl">
             <tr>
-                <td>
-                    <div class="biz">{{ $business }}</div>
-                    @if ($address)
-                        <div class="biz-addr">{{ $address }}</div>
-                    @endif
+                <td style="vertical-align: top; padding-bottom: 18px;">
+                    <table>
+                        <tr>
+                            <td style="width: 34px; vertical-align: top;">
+                                <div class="logo">{{ $initials }}</div>
+                            </td>
+                            <td style="vertical-align: top; padding-left: 11px;">
+                                <div class="biz">{{ $business }}</div>
+                                @if ($address)
+                                    <div class="biz-addr">{{ $address }}</div>
+                                @endif
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td class="right">
+                <td class="right" style="vertical-align: top; padding-bottom: 18px;">
                     <div class="doc-label">{{ __('Invoice') }}</div>
                     <div class="doc-no">{{ $invoice->invoice_number }}</div>
                     @if ($status)
-                        <div class="status">{{ $status }}</div>
+                        <div class="status" style="background: {{ $badge['bg'] }}; color: {{ $badge['fg'] }}; border: 1px solid {{ $badge['bd'] }};">{{ $status }}</div>
                     @endif
                 </td>
             </tr>
         </table>
+        <div class="head-rule"></div>
 
-        {{-- Bill to --}}
-        <table style="margin-top: 22px;">
+        {{-- Bill to + billing meta --}}
+        <table style="margin-top: 20px;">
             <tr>
-                <td>
+                <td style="width: 55%; vertical-align: top; padding-right: 16px;">
                     <div class="section-title">{{ __('Bill to') }}</div>
                     <div class="billto">{{ $tenantName }}</div>
                     @if ($roomNumber)
-                        <div class="billto-sub">{{ __('Room') }} {{ $roomNumber }}</div>
+                        <div><span class="room-tag">{{ __('Room') }} {{ $roomNumber }}</span></div>
+                    @endif
+                    @if ($invoice->tenant?->phone_number)
+                        <div class="billto-sub">{{ $invoice->tenant->phone_number }}</div>
                     @endif
                 </td>
-            </tr>
-        </table>
-
-        {{-- Meta row: Period / Issued / Due --}}
-        <table class="meta-tbl">
-            <tr>
-                <td>
-                    <span class="k">{{ __('Period') }}</span>
-                    {{ $date($invoice->period_start) }} – {{ $date($invoice->period_end) }}
-                </td>
-                <td>
-                    <span class="k">{{ __('Issued') }}</span>
-                    {{ $date($invoice->issue_date) }}
-                </td>
-                <td>
-                    <span class="k">{{ __('Due') }}</span>
-                    {{ $date($invoice->due_date) }}
+                <td style="width: 45%; vertical-align: top;">
+                    <table class="defs">
+                        <tr>
+                            <td class="dk">{{ __('Billing Period') }}</td>
+                            <td class="dv">{{ $period }}</td>
+                        </tr>
+                        <tr>
+                            <td class="dk">{{ __('Issued Date') }}</td>
+                            <td class="dv">{{ $date($invoice->issue_date) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="dk">{{ __('Due Date') }}</td>
+                            <td class="dv due">{{ $date($invoice->due_date) }}</td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
         </table>
@@ -337,34 +374,46 @@
             </thead>
             <tbody>
                 @forelse ($lines as $line)
+                    @php $usage = $line->utilityUsage; @endphp
                     <tr class="{{ $line->is_waived ? 'waived' : '' }}">
                         <td>
-                            {{ $line->description }}
+                            <div class="desc">{{ $line->description }}</div>
                             @if ($line->line_type)
-                                <div class="muted" style="font-size: 9px;">{{ optional($line->line_type)->getLabel() }}</div>
+                                <div class="line-type">{{ optional($line->line_type)->getLabel() }}</div>
                             @endif
                             @if ($line->is_waived)
                                 <span class="waived-tag">({{ __('Waived') }})</span>
                             @endif
+                            {{-- Only show meter details when both readings exist, matching the on-screen modal (no fabricated "0.0 → 0.0"). --}}
+                            @if ($usage && $usage->propertyUtility && $usage->old_reading !== null && $usage->new_reading !== null)
+                                @php $pu = $usage->propertyUtility; @endphp
+                                <div class="usage">
+                                    {{-- The Khmer PDF font lacks U+2192; render the arrow with DejaVu Sans (bundled with dompdf) so it isn't a tofu box. --}}
+                                    {{ __('Meter') }}: {{ number_format((float) $usage->old_reading, 1) }} <span style="font-family: 'DejaVu Sans';">&#8594;</span> {{ number_format((float) $usage->new_reading, 1) }}
+                                    @if ($usage->amount_used)
+                                        | {{ __('Consumed') }}: {{ $qty($usage->amount_used) }} {{ $pu->unit_of_measure ?? __('units') }}
+                                    @endif
+                                </div>
+                            @endif
                         </td>
-                        <td class="num">{{ rtrim(rtrim(number_format((float) $line->quantity, 3), '0'), '.') }}</td>
-                        <td class="num">{{ $money($line->unit_price) }}</td>
-                        <td class="num">{{ $line->is_waived ? $money(0) : $money($line->amount) }}</td>
+                        <td class="num"><div>{{ $qty($line->quantity) }}</div></td>
+                        <td class="num"><div>{{ $money($line->unit_price) }}</div></td>
+                        <td class="num"><div class="amt">{{ $line->is_waived ? $money(0) : $money($line->amount) }}</div></td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="muted center" style="padding: 16px;">{{ __('No line items.') }}</td>
+                        <td colspan="4" class="muted center" style="padding: 18px;">{{ __('No line items.') }}</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
 
-        {{-- Totals, right-aligned --}}
-        <table class="totals-tbl">
+        {{-- Totals --}}
+        <table style="margin-top: 16px;">
             <tr>
-                <td></td>
-                <td>
-                    <table>
+                <td style="vertical-align: top;">&nbsp;</td>
+                <td style="width: 250px; vertical-align: top;">
+                    <table class="totals-tbl">
                         <tr>
                             <td class="k">{{ __('Subtotal') }}</td>
                             <td class="v">{{ $money($subtotal) }}</td>
@@ -377,7 +426,7 @@
                             <td class="k">{{ __('Paid') }}</td>
                             <td class="v">{{ $money($invoice->amount_paid) }}</td>
                         </tr>
-                        <tr class="balance">
+                        <tr class="balance {{ $owing ? 'owing' : '' }}">
                             <td class="k">{{ __('Balance') }}</td>
                             <td class="v">{{ $money($invoice->balance) }}</td>
                         </tr>
@@ -388,20 +437,19 @@
 
         {{-- Payments --}}
         @if ($payments->isNotEmpty())
-            <div class="section-title" style="margin-top: 22px;">{{ __('Payments') }}</div>
             <table class="pay-tbl">
                 <thead>
                     <tr>
                         <th>{{ __('Date') }}</th>
                         <th>{{ __('Method') }}</th>
-                        <th>{{ __('Receipt') }}</th>
+                        <th>{{ __('Receipt/Reference') }}</th>
                         <th class="num">{{ __('Amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($payments as $payment)
                         <tr>
-                            <td>{{ optional($payment->paid_at)->format('d M Y') }}</td>
+                            <td>{{ $date($payment->paid_at) }}</td>
                             <td>{{ optional($payment->method)->getLabel() ?? '—' }}</td>
                             <td>{{ $payment->receipt_number ?? $payment->transaction_ref ?? '—' }}</td>
                             <td class="num">{{ $money($payment->amount) }}</td>
@@ -414,7 +462,7 @@
         {{-- Notes --}}
         @if ($invoice->notes)
             <div class="notes-box">
-                <span class="section-title">{{ __('Notes') }}</span><br>
+                <div class="section-title">{{ __('Notes') }}</div>
                 {{ $invoice->notes }}
             </div>
         @endif

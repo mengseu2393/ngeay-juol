@@ -54,6 +54,52 @@ class Property extends Model implements HasMedia
         $this->addMediaCollection('photos');
     }
 
+    /**
+     * A single-line postal address assembled from the Cambodian address fields,
+     * de-duplicated so overlapping entries don't repeat. Data entry frequently
+     * copies the whole address into `address_line` AND fills `street`/`commune`
+     * with the same text; naively imploding every field then prints the address
+     * two or three times over.
+     *
+     * We work at comma-segment granularity: a field is dropped only when every
+     * one of its segments is already represented by a field we've kept. That
+     * collapses a field repeating the whole address (address_line == street) or a
+     * single value already inside another field ("Phnom Penh" as both the commune
+     * and the tail of address_line), while keeping a genuinely distinct field that
+     * merely shares a substring with another ("San" vs "Sangkat San Khang").
+     */
+    protected function formattedAddress(): Attribute
+    {
+        return Attribute::make(get: function (): string {
+            $parts = array_filter(
+                [$this->address_line, $this->street, $this->village, $this->commune, $this->district, $this->city, $this->postal_code],
+                fn ($part) => filled(trim((string) $part)),
+            );
+
+            $kept = [];
+            $seen = []; // normalised comma-segments already represented by a kept field
+
+            foreach ($parts as $part) {
+                $part = trim((string) $part);
+
+                $segments = array_values(array_filter(
+                    array_map(fn ($s) => mb_strtolower(trim($s)), explode(',', $part)),
+                    fn ($s) => $s !== '',
+                ));
+
+                // Redundant only when it adds no new segment.
+                if ($segments !== [] && array_diff($segments, $seen) === []) {
+                    continue;
+                }
+
+                $kept[] = $part;
+                $seen = array_merge($seen, $segments);
+            }
+
+            return implode(', ', $kept);
+        });
+    }
+
     // total_floors / total_rooms are computed (never stored — fixes the old drift bug).
     protected function totalRooms(): Attribute
     {

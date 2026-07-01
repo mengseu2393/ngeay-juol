@@ -130,6 +130,54 @@ class Invoice extends Model
     }
 
     // ---------------------------------------------------------------------
+    // Date presentation (defensive)
+    // ---------------------------------------------------------------------
+
+    /**
+     * Whether a date is real enough to print. Guards against corrupt values such
+     * as period_start = "0011-11-11" (a mistyped year that Carbon parses happily
+     * but which renders as "11 Nov 0011"). Anything outside a sane year window is
+     * treated as missing rather than shown.
+     */
+    public static function isPlausibleDate(mixed $date): bool
+    {
+        return $date instanceof \Carbon\CarbonInterface
+            && $date->year >= 2000
+            && $date->year <= 2100;
+    }
+
+    /**
+     * Format a date for display, or a placeholder when it's missing/implausible.
+     * The placeholder defaults to an em dash for the on-screen UI; the dompdf PDF
+     * passes a plain "-" because the bundled Khmer font has no em/en dash glyph.
+     */
+    public static function displayDate(mixed $date, string $format = 'd M Y', string $placeholder = '—'): string
+    {
+        return self::isPlausibleDate($date) ? $date->translatedFormat($format) : $placeholder;
+    }
+
+    /**
+     * The billing period as a single human string. Drops an endpoint that is
+     * missing or implausible instead of printing a broken range like
+     * "11 Nov 0011 – 01 Jul 2026"; collapses to one date when only one endpoint
+     * is valid, and to the placeholder when neither is. The separator/placeholder
+     * default to en/em dashes for the UI; the PDF passes ASCII (the Khmer font
+     * lacks those glyphs — they'd otherwise render as tofu boxes).
+     */
+    public function billingPeriodLabel(string $format = 'd M Y', string $separator = ' – ', string $placeholder = '—'): string
+    {
+        $start = self::isPlausibleDate($this->period_start) ? $this->period_start->translatedFormat($format) : null;
+        $end = self::isPlausibleDate($this->period_end) ? $this->period_end->translatedFormat($format) : null;
+
+        return match (true) {
+            $start && $end => $start.$separator.$end,
+            (bool) $end => $end,
+            (bool) $start => $start,
+            default => $placeholder,
+        };
+    }
+
+    // ---------------------------------------------------------------------
     // Relationships
     // ---------------------------------------------------------------------
 

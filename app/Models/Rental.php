@@ -40,17 +40,19 @@ class Rental extends Model implements HasMedia
         'status',
         'start_date',
         'end_date',
+        'next_invoice_date',
     ];
 
     protected function casts(): array
     {
         return [
-            'monthly_rent' => 'decimal:2',
-            'security_deposit' => 'decimal:2',
-            'signed_at' => 'datetime',
-            'status' => RentalStatus::class,
-            'start_date' => 'date',
-            'end_date' => 'date',
+            'monthly_rent'       => 'decimal:2',
+            'security_deposit'   => 'decimal:2',
+            'signed_at'          => 'datetime',
+            'status'             => RentalStatus::class,
+            'start_date'         => 'date',
+            'end_date'           => 'date',
+            'next_invoice_date'  => 'date',
         ];
     }
 
@@ -81,6 +83,42 @@ class Rental extends Model implements HasMedia
             // otherwise-free room — it never overrides Maintenance/Unavailable.)
             if ($rental->status === RentalStatus::Active) {
                 $rental->occupyUnit();
+
+                // Auto-create first invoice if enabled in Property Settings
+                $setting = \App\Models\PropertySetting::where('property_id', $rental->property_id)->first();
+                if ($setting && $setting->create_invoice_on_move_in) {
+                    $exists = \App\Models\Invoice::where('rental_id', $rental->id)->exists();
+                    if (! $exists) {
+                        $periodStart = \Illuminate\Support\Carbon::parse($rental->start_date);
+                        if ($setting->first_month_billing_mode === \App\Enums\FirstMonthBillingMode::FullMonth) {
+                            $periodEnd = $periodStart->copy()->addMonth()->subDay();
+                        } else {
+                            $periodEnd = $periodStart->copy()->endOfMonth();
+                        }
+
+                        $dueDay = $setting->due_day_of_month ?: 7;
+                        $dueDate = $periodStart->copy()->day($dueDay);
+                        if ($dueDate->isBefore($periodStart)) {
+                            $dueDate->addMonth();
+                        }
+
+                        app(\App\Services\InvoiceBuilderService::class)->create([
+                            'rental' => $rental,
+                            'period_start' => $periodStart,
+                            'period_end' => $periodEnd,
+                            'issue_date' => now(),
+                            'due_date' => $dueDate,
+                            'include_rent' => true,
+                            'is_first_invoice' => true,
+                            'usages' => [],
+                        ]);
+
+                        // Roll next_invoice_date forward so the next run starts after this period
+                        $rental->withoutEvents(fn () => $rental->update([
+                            'next_invoice_date' => $periodEnd->copy()->addDay(),
+                        ]));
+                    }
+                }
             }
 
             // If the tenancy was moved to a different room, free the room it left

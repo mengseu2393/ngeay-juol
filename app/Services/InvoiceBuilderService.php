@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Enums\InvoiceLineType;
 use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
+use App\Models\PropertySetting;
 use App\Models\Rental;
 use App\Models\UtilityUsage;
+use App\Services\ProratingService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -46,6 +48,7 @@ class InvoiceBuilderService
      *     period_start: Carbon|string, period_end: Carbon|string,
      *     issue_date?: Carbon|string, due_date?: Carbon|string,
      *     include_rent?: bool,
+     *     is_first_invoice?: bool,
      *     usages?: array<int, UtilityUsage|int>,
      *     adhoc?: array<int, array{description: string, amount: float|string}>,
      *     status?: InvoiceStatus, notes?: string|null
@@ -80,13 +83,48 @@ class InvoiceBuilderService
 
             // Rent line
             if ($data['include_rent'] ?? true) {
-                $rent = (float) $rental->monthly_rent;
+                $isFirstInvoice = (bool) ($data['is_first_invoice'] ?? false);
+
+                if ($isFirstInvoice) {
+                    // Load property settings once for proration/deposit logic.
+                    $propertySetting = PropertySetting::where('property_id', $rental->property_id)->first();
+
+                    $rent = ProratingService::compute(
+                        $propertySetting,
+                        (float) $rental->monthly_rent,
+                        $periodStart,
+                        $periodEnd,
+                    );
+
+                    // Build a human-readable description that reflects the mode.
+                    $mode = $propertySetting?->first_month_billing_mode;
+                    $rentDescription = $mode?->getLabel()
+                        ? 'First month rent (' . $mode->getLabel() . ')'
+                        : 'First month rent';
+
+                    // Add a security deposit line if configured.
+                    $depositAmount = ProratingService::depositAmount($propertySetting, (float) $rental->monthly_rent);
+                    if ($depositAmount > 0) {
+                        $invoice->lines()->create([
+                            'line_type'   => InvoiceLineType::AdHoc,
+                            'description' => 'Security deposit (' . ($propertySetting->upfront_deposit_months ?? 0) . '× monthly rent)',
+                            'quantity'    => 1,
+                            'unit_price'  => $depositAmount,
+                            'amount'      => $depositAmount,
+                        ]);
+                        $total += $depositAmount;
+                    }
+                } else {
+                    $rent            = (float) $rental->monthly_rent;
+                    $rentDescription = 'Monthly rent';
+                }
+
                 $invoice->lines()->create([
-                    'line_type' => InvoiceLineType::Rent,
-                    'description' => 'Monthly rent',
-                    'quantity' => 1,
-                    'unit_price' => $rent,
-                    'amount' => $rent,
+                    'line_type'   => InvoiceLineType::Rent,
+                    'description' => $rentDescription,
+                    'quantity'    => 1,
+                    'unit_price'  => $rent,
+                    'amount'      => $rent,
                 ]);
                 $total += $rent;
             }

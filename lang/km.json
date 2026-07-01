@@ -191,5 +191,13 @@
     "Villa": "វីឡា",
     "Village": "ភូមិ",
     "Village (Phum)": "ភូមិ (ផុំ)",
-    "Waived": "បានលើកលែង"
+    "Waived": "បានលើកលែង",
+    "Total Due": "សរុបត្រូវបង់",
+    "Billing Period": "រយៈពេលវិក្កយបត្រ",
+    "Issued Date": "កាលបរិច្ឆេទចេញ",
+    "Due Date": "កាលបរិច្ឆេទផុតកំណត់",
+    "Meter": "ម៉ែត្រ",
+    "Consumed": "បានប្រើប្រាស់",
+    "units": "ឯកតា",
+    "Receipt/Reference": "បង្កាន់ដៃ/ឯកសារយោង"
 }

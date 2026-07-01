@@ -29,9 +29,9 @@
         </div>
 
         <dl class="mt-4 grid grid-cols-2 gap-2 text-sm">
-            <div><dt class="text-slate-400">{{ __('Period') }}</dt><dd>{{ $invoice->period_start?->format('d M') }} – {{ $invoice->period_end?->format('d M Y') }}</dd></div>
-            <div><dt class="text-slate-400">{{ __('Issued') }}</dt><dd>{{ $invoice->issue_date?->format('d M Y') }}</dd></div>
-            <div><dt class="text-slate-400">{{ __('Due') }}</dt><dd>{{ $invoice->due_date?->format('d M Y') }}</dd></div>
+            <div><dt class="text-slate-400">{{ __('Period') }}</dt><dd>{{ $invoice->billingPeriodLabel() }}</dd></div>
+            <div><dt class="text-slate-400">{{ __('Issued') }}</dt><dd>{{ \App\Models\Invoice::displayDate($invoice->issue_date) }}</dd></div>
+            <div><dt class="text-slate-400">{{ __('Due') }}</dt><dd>{{ \App\Models\Invoice::displayDate($invoice->due_date) }}</dd></div>
         </dl>
     </div>
 

@@ -58,6 +58,7 @@ class RentalsRelationManager extends RelationManager
                         ->numeric()->prefix('$')->default(0)
                         ->dehydrateStateUsing(fn ($state) => $state === '' || $state === null ? 0 : $state),
                     Forms\Components\DatePicker::make('start_date')
+                        ->default(now())
                         ->required()
                         // Guard "one active tenancy per room" before the DB unique index throws.
                         // Only Active tenancies occupy the room; excludes the record being edited.
@@ -77,8 +78,20 @@ class RentalsRelationManager extends RelationManager
                                 }
                             };
                         }),
+
+                    // end_date is kept in the DB but hidden from the day-to-day edit form.
+                    // Use "End tenancy" (the status-badge action) to close a tenancy.
                     Forms\Components\DatePicker::make('end_date')
-                        ->helperText(__('Leave blank while the tenant is still renting.')),
+                        ->hidden()
+                        ->dehydrated(),
+
+                    Forms\Components\DatePicker::make('next_invoice_date')
+                        ->label(__('Invoice date'))
+                        ->helperText(__('The date that will auto-fill the “Issue date” on the next billing run for this tenant. Rolls forward automatically after each invoice is generated.'))
+                        ->placeholder(__('Set when first invoice is due'))
+                        ->native(false)
+                        ->displayFormat('d M Y')
+                        ->columnSpanFull(),
                 ])->columns(2),
 
             Forms\Components\Section::make(__('Agreement'))
@@ -103,7 +116,12 @@ class RentalsRelationManager extends RelationManager
                     ->action($this->endRentalAction())
                     ->tooltip(fn (Rental $record) => $record->isActive() ? __('Click to end tenancy') : null),
                 Tables\Columns\TextColumn::make('start_date')->date(),
-                Tables\Columns\TextColumn::make('end_date')->date()->placeholder(__('Current')),
+                Tables\Columns\TextColumn::make('next_invoice_date')
+                    ->label(__('Invoice date'))
+                    ->date('d M Y')
+                    ->placeholder(__('—'))
+                    ->badge()
+                    ->color('info'),
                 Tables\Columns\TextColumn::make('monthly_rent')->money('USD'),
             ])
             ->filters([

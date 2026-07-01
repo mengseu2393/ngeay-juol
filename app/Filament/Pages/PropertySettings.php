@@ -2,12 +2,14 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\FirstMonthBillingMode;
 use App\Models\PropertySetting;
 use App\Support\ActiveProperty;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
@@ -69,7 +71,15 @@ class PropertySettings extends Page implements HasForms
 
         $this->setting = PropertySetting::firstOrCreate(
             ['property_id' => ActiveProperty::id()],
-            ['currency' => 'USD', 'due_day_of_month' => 7],
+            [
+                'currency'                    => 'USD',
+                'due_day_of_month'            => 7,
+                'first_month_billing_mode'    => FirstMonthBillingMode::FullMonth->value,
+                'proration_cutoff_day'        => 15,
+                'require_first_month_upfront' => false,
+                'upfront_deposit_months'      => 0,
+                'monthly_billing_enabled'     => false,
+            ],
         );
 
         $this->form->fill($this->setting->attributesToArray());
@@ -83,12 +93,75 @@ class PropertySettings extends Page implements HasForms
                     ->description(__('Per-property defaults — never shared with your other properties.'))
                     ->icon('heroicon-o-banknotes')
                     ->schema([
+                        // ── Feature flag ──────────────────────────────────────────
+                        Forms\Components\Toggle::make('monthly_billing_enabled')
+                            ->label(__('Enable Monthly Billing'))
+                            ->helperText(__('When ON, the Monthly Billing page auto-loads all due rooms so you can enter meter readings and generate invoices in one click. Turn this off to hide the feature for this property.'))
+                            ->default(false)
+                            ->inline(false)
+                            ->columnSpanFull(),
+
                         Forms\Components\TextInput::make('currency')->default('USD')->maxLength(8),
                         Forms\Components\TextInput::make('invoice_prefix')->placeholder('e.g. RIV'),
                         Forms\Components\TextInput::make('due_day_of_month')
                             ->numeric()->minValue(1)->maxValue(28)->default(7),
                         Forms\Components\TextInput::make('late_fee')->numeric()->prefix('$')->default(0),
                         Forms\Components\TextInput::make('water_billing_default')->placeholder('e.g. metered / flat'),
+                    ])->columns(2),
+
+                // ── Move-in billing rules ──────────────────────────────────────
+                Forms\Components\Section::make(__('Move-in Billing Rules'))
+                    ->description(__('Configure how the first month\'s rent is calculated and what must be paid before a tenant moves in.'))
+                    ->icon('heroicon-o-calendar-days')
+                    ->schema([
+                        Forms\Components\Select::make('first_month_billing_mode')
+                            ->label(__('First-month billing mode'))
+                            ->options(FirstMonthBillingMode::options())
+                            ->default(FirstMonthBillingMode::FullMonth->value)
+                            ->selectablePlaceholder(false)
+                            ->live()
+                            ->helperText(function (Get $get): string {
+                                $mode = FirstMonthBillingMode::tryFrom($get('first_month_billing_mode'));
+
+                                return $mode?->getDescription() ?? '';
+                            })
+                            ->columnSpanFull()
+                            ->required(),
+
+                        Forms\Components\TextInput::make('proration_cutoff_day')
+                            ->label(__('Half-month cutoff day'))
+                            ->helperText(__('If the tenant moves in AFTER this day of the month, charge half rent. Otherwise charge full rent.'))
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(28)
+                            ->default(15)
+                            ->suffix(__('of the month'))
+                            ->visible(fn (Get $get) => $get('first_month_billing_mode') === FirstMonthBillingMode::HalfMonth->value)
+                            ->required(fn (Get $get) => $get('first_month_billing_mode') === FirstMonthBillingMode::HalfMonth->value),
+
+                        Forms\Components\Toggle::make('require_first_month_upfront')
+                            ->label(__('Require first month paid before move-in'))
+                            ->helperText(__('When enabled, the first invoice must be settled before the tenancy is considered active.'))
+                            ->default(false)
+                            ->inline(false),
+
+                        Forms\Components\Toggle::make('create_invoice_on_move_in')
+                            ->label(__('Auto-create invoice on move-in'))
+                            ->helperText(__('Automatically generate the first rent invoice when a new tenant is created.'))
+                            ->default(false)
+                            ->inline(false),
+
+                        Forms\Components\Select::make('upfront_deposit_months')
+                            ->label(__('Security deposit'))
+                            ->helperText(__('Number of months\' rent collected as an upfront security deposit (added as a line item on the first invoice).'))
+                            ->options([
+                                0 => __('No deposit'),
+                                1 => __('1 month (1× rent)'),
+                                2 => __('2 months (2× rent)'),
+                            ])
+                            ->default(0)
+                            ->selectablePlaceholder(false)
+                            ->required(),
                     ])->columns(2),
 
                 Forms\Components\Section::make(__('Lease'))

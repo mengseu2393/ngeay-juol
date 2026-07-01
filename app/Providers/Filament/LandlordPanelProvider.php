@@ -60,36 +60,12 @@ class LandlordPanelProvider extends PanelProvider
                 'primary' => Color::Emerald,
                 'gray' => Color::Slate,
             ])
+            // Invoice printing/PDF is served by the dompdf document route (a real
+            // PDF, so no browser-injected print headers) — there's no window.print()
+            // popup to wire up here; just load the shared admin theme.
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn (): string => '<link rel="stylesheet" href="'.asset('css/rentwise-admin.css').'?v='.@filemtime(public_path('css/rentwise-admin.css')).'">
-<script>
-window.printInvoiceSlip = function(event) {
-    var slip = document.querySelector(\'.invoice-slip\');
-    if (! slip) return;
-    var content = slip.cloneNode(true);
-    var toolbar = content.querySelector(\'.invoice-slip-toolbar\');
-    if (toolbar) toolbar.remove();
-    var styles = document.getElementById(\'print-styles\');
-    var win = window.open(\'\', \'_blank\', \'width=800,height=600,menubar=0,toolbar=0,location=0,status=0\');
-    if (! win) { window.print(); return; }
-    // NOTE: the closing head/body/html tags below are split via string
-    // concatenation on purpose. Livewire/Filament inject their assets by
-    // string-replacing the literal closing head and body tokens across the whole
-    // rendered page; if those tokens appear verbatim ANYWHERE in this inline
-    // script (even in a comment) they get corrupted, injecting a stray script
-    // close tag and a raw newline that throws "unescaped line break" and leaves
-    // printInvoiceSlip undefined. Do not write those tokens out in full here.
-    win.document.write(\'<!DOCTYPE html><html><head><meta charset="utf-8"><title>Print Invoice<\'+\'/title>\');
-    if (styles) win.document.write(styles.innerHTML);
-    win.document.write(\'<\'+\'/head><body>\');
-    win.document.write(content.innerHTML);
-    win.document.write(\'<\'+\'/body><\'+\'/html>\');
-    win.document.close();
-    win.focus();
-    setTimeout(function () { win.print(); }, 300);
-};
-</script>',
+                fn (): string => '<link rel="stylesheet" href="'.asset('css/rentwise-admin.css').'?v='.@filemtime(public_path('css/rentwise-admin.css')).'">',
             )
             // Property context switcher at the top of the sidebar — landlord panel only.
             ->renderHook(
