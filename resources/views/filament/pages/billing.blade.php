@@ -108,12 +108,11 @@
                         </p>
                     </div>
 
-                    <div x-data="{ isOn: @js((bool) $subscription->auto_renew) }" class="flex items-center justify-between">
+                    <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-500">{{ __('Auto-renew') }}</span>
-                        <x-filament::toggle
-                            x-model="isOn"
-                            :disabled="true"
-                        />
+                        <x-filament::badge :color="$subscription->auto_renew ? 'success' : 'gray'">
+                            {{ $subscription->auto_renew ? __('On') : __('Off') }}
+                        </x-filament::badge>
                     </div>
                 </div>
             </x-filament::section>
