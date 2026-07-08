@@ -108,13 +108,13 @@ class InvoiceResource extends Resource
                     ),
                 Tables\Columns\TextColumn::make('tenant.name')->label(__('Tenant'))->searchable(),
                 Tables\Columns\TextColumn::make('amount_due')
-                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatInvoiceAmount($record, 'due'))
+                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatForRecord($state, $record))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('amount_paid')
-                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatInvoiceAmount($record, 'paid')),
+                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatForRecord($state, $record)),
                 Tables\Columns\TextColumn::make('balance')
                     ->state(fn (Invoice $r) => $r->balance)
-                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatInvoiceAmount($record, 'balance')),
+                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatForRecord($state, $record)),
                 Tables\Columns\TextColumn::make('payment_status')->badge()
                     // Click the status to manage payments: add when owing, or edit
                     // existing payments once paid.
@@ -232,9 +232,9 @@ class InvoiceResource extends Resource
             ->icon('heroicon-o-banknotes')
             ->color(fn (Invoice $record) => $record->balance > 0 ? 'success' : 'gray')
             ->modalHeading(fn (Invoice $record) => __('Payments').' · '.$record->invoice_number)
-            ->modalDescription(fn (Invoice $record) => __('Total').': '.Money::formatInvoiceAmount($record, 'due')
-                .' · '.__('Paid').': '.Money::formatInvoiceAmount($record, 'paid')
-                .' · '.__('Balance').': '.Money::formatInvoiceAmount($record, 'balance'))
+            ->modalDescription(fn (Invoice $record) => __('Total').': '.Money::formatForRecord($record->amount_due, $record)
+                .' · '.__('Paid').': '.Money::formatForRecord($record->amount_paid, $record)
+                .' · '.__('Balance').': '.Money::formatForRecord($record->balance, $record))
             ->modalSubmitActionLabel(__('Save'))
             // Existing payments become repeater rows; seed one row when nothing is
             // paid yet so "record a payment" stays one click.
@@ -242,7 +242,6 @@ class InvoiceResource extends Resource
                 $rows = $record->payments()->orderBy('paid_at')->get()->map(fn ($p) => [
                     'id' => $p->id,
                     'amount' => (string) $p->amount,
-                    'currency' => $p->currency,
                     'paid_at' => $p->paid_at,
                     'method' => $p->method,
                     'transaction_ref' => $p->transaction_ref,
@@ -251,13 +250,7 @@ class InvoiceResource extends Resource
                 ])->all();
 
                 if (empty($rows) && (float) $record->balance > 0) {
-                    $rows[] = [
-                        'id' => null,
-                        'amount' => (string) $record->balance,
-                        'currency' => Money::forRecord($record),
-                        'paid_at' => now(),
-                        'method' => PaymentMethod::Cash->value
-                    ];
+                    $rows[] = ['id' => null, 'amount' => (string) $record->balance, 'paid_at' => now(), 'method' => PaymentMethod::Cash->value];
                 }
 
                 return ['payments' => $rows];
@@ -267,21 +260,11 @@ class InvoiceResource extends Resource
                     ->hiddenLabel()
                     ->addActionLabel(__('Add payment'))
                     ->defaultItems(0)
-                    ->itemLabel(fn (array $state) => ($state['amount'] ? Money::format($state['amount'], $state['currency'] ?? null) : __('New payment'))
+                    ->itemLabel(fn (array $state) => ($state['amount'] ? Money::activeFormat($state['amount']) : __('New payment'))
                         .($state['paid_at'] ?? null ? ' · '.\Illuminate\Support\Carbon::parse($state['paid_at'])->format('d M Y') : ''))
                     ->schema([
                         Forms\Components\Hidden::make('id'),
-                        Forms\Components\TextInput::make('amount')
-                            ->numeric()
-                            ->required()
-                            ->minValue(0.01),
-                        Forms\Components\Select::make('currency')
-                            ->label(__('Payment currency'))
-                            ->options([
-                                'USD' => 'USD',
-                                'KHR' => 'KHR',
-                            ])
-                            ->required(),
+                        Forms\Components\TextInput::make('amount')->numeric()->prefix(fn () => Money::activeSymbol())->required()->minValue(0.01),
                         Forms\Components\DateTimePicker::make('paid_at')->label(__('Paid at'))->default(now())->required(),
                         Forms\Components\Select::make('method')->label(__('Method'))->options(PaymentMethod::class)->default(PaymentMethod::Cash)->required(),
                         Forms\Components\TextInput::make('transaction_ref')->label(__('Transaction ref')),
@@ -297,8 +280,8 @@ class InvoiceResource extends Resource
                 $record->refresh();
                 Notification::make()
                     ->title(__('Payments updated'))
-                    ->body(__('Paid').': '.Money::formatInvoiceAmount($record, 'paid')
-                        .' · '.__('Balance').': '.Money::formatInvoiceAmount($record, 'balance')
+                    ->body(__('Paid').': '.Money::formatForRecord($record->amount_paid, $record)
+                        .' · '.__('Balance').': '.Money::formatForRecord($record->balance, $record)
                         .' · '.$record->payment_status->getLabel())
                     ->success()->send();
             });
@@ -321,7 +304,6 @@ class InvoiceResource extends Resource
         foreach ($rows as $row) {
             $attributes = [
                 'amount' => $row['amount'],
-                'currency' => $row['currency'] ?? 'USD',
                 'paid_at' => $row['paid_at'] ?? now(),
                 'method' => $row['method'] ?? PaymentMethod::Cash,
                 'transaction_ref' => $row['transaction_ref'] ?? null,

@@ -78,7 +78,6 @@ class CreateInvoice extends CreateRecord
             $adhoc[] = [
                 'description' => $data['extra_charge_description'] ?? __('Extra charge'),
                 'amount' => (float) $data['extra_charge'],
-                'currency' => $data['extra_charge_currency'] ?? 'USD',
             ];
         }
 

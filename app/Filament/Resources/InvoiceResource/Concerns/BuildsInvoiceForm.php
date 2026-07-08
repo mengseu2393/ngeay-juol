@@ -47,15 +47,7 @@ trait BuildsInvoiceForm
                         ->content(fn (Get $get) => static::tenantLabel($get('rental_id')) ?? '—'),
                     Forms\Components\TextInput::make('monthly_rent')
                         ->label(__('Monthly rent'))
-                        ->numeric()
-                        ->prefix(function (Get $get) {
-                            $unitId = $get('unit_id');
-                            if ($unitId && $unit = Unit::find($unitId)) {
-                                return Money::symbol($unit->rent_currency);
-                            }
-                            return Money::activeSymbol();
-                        })
-                        ->required()
+                        ->numeric()->prefix(fn (Get $get) => Money::symbolForUnitId($get('unit_id')))->required()
                         ->live(onBlur: true)
                         ->helperText(__('Auto-filled from the room — adjust if needed.')),
                     Forms\Components\Toggle::make('include_rent')
@@ -98,7 +90,6 @@ trait BuildsInvoiceForm
                             Forms\Components\Hidden::make('utility_usage_id'),
                             Forms\Components\Hidden::make('utility_name'),
                             Forms\Components\Hidden::make('rate'),
-                            Forms\Components\Hidden::make('currency'),
                             Forms\Components\Hidden::make('billing_type'),
                             Forms\Components\Hidden::make('unit_of_measure'),
                             Forms\Components\Hidden::make('requires_reading'),
@@ -109,9 +100,8 @@ trait BuildsInvoiceForm
                                     ? static::meterHint([
                                         'rate' => $get('rate'),
                                         'unit_of_measure' => $get('unit_of_measure'),
-                                        'currency' => $get('currency'),
                                     ])
-                                    : __('Fixed charge').': '.Money::format((float) $get('rate'), $get('currency'))),
+                                    : __('Fixed charge').': '.Money::activeFormat((float) $get('rate'))),
                             Forms\Components\TextInput::make('old_reading')
                                 ->visible(fn (Get $get) => (bool) $get('requires_reading'))
                                 ->numeric()->disabled()->dehydrated()
@@ -129,7 +119,6 @@ trait BuildsInvoiceForm
                                     'new_reading' => $get('new_reading'),
                                     'is_waived' => $get('is_waived'),
                                     'requires_reading' => $get('requires_reading'),
-                                    'currency' => $get('currency'),
                                 ])),
                         ])
                         ->columns(4)
@@ -141,22 +130,11 @@ trait BuildsInvoiceForm
                     Forms\Components\Toggle::make('has_extra_charge')
                         ->label(__('Add extra charge'))
                         ->default(false)->live(),
-                    Forms\Components\Grid::make(2)
-                        ->schema([
-                            Forms\Components\TextInput::make('extra_charge')
-                                ->label(__('Extra charge'))
-                                ->numeric()
-                                ->default('0')->live(onBlur: true)
-                                ->helperText(__('One-off extra charge to add to this invoice.')),
-                            Forms\Components\Select::make('extra_charge_currency')
-                                ->label(__('Currency'))
-                                ->options([
-                                    'USD' => 'USD ($)',
-                                    'KHR' => 'KHR (៛)',
-                                ])
-                                ->default(fn (Get $get) => Money::forUnitId($get('unit_id')))
-                                ->required(),
-                        ])
+                    Forms\Components\TextInput::make('extra_charge')
+                        ->label(__('Extra charge'))
+                        ->numeric()->prefix(fn (Get $get) => Money::symbolForUnitId($get('unit_id')))
+                        ->default('0')->live(onBlur: true)
+                        ->helperText(__('One-off extra charge to add to this invoice.'))
                         ->visible(fn (Get $get) => $get('has_extra_charge')),
                     Forms\Components\TextInput::make('extra_charge_description')
                         ->label(__('Extra charge description'))
@@ -165,34 +143,15 @@ trait BuildsInvoiceForm
                         ->visible(fn (Get $get) => $get('has_extra_charge')),
                     Forms\Components\Placeholder::make('grand_total')
                         ->label(__('Invoice total'))
-                        ->content(function (Get $get) {
-                            $unitId = $get('unit_id');
-                            if (!$unitId) return '—';
-                            $unit = Unit::find($unitId);
-                            $rentCurrency = $unit?->rent_currency ?: 'USD';
-                            $propertyId = $unit?->property_id;
-                            $setting = $propertyId ? \App\Models\PropertySetting::where('property_id', $propertyId)->first() : null;
-                            $rate = $setting?->usd_khr_exchange_rate ?: 4000;
-
-                            $totals = static::calculateTotals([
+                        ->content(fn (Get $get) => Money::format(
+                            static::grandTotal([
                                 'include_rent' => $get('include_rent'),
                                 'monthly_rent' => $get('monthly_rent'),
-                                'rent_currency' => $rentCurrency,
                                 'readings' => $get('readings'),
                                 'extra_charge' => $get('extra_charge'),
-                                'extra_charge_currency' => $get('extra_charge_currency'),
-                            ], $rate);
-
-                            if ($totals['usd_only'] > 0 && $totals['khr_only'] > 0) {
-                                return Money::format($totals['usd_only'], 'USD') . ' + ' . Money::format($totals['khr_only'], 'KHR') . ' (Total: ' . Money::format($totals['total_usd'], 'USD') . ' / ' . Money::format($totals['total_khr'], 'KHR') . ')';
-                            }
-                            
-                            $reporting = $setting?->currency ?: 'USD';
-                            if ($reporting === 'KHR') {
-                                return Money::format($totals['total_khr'], 'KHR') . ' ($' . number_format($totals['total_usd'], 2) . ')';
-                            }
-                            return Money::format($totals['total_usd'], 'USD') . ' (' . number_format($totals['total_khr'], 0) . ' KHR)';
-                        }),
+                            ]),
+                            Money::forUnitId($get('unit_id')),
+                        )),
                     Forms\Components\Textarea::make('notes')->columnSpanFull(),
                 ]),
         ];
@@ -247,7 +206,6 @@ trait BuildsInvoiceForm
                 'utility_usage_id' => null,
                 'utility_name' => $util->name,
                 'rate' => (string) $util->rate,
-                'currency' => $util->currency ?: 'USD',
                 'billing_type' => $util->billing_type->value,
                 'unit_of_measure' => $util->unit_of_measure,
                 'requires_reading' => $util->requiresReading(),
@@ -272,9 +230,8 @@ trait BuildsInvoiceForm
     {
         $rate = (float) ($row['rate'] ?? 0);
         $uom = $row['unit_of_measure'] ?? '';
-        $currency = $row['currency'] ?? 'USD';
 
-        return __('Rate').': '.Money::format($rate, $currency).($uom ? ' / '.$uom : '');
+        return __('Rate').': '.Money::activeFormat($rate, 2).($uom ? ' / '.$uom : '');
     }
 
     /** Whether this reading row is waived (truthy across bool/int/"1"/"true" shapes). */
@@ -286,12 +243,11 @@ trait BuildsInvoiceForm
     /** Display string for the Charge column — shows "Waived" instead of $0 when waived. */
     protected static function chargeLabel(array $row): string
     {
-        $currency = $row['currency'] ?? 'USD';
         if (static::isWaivedRow($row)) {
-            return __('Waived').' · '.Money::format(0, $currency);
+            return __('Waived').' · '.Money::activeFormat(0);
         }
 
-        return Money::format(static::rowAmount($row), $currency);
+        return Money::activeFormat(static::rowAmount($row));
     }
 
     /** Charge for one reading row — mirrors UtilityBillingService::resolveCharge. */
@@ -330,52 +286,5 @@ trait BuildsInvoiceForm
         $total += (float) ($data['extra_charge'] ?? 0);
 
         return round($total, 2);
-    }
-
-    protected static function calculateTotals(array $data, ?float $rate): array
-    {
-        $usd = 0.0;
-        $khr = 0.0;
-
-        if ($data['include_rent'] ?? true) {
-            $rentAmt = (float) ($data['monthly_rent'] ?? 0);
-            $rentCurr = $data['rent_currency'] ?? 'USD';
-            if ($rentCurr === 'USD') {
-                $usd += $rentAmt;
-            } else {
-                $khr += $rentAmt;
-            }
-        }
-
-        foreach ($data['readings'] ?? [] as $row) {
-            $rowAmt = static::rowAmount($row);
-            $rowCurr = $row['currency'] ?? 'USD';
-            if ($rowCurr === 'USD') {
-                $usd += $rowAmt;
-            } else {
-                $khr += $rowAmt;
-            }
-        }
-
-        if (isset($data['extra_charge']) && (float) $data['extra_charge'] > 0) {
-            $extraAmt = (float) $data['extra_charge'];
-            $extraCurr = $data['extra_charge_currency'] ?? 'USD';
-            if ($extraCurr === 'USD') {
-                $usd += $extraAmt;
-            } else {
-                $khr += $extraAmt;
-            }
-        }
-
-        $rate = $rate ?: 4000;
-        $totalInUsd = $usd + ($khr / $rate);
-        $totalInKhr = ($usd * $rate) + $khr;
-
-        return [
-            'usd_only' => $usd,
-            'khr_only' => $khr,
-            'total_usd' => $totalInUsd,
-            'total_khr' => $totalInKhr,
-        ];
     }
 }

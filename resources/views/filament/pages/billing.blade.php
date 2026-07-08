@@ -2,11 +2,11 @@
 
 <x-filament-panels::page>
     @if(! $subscription)
-        <x-filament-panels::empty-state
-            heading="{{ __('No subscription') }}"
-            description="{{ __('You do not have an active subscription yet. Please contact the administrator.') }}"
-            icon="heroicon-o-credit-card"
-        />
+        <div class="rounded-2xl border border-dashed border-gray-300 p-8 text-center dark:border-gray-700">
+            <x-heroicon-o-credit-card class="mx-auto h-10 w-10 text-gray-400" />
+            <p class="mt-3 font-semibold">{{ __('No subscription') }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('You do not have an active subscription yet. Please contact the administrator.') }}</p>
+        </div>
     @else
         {{-- Status banner --}}
         @php $access = $this->getAccess(); @endphp
