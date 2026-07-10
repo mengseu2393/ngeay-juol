@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         if (filter_var(env('SEED_DEMO', false), FILTER_VALIDATE_BOOL)) {
-            $this->call(DemoDataSeeder::class);
+            $this->call(KhmerDemoSeeder::class);
         }
     }
 }
