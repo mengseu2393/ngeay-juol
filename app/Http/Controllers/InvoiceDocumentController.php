@@ -17,6 +17,14 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class InvoiceDocumentController extends Controller
 {
+    public function view(Invoice $invoice)
+    {
+        $this->guard($invoice);
+        $invoice->loadMissing(['lines.utilityUsage.propertyUtility', 'rental.unit.property', 'tenant', 'property']);
+
+        return view('invoices.simple-view', compact('invoice'));
+    }
+
     /**
      * Render the invoice as a PDF. ?size= picks the paper (defaults to a4);
      * ?mode=stream opens inline (print preview) instead of downloading.

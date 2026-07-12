@@ -163,6 +163,10 @@
 
     {{-- Toolbar (screen only — printing/PDF is server-rendered, so no browser headers) --}}
     <div class="rw-invoice-toolbar">
+        <a href="{{ route('invoices.view', ['invoice' => $invoice]) }}"
+           class="rw-btn rw-btn--ghost">
+            {{ __('View details') }}
+        </a>
         <a href="{{ route('invoices.pdf', ['invoice' => $invoice, 'size' => 'a4', 'mode' => 'stream']) }}"
            target="_blank" rel="noopener" class="rw-btn rw-btn--primary">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon">

@@ -28,27 +28,12 @@ class SimpleInvoiceList extends Component
     /** ID of the invoice being paid right now */
     public ?int $payingInvoiceId = null;
 
-    /** ID of the invoice shown in the inline detail modal. */
-    public ?int $viewingInvoiceId = null;
-
     public string $payAmount = '';
     public int $payMethod = 1; // PaymentMethod::Cash = 1
     public string $payNote = '';
 
     public bool $paySuccess = false;
     public ?string $paySuccessMessage = null;
-
-    public function startView(int $invoiceId): void
-    {
-        if ($this->loadInvoice($invoiceId)) {
-            $this->viewingInvoiceId = $invoiceId;
-        }
-    }
-
-    public function closeView(): void
-    {
-        $this->viewingInvoiceId = null;
-    }
 
     protected $queryString = ['filter', 'search'];
 
@@ -161,8 +146,6 @@ class SimpleInvoiceList extends Component
         $invoices = $query->orderByDesc('issue_date')->paginate(15);
 
         $payingInvoice = $this->payingInvoiceId ? $this->loadInvoice($this->payingInvoiceId) : null;
-        $viewingInvoice = $this->viewingInvoiceId ? $this->loadInvoice($this->viewingInvoiceId) : null;
-
         $paymentMethods = collect(PaymentMethod::cases())
             ->mapWithKeys(fn ($m) => [$m->value => $m->getLabel()])
             ->all();
@@ -170,7 +153,6 @@ class SimpleInvoiceList extends Component
         return view('livewire.simple-invoice-list', [
             'invoices' => $invoices,
             'payingInvoice' => $payingInvoice,
-            'viewingInvoice' => $viewingInvoice,
             'paymentMethods' => $paymentMethods,
         ]);
     }

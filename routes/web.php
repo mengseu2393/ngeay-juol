@@ -27,6 +27,7 @@ Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 Route::middleware(['auth', \App\Http\Middleware\SetLocale::class])->group(function () {
     Route::get('landlord/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'pdf'])->name('invoices.pdf');
     Route::get('landlord/invoices/{invoice}/excel', [InvoiceDocumentController::class, 'excel'])->name('invoices.excel');
+    Route::get('landlord/invoices/{invoice}/view', [InvoiceDocumentController::class, 'view'])->name('invoices.view');
 
     Route::post('landlord/simple-mode/toggle', function (\Illuminate\Http\Request $request) {
         $user = $request->user();
