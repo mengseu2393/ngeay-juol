@@ -43,17 +43,17 @@
             }
         </style>
     </head>
-    <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-300">
+    <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex items-center justify-center p-6 relative overflow-x-hidden transition-colors duration-300">
         
         <!-- Decorative Ambient Lights -->
         <div class="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-emerald-400 glow-bg pointer-events-none"></div>
         <div class="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-cyan-400 glow-bg pointer-events-none"></div>
 
         <!-- Main Card container -->
-        <div class="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10 min-h-[600px]">
+        <div class="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10 lg:min-h-[600px]">
             
             <!-- Left Panel (Illustration & Info) -->
-            <div class="lg:col-span-5 bg-gradient-to-tr from-slate-900 via-slate-850 to-slate-900 p-8 lg:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+            <div class="hidden lg:flex lg:col-span-5 bg-gradient-to-tr from-slate-900 via-slate-850 to-slate-900 p-8 lg:p-12 text-white flex-col justify-between relative overflow-hidden">
                 <!-- Inner ambient glow -->
                 <div class="absolute bottom-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
                 
