@@ -221,7 +221,71 @@
                     </div>
                     <span class="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $this->currentRoomProgress() }}</span>
                 </div>
-                <div x-init="$nextTick(() => $el.querySelector('[data-sbi-new-reading]')?.focus())" class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                @php
+                    $cardIndex = $this->currentRoomIndex;
+                    $cardRoom = $this->currentRoom();
+                    $cardSummary = $this->roomSummary($cardIndex);
+                @endphp
+                @if($cardRoom)
+                    <div wire:key="reading-card-{{ $cardIndex }}" x-init="$nextTick(() => $el.querySelector('[data-sbi-new-reading]')?.focus())" class="overflow-hidden rounded-2xl border border-primary-100 bg-white p-4 shadow-md ring-1 ring-primary-500/10 dark:border-primary-900/50 dark:bg-gray-900 space-y-4">
+                        <div class="flex items-start justify-between gap-3 border-b border-gray-100 pb-3 dark:border-gray-800">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-gray-950 dark:text-white">{{ __('Room') }} {{ $cardRoom['room_number'] }}</span>
+                                    @if($cardRoom['is_first_invoice'] ?? false)
+                                        <span class="rounded-full bg-primary-50 px-2 py-0.5 text-[9px] font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-400">{{ __('Prorated') }}</span>
+                                    @endif
+                                </div>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">{{ $cardRoom['occupant_name'] }}</span>
+                            </div>
+                            <button type="button" wire:click="toggleRoomSkip({{ $cardIndex }})" class="rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition {{ $cardRoom['skipped'] ? 'border-primary-200 bg-primary-50/20 text-primary-600 dark:border-primary-900/30 dark:text-primary-400' : 'border-red-200 text-red-600 hover:bg-red-50/50 dark:border-red-900/30' }}">{{ $cardRoom['skipped'] ? __('Unskip') : __('Skip') }}</button>
+                        </div>
+
+                        @if(!$cardRoom['skipped'])
+                            <div class="grid min-w-0 grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                                <div class="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50">
+                                    <span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-gray-400">{{ __('Rent') }}</span>
+                                    <span class="text-base font-extrabold text-gray-950 dark:text-white">{{ \App\Support\Money::format($cardRoom['rent'], $cardRoom['rent_currency'] ?? 'USD') }}</span>
+                                </div>
+                                <div class="min-w-0 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50">
+                                    <span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-gray-400">{{ __('Billing Period') }}</span>
+                                    <div class="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center">
+                                        <input type="date" wire:model.live="rooms.{{ $cardIndex }}.period_start" class="min-w-0 w-full rounded-lg border-gray-300 bg-white px-2 py-1.5 text-[10px] shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                                        <span class="hidden text-center text-gray-400 sm:inline">&rarr;</span>
+                                        <input type="date" wire:model.live="rooms.{{ $cardIndex }}.period_end" class="min-w-0 w-full rounded-lg border-gray-300 bg-white px-2 py-1.5 text-[10px] shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if($this->roomHasInvalidPeriodOrDuplicate($cardIndex))
+                                <div class="rounded-lg border border-red-200 bg-red-50/50 p-2 text-[10px] font-semibold text-red-650 dark:border-red-900/30 dark:bg-red-950/10 dark:text-red-400">{{ __('Please check this billing period or duplicate invoice.') }}</div>
+                            @endif
+
+                            <div class="space-y-2.5 pt-1">
+                                <span class="block border-b border-gray-100 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:border-gray-800">{{ __('Utilities') }}</span>
+                                <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                                    @foreach($cardRoom['utilities'] as $utilityIndex => $utility)
+                                        @php($preview = $this->utilityPreview($cardIndex, $utilityIndex))
+                                        <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-3 space-y-1.5 dark:border-gray-800 dark:bg-gray-800/30">
+                                            <span class="font-bold text-gray-700 dark:text-gray-300">{{ $utility['utility_name'] }}</span>
+                                            @if($utility['requires_reading'] ?? true)
+                                                <div class="text-[8px] leading-tight text-gray-400 dark:text-gray-500">{{ __('Previous reading') }}: <span class="font-semibold text-gray-500 dark:text-gray-400">{{ $preview['old_reading'] !== null ? $this->formatQuantity($preview['old_reading']) : '—' }}</span></div>
+                                                <input type="number" step="any" inputmode="decimal" wire:model.live.debounce.300ms="rooms.{{ $cardIndex }}.utilities.{{ $utilityIndex }}.new_reading" data-sbi-new-reading class="w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm font-semibold shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white" placeholder="{{ __('New reading') }}">
+                                                @if($preview['amount_used'] !== null)<div class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-500">{{ __('Usage') }}: {{ $this->formatQuantity($preview['amount_used']) }} {{ $utility['unit_of_measure'] }} · {{ \App\Support\Money::format($preview['charge'], $utility['currency'] ?? 'USD') }}</div>@endif
+                                            @else
+                                                <span class="text-[10px] text-gray-500 dark:text-gray-400">{{ __('Fixed') }}: {{ \App\Support\Money::format($preview['charge'], $utility['currency'] ?? 'USD') }}</span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between rounded-xl bg-primary-50 px-3 py-3 dark:bg-primary-500/10"><span class="text-xs font-bold text-primary-800 dark:text-primary-300">{{ __('Estimated total') }}</span><span class="text-lg font-extrabold text-primary-700 dark:text-primary-300">{{ $cardSummary['estimated_total_display'] }}</span></div>
+                        @else
+                            <div class="py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('This room will be skipped from the current billing run.') }}</div>
+                        @endif
+                    </div>
+                @endif
+                <div wire:ignore class="hidden">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-left text-xs">
                         <thead class="bg-gray-50 dark:bg-gray-800/50">
                             <tr>

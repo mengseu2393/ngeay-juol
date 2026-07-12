@@ -7,7 +7,6 @@ use App\Filament\Pages\Billing;
 use App\Filament\Pages\ConsumptionHistory;
 use App\Filament\Pages\MonthlyBilling;
 use App\Filament\Pages\PropertySettings;
-use App\Filament\Pages\UtilityBilling;
 use App\Filament\Resources\InvoiceResource;
 use App\Filament\Resources\PaymentResource;
 use App\Filament\Resources\PropertyResource;
@@ -165,7 +164,6 @@ class LandlordPanelProvider extends PanelProvider
                 Dashboard::class,
                 Billing::class,
                 MonthlyBilling::class,
-                UtilityBilling::class,
                 PropertySettings::class,
                 ConsumptionHistory::class,
                 \App\Filament\Pages\SimpleDashboard::class,

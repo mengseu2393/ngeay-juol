@@ -83,6 +83,23 @@
         </div>
     @endif
 
+    {{-- ── Invoice detail modal ── --}}
+    @if($viewingInvoice)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-gray-950/45 p-3 backdrop-blur-xl sm:p-6" wire:key="invoice-view-modal-{{ $viewingInvoice->id }}">
+            <div class="my-auto w-full max-w-4xl">
+                <div class="mb-2 flex justify-end">
+                    <button
+                        type="button"
+                        wire:click="closeView"
+                        aria-label="{{ __('Close') }}"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-xl leading-none text-gray-500 shadow-sm transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/95 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >&times;</button>
+                </div>
+                @include('components.invoice-slip-modal', ['invoice' => $viewingInvoice])
+            </div>
+        </div>
+    @endif
+
     {{-- ── Invoice cards ── --}}
     @forelse($invoices as $invoice)
         @php
@@ -134,10 +151,12 @@
 
             {{-- Actions --}}
             <div class="mt-4 flex flex-col sm:flex-row gap-2">
-                <a href="{{ \App\Filament\Resources\InvoiceResource::getUrl('edit', ['record' => $invoice->id], panel: 'landlord') }}"
+                <button
+                   type="button"
+                   wire:click="startView({{ $invoice->id }})"
                    class="rw-sm-btn-ghost flex-1 text-center"
                    id="invoice-view-{{ $invoice->id }}"
-                >{{ __('View') }}</a>
+                >{{ __('View') }}</button>
 
                 @if($balance > 0.009)
                     <button

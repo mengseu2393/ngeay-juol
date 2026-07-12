@@ -17,13 +17,13 @@ return new class extends Migration
             $table->foreignId('property_id')->nullable()->after('unit_id')->constrained('properties')->cascadeOnDelete();
             $table->index('property_id');
         });
-        DB::statement('UPDATE rentals r JOIN units u ON u.id = r.unit_id SET r.property_id = u.property_id WHERE r.property_id IS NULL');
+        DB::statement('UPDATE rentals SET property_id = (SELECT property_id FROM units WHERE units.id = rentals.unit_id) WHERE property_id IS NULL');
 
         Schema::table('invoices', function (Blueprint $table) {
             $table->foreignId('property_id')->nullable()->after('rental_id')->constrained('properties')->cascadeOnDelete();
             $table->index('property_id');
         });
-        DB::statement('UPDATE invoices i JOIN rentals r ON r.id = i.rental_id SET i.property_id = r.property_id WHERE i.property_id IS NULL');
+        DB::statement('UPDATE invoices SET property_id = (SELECT property_id FROM rentals WHERE rentals.id = invoices.rental_id) WHERE property_id IS NULL');
     }
 
     public function down(): void
