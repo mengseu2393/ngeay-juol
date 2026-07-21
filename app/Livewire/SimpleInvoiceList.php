@@ -127,12 +127,12 @@ class SimpleInvoiceList extends Component
             ->first();
     }
 
-    public function render()
+    /** The invoice query matching the current filter + search (unpaginated). */
+    protected function filteredQuery()
     {
         $propertyId = ActiveProperty::id();
 
         $query = Invoice::query()
-            ->with(['rental.unit', 'tenant'])
             ->when($propertyId, fn ($q) => $q->where('property_id', $propertyId))
             ->when(! $propertyId, fn ($q) => $q->whereRaw('1 = 0')); // no property → empty list
 
@@ -159,7 +159,19 @@ class SimpleInvoiceList extends Component
             });
         }
 
-        $invoices = $query->orderByDesc('issue_date')->paginate(15);
+        return $query;
+    }
+
+    public function render()
+    {
+        $invoices = $this->filteredQuery()
+            ->with(['rental.unit', 'tenant'])
+            ->orderByDesc('issue_date')
+            ->paginate(15);
+
+        // Everything the current filter matches (not just this page) — feeds the
+        // "Print all" batch-PDF button. Same cap as the batch route.
+        $batchIds = $this->filteredQuery()->orderByDesc('issue_date')->limit(200)->pluck('id');
 
         $paymentMethods = collect(PaymentMethod::cases())
             ->mapWithKeys(fn ($m) => [$m->value => $m->getLabel()])
@@ -168,6 +180,7 @@ class SimpleInvoiceList extends Component
         return view('livewire.simple-invoice-list', [
             'invoices' => $invoices,
             'paymentMethods' => $paymentMethods,
+            'batchIds' => $batchIds,
         ]);
     }
 }

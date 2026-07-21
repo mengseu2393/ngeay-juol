@@ -35,6 +35,25 @@
         <svg class="rw-sm-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/></svg>
     </div>
 
+    {{-- ── Print all (current filter) — one batch PDF via the share-aware handler ── --}}
+    @if($batchIds->isNotEmpty())
+        <button
+            type="button"
+            class="rw-sm-btn-secondary w-full flex items-center justify-center gap-1.5"
+            id="invoice-print-all"
+            data-stream-url="{{ route('invoices.batch-pdf', ['ids' => $batchIds->implode(','), 'mode' => 'stream']) }}"
+            data-download-url="{{ route('invoices.batch-pdf', ['ids' => $batchIds->implode(',')]) }}"
+            data-filename="invoices-{{ now()->format('Ymd') }}.pdf"
+            data-preparing="{{ __('Preparing…') }}"
+            onclick="rwPrintInvoice(this)"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5 2.75C5 1.784 5.784 1 6.75 1h6.5c.966 0 1.75.784 1.75 1.75v1.5A1.75 1.75 0 0 1 16.75 6H18a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-.25v1.25a1.75 1.75 0 0 1-1.75 1.75h-8.5A1.75 1.75 0 0 1 4 17.25V16H3.75A2 2 0 0 1 1.75 14V8a2 2 0 0 1 2-2h1.25A1.75 1.75 0 0 1 6.75 4.25v-1.5ZM6.5 4.25c0-.138.112-.25.25-.25h6.5c.138 0 .25.112.25.25v1.5c0 .138-.112.25-.25.25h-6.5a.25.25 0 0 1-.25-.25v-1.5ZM5.5 17.25c0-.138.112-.25.25-.25h8.5c.138 0 .25.112.25.25v-3.5c0-.138-.112-.25-.25-.25h-8.5c-.138 0-.25.112-.25.25v3.5Z" clip-rule="evenodd" />
+            </svg>
+            <span data-label>{{ __('Print all') }} ({{ $batchIds->count() }})</span>
+        </button>
+    @endif
+
     {{-- ── Success message ── --}}
     @if($paySuccess && $paySuccessMessage)
         <div class="rw-sm-success-banner" role="status">

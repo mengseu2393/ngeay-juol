@@ -29,6 +29,63 @@ class InvoicePdfService
             'thermal' => InvoicePaper::isThermal($size),
         ])->render();
 
+        return $this->render($html, $size, fn () => $this->makeWithDompdf($invoice, $size));
+    }
+
+    /**
+     * Build one PDF containing many invoices (one per page) — the "print all"
+     * flow for a filtered list. Each invoice is rendered through the SAME
+     * single-invoice template, then the page bodies are stitched together with
+     * page breaks, so batch output can never drift from the single-invoice PDF.
+     * Standard (A4/A5) layout only — thermal receipts don't batch.
+     */
+    public function makeBatch($invoices, string $size = 'a4'): string
+    {
+        $style = null;
+        $pages = [];
+
+        foreach ($invoices as $invoice) {
+            $invoice->loadMissing(['lines', 'payments.recordedBy', 'tenant', 'rental.unit.property', 'property']);
+
+            $html = view('invoices.pdf', [
+                'invoice' => $invoice,
+                'size' => $size,
+                'thermal' => false,
+            ])->render();
+
+            if ($style === null && preg_match('~<style>(.*?)</style>~s', $html, $m)) {
+                $style = $m[1];
+            }
+
+            // Anchor past </head>: the template's CSS comments mention "<body>",
+            // so a bare <body> match would land inside the <style> block.
+            if (preg_match('~</head>\s*<body[^>]*>(.*?)</body>~s', $html, $m)) {
+                $pages[] = '<div class="rw-batch-page">' . $m[1] . '</div>';
+            }
+        }
+
+        // The single-invoice template puts the page padding on <body> (see its
+        // comment about dompdf); in a batch that must live on each page div so
+        // every invoice starts padded.
+        $html = '<!DOCTYPE html><html lang="' . str_replace('_', '-', app()->getLocale()) . '"><head><meta charset="utf-8">'
+            . '<title>' . __('Invoices') . '</title>'
+            . '<style>' . $style . '
+                body { margin: 0 !important; }
+                .rw-batch-page { padding: 44px 52px; page-break-after: always; }
+                .rw-batch-page:last-child { page-break-after: auto; }
+            </style></head><body>' . implode('', $pages) . '</body></html>';
+
+        return $this->render($html, $size, function () use ($html, $size) {
+            $pdf = Pdf::loadHTML($html);
+            $pdf->setPaper($size === 'a5' ? 'a5' : 'a4', 'portrait');
+
+            return $pdf->output();
+        }, timeout: 120);
+    }
+
+    /** Render final HTML to PDF via Browsershot, invoking $fallback on failure. */
+    protected function render(string $html, string $size, callable $fallback, int $timeout = 60): string
+    {
         $browsershot = Browsershot::html($html)
             ->showBackground()
             ->margins(0, 0, 0, 0)
@@ -64,17 +121,18 @@ class InvoicePdfService
                 ->paperHeight(220, 'mm');
         }
 
+        $browsershot->timeout($timeout);
+
         try {
             return $browsershot->pdf();
         } catch (Throwable $exception) {
             Log::warning('Browsershot invoice PDF render failed; falling back to dompdf.', [
-                'invoice_id' => $invoice->getKey(),
                 'size' => $size,
                 'exception' => $exception::class,
                 'message' => $exception->getMessage(),
             ]);
 
-            return $this->makeWithDompdf($invoice, $size);
+            return $fallback();
         }
     }
 

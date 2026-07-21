@@ -25,6 +25,9 @@ Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 // SetLocale makes the documents render in the user's chosen language (Khmer when
 // selected) — it otherwise only runs inside the Filament panel, not on web routes.
 Route::middleware(['auth', \App\Http\Middleware\SetLocale::class])->group(function () {
+    // Batch "print all" — registered before the {invoice} routes so 'batch'
+    // never hits the model binding.
+    Route::get('landlord/invoices/batch/pdf', [InvoiceDocumentController::class, 'batchPdf'])->name('invoices.batch-pdf');
     Route::get('landlord/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'pdf'])->name('invoices.pdf');
     Route::get('landlord/invoices/{invoice}/excel', [InvoiceDocumentController::class, 'excel'])->name('invoices.excel');
     Route::get('landlord/invoices/{invoice}/view', [InvoiceDocumentController::class, 'view'])->name('invoices.view');

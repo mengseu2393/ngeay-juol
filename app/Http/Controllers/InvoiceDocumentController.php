@@ -58,6 +58,47 @@ class InvoiceDocumentController extends Controller
     }
 
     /**
+     * Render many invoices into ONE PDF (one per page) — "print all" for a
+     * filtered list. ?ids= is a comma-separated allow-list built by the caller;
+     * Invoice's LandlordScope re-filters it, so foreign IDs are silently
+     * dropped rather than leaked. Landlord/staff only — tenants have no
+     * batch-print use case.
+     */
+    public function batchPdf(Request $request)
+    {
+        $user = auth()->user();
+        abort_unless($user?->isPlatformStaff() || $user?->effectiveLandlordId(), 403);
+
+        $ids = collect(explode(',', (string) $request->query('ids')))
+            ->filter(fn ($id) => ctype_digit($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->take(200);
+
+        abort_if($ids->isEmpty(), 404);
+
+        $invoices = Invoice::query()
+            ->with(['lines', 'payments.recordedBy', 'tenant', 'rental.unit.property', 'property'])
+            ->whereIn('id', $ids)
+            ->orderBy('invoice_number')
+            ->get();
+
+        abort_if($invoices->isEmpty(), 404);
+
+        $pdfContent = app(InvoicePdfService::class)->makeBatch($invoices);
+        $mode = $request->query('mode') === 'stream' ? 'inline' : 'attachment';
+        $name = 'invoices-' . now()->format('Ymd-Hi') . '-' . $invoices->count() . '.pdf';
+
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => $mode . '; filename="' . $name . '"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ]);
+    }
+
+    /**
      * Stream the invoice as an XLSX download.
      */
     public function excel(Invoice $invoice): StreamedResponse

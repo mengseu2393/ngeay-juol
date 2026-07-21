@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\AdminSettings;
+use App\Filament\Pages\QrCodeGenerator;
 use App\Filament\Resources\LandlordResource;
 use App\Filament\Resources\SubscriptionPaymentResource;
 use App\Filament\Resources\SubscriptionPlanResource;
@@ -108,6 +109,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 AdminSettings::class,
+                QrCodeGenerator::class,
             ])
             ->widgets([
                 AccountWidget::class,

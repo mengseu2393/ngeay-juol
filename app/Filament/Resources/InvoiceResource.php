@@ -201,6 +201,38 @@ class InvoiceResource extends Resource
                 Tables\Filters\SelectFilter::make('payment_status')->options(InvoiceStatus::class),
                 Tables\Filters\TrashedFilter::make(),
             ])
+            // "Print all": one PDF containing every invoice matching the CURRENT
+            // filters (capped at 200). The href is rebuilt each Livewire render, so
+            // it always reflects the active filter state. Desktop opens the inline
+            // PDF; on mobile/PWA rwPrintInvoiceLink() reroutes through the native
+            // share sheet (no inline PDF viewer on phones).
+            ->headerActions([
+                Tables\Actions\Action::make('printAll')
+                    ->label(__('Print all'))
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->badge(fn ($livewire) => $livewire->getFilteredTableQuery()->count() ?: null)
+                    ->url(function ($livewire): ?string {
+                        $ids = $livewire->getFilteredTableQuery()->limit(200)->pluck('id');
+
+                        return $ids->isEmpty()
+                            ? null
+                            : route('invoices.batch-pdf', ['ids' => $ids->implode(','), 'mode' => 'stream']);
+                    }, shouldOpenInNewTab: true)
+                    ->extraAttributes(function ($livewire): array {
+                        $ids = $livewire->getFilteredTableQuery()->limit(200)->pluck('id');
+
+                        if ($ids->isEmpty()) {
+                            return [];
+                        }
+
+                        return [
+                            'data-download-url' => route('invoices.batch-pdf', ['ids' => $ids->implode(',')]),
+                            'data-filename' => 'invoices-' . now()->format('Ymd') . '.pdf',
+                            'onclick' => 'return rwPrintInvoiceLink(event, this)',
+                        ];
+                    }),
+            ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     static::tableDocumentActions(),

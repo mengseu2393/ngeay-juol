@@ -24,9 +24,9 @@
             }
 
             const label = btn.querySelector('[data-label]');
-            const original = label.textContent;
+            const original = label ? label.textContent : null;
             btn.disabled = true;
-            label.textContent = btn.dataset.preparing;
+            if (label && btn.dataset.preparing) label.textContent = btn.dataset.preparing;
 
             try {
                 const res = await fetch(btn.dataset.downloadUrl, { credentials: 'same-origin' });
@@ -53,8 +53,24 @@
                 }
             } finally {
                 btn.disabled = false;
-                label.textContent = original;
+                if (label && original !== null) label.textContent = original;
             }
+        };
+
+        // For <a href> style triggers (e.g. Filament header actions): desktop
+        // follows the link normally (inline PDF tab); mobile/PWA intercepts and
+        // routes through the share-sheet flow above.
+        window.rwPrintInvoiceLink = function (event, el) {
+            const mobileLike = window.matchMedia('(pointer: coarse)').matches
+                || window.matchMedia('(display-mode: standalone)').matches;
+
+            if (! mobileLike || typeof navigator.canShare !== 'function') {
+                return true;
+            }
+
+            event.preventDefault();
+            window.rwPrintInvoice(el);
+            return false;
         };
     }
 </script>

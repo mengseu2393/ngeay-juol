@@ -125,7 +125,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                                 </div>
-                                <input id="login" name="login" type="text" value="{{ old('login') }}" required autofocus
+                                <input id="login" name="login" type="text" value="{{ request('qr_login', old('login')) }}" required autofocus
                                     class="block w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/25 outline-none transition-all text-sm"
                                     placeholder="Enter your email or username">
                             </div>
@@ -176,7 +176,35 @@
 
         <!-- Scripts -->
         <script>
+            // ── QR Code Auto-Fill ─────────────────────────────────────────
+            // When the login page is opened from a QR code scan, the URL
+            // contains ?qr_login=...&qr_password=... query params. We read
+            // them to prefill the form and optionally auto-submit.
+            (function () {
+                const params = new URLSearchParams(window.location.search);
+                const qrPassword = params.get('qr_password');
 
+                if (qrPassword) {
+                    const pwField = document.getElementById('password');
+                    if (pwField) {
+                        pwField.value = qrPassword;
+                    }
+
+                    // Clean the URL so credentials don't linger in the address bar.
+                    if (window.history.replaceState) {
+                        const cleanUrl = window.location.origin + window.location.pathname;
+                        window.history.replaceState({}, document.title, cleanUrl);
+                    }
+
+                    // Auto-submit the form after a brief delay so the user sees the prefill.
+                    const loginField = document.getElementById('login');
+                    if (loginField && loginField.value && pwField.value) {
+                        setTimeout(function () {
+                            document.querySelector('form').submit();
+                        }, 600);
+                    }
+                }
+            })();
         </script>
     </body>
 </html>
