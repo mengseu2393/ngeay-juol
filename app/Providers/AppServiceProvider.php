@@ -22,6 +22,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\TenantProfile;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\UtilityMeter;
 use App\Models\UtilityUsage;
 use App\Models\UtilityWaiver;
 use Filament\Forms\Components\Field;
@@ -54,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
             'property_utility' => PropertyUtility::class,
             'property_setting' => PropertySetting::class,
             'utility_usage' => UtilityUsage::class,
+            'utility_meter' => UtilityMeter::class,
             'utility_waiver' => UtilityWaiver::class,
             'invoice' => Invoice::class,
             'invoice_line' => InvoiceLine::class,

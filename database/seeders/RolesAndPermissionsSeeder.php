@@ -16,7 +16,7 @@ class RolesAndPermissionsSeeder extends Seeder
     /** Resources whose access is constrained to the actor's landlord. */
     private array $landlordOwned = [
         'property', 'unit', 'property_utility', 'rental', 'invoice',
-        'payment', 'utility_usage', 'utility_waiver', 'maintenance_request',
+        'payment', 'utility_usage', 'utility_meter', 'utility_waiver', 'maintenance_request',
     ];
 
     /** Platform-managed catalog resources. */

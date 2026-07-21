@@ -540,14 +540,27 @@
                             </p>
                         </div>
                         @if($access !== \App\Enums\SubscriptionAccess::ReadOnly)
-                            <x-filament::button
-                                type="button"
-                                icon="heroicon-o-check-circle"
-                                wire:click="openCreateConfirmation"
-                                class="w-full sm:w-auto"
-                            >
-                                {{ __('Create invoices') }}
-                            </x-filament::button>
+                            {{-- Blocking rooms keep the server path (warning notification); otherwise open instantly client-side. --}}
+                            @if($this->firstBlockingRoomIndex() !== null)
+                                <x-filament::button
+                                    type="button"
+                                    icon="heroicon-o-check-circle"
+                                    wire:click="openCreateConfirmation"
+                                    class="w-full sm:w-auto"
+                                >
+                                    {{ __('Create invoices') }}
+                                </x-filament::button>
+                            @else
+                                <x-filament::button
+                                    type="button"
+                                    icon="heroicon-o-check-circle"
+                                    x-data=""
+                                    x-on:click="$dispatch('open-billing-confirm')"
+                                    class="w-full sm:w-auto"
+                                >
+                                    {{ __('Create invoices') }}
+                                </x-filament::button>
+                            @endif
                         @endif
                     </div>
 
@@ -709,14 +722,27 @@
                         </p>
 
                         @if($access !== \App\Enums\SubscriptionAccess::ReadOnly)
-                            <x-filament::button
-                                type="button"
-                                icon="heroicon-o-check-circle"
-                                wire:click="openCreateConfirmation"
-                                class="w-full sm:w-auto text-sm py-2 px-4"
-                            >
-                                {{ __('Create invoices') }}
-                            </x-filament::button>
+                            {{-- Blocking rooms keep the server path (warning notification); otherwise open instantly client-side. --}}
+                            @if($this->firstBlockingRoomIndex() !== null)
+                                <x-filament::button
+                                    type="button"
+                                    icon="heroicon-o-check-circle"
+                                    wire:click="openCreateConfirmation"
+                                    class="w-full sm:w-auto text-sm py-2 px-4"
+                                >
+                                    {{ __('Create invoices') }}
+                                </x-filament::button>
+                            @else
+                                <x-filament::button
+                                    type="button"
+                                    icon="heroicon-o-check-circle"
+                                    x-data=""
+                                    x-on:click="$dispatch('open-billing-confirm')"
+                                    class="w-full sm:w-auto text-sm py-2 px-4"
+                                >
+                                    {{ __('Create invoices') }}
+                                </x-filament::button>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -806,9 +832,18 @@
             </div>
         @endif
 
-        {{-- Confirmation Modal --}}
-        @if($this->showCreateConfirmation)
-            <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm transition-opacity">
+        {{-- Confirmation Modal — always in the DOM so opening is instant (Alpine);
+             entangled with showCreateConfirmation so server flows (tests, blocked-room
+             warnings, post-create reset) stay authoritative. --}}
+        @if($this->rooms !== [])
+            <div
+                x-data="{ show: $wire.entangle('showCreateConfirmation') }"
+                x-show="show"
+                x-cloak
+                x-on:open-billing-confirm.window="show = true"
+                x-on:keydown.escape.window="show = false"
+                style="display: none;"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm transition-opacity">
                 <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-4">
                     <div>
                         <h3 class="text-lg font-bold text-gray-950 dark:text-white">
@@ -853,7 +888,7 @@
                         <x-filament::button
                             type="button"
                             color="gray"
-                            wire:click="cancelCreateConfirmation"
+                            x-on:click="show = false"
                             class="w-full sm:w-auto"
                         >
                             {{ __('Cancel') }}

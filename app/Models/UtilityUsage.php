@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ReadingType;
 use App\Models\Concerns\BelongsToLandlord;
+use App\Services\MeterReadingResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -14,6 +15,7 @@ class UtilityUsage extends Model
 
     protected $fillable = [
         'property_utility_id',
+        'meter_id',
         'unit_id',
         'rental_id',
         'landlord_id',
@@ -38,9 +40,33 @@ class UtilityUsage extends Model
         ];
     }
 
+    /**
+     * Readings are stamped with the device that produced them here rather than
+     * at each of the six screens that record readings — billing, simple mode,
+     * the invoice forms and the room page all create rows through this model.
+     * Rooms with no meter keep meter_id NULL and bill the legacy way.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (UtilityUsage $usage) {
+            if ($usage->meter_id || ! $usage->unit_id || ! $usage->property_utility_id) {
+                return;
+            }
+
+            $usage->meter_id = app(MeterReadingResolver::class)
+                ->activeMeter((int) $usage->unit_id, (int) $usage->property_utility_id)
+                ?->getKey();
+        });
+    }
+
     public function resolveLandlordId(): ?int
     {
         return Unit::withoutGlobalScopes()->whereKey($this->unit_id)->value('landlord_id');
+    }
+
+    public function meter(): BelongsTo
+    {
+        return $this->belongsTo(UtilityMeter::class, 'meter_id');
     }
 
     public function propertyUtility(): BelongsTo

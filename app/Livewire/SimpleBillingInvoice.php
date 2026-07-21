@@ -129,6 +129,21 @@ class SimpleBillingInvoice extends Component
         return __($name);
     }
 
+    /**
+     * The blade's confirmation modal always called this, but the method only
+     * existed on MonthlyBilling — opening the modal in simple mode crashed.
+     */
+    public function getExchangeRateInfo(): array
+    {
+        $setting = PropertySetting::where('property_id', $this->propertyId)->first();
+
+        return [
+            'rate' => $setting?->usd_khr_exchange_rate ?: 4000,
+            'source' => $setting?->exchange_rate_source ?: __('Manual'),
+            'date' => $setting?->exchange_rate_date ? $setting->exchange_rate_date->format('d M Y') : '—',
+        ];
+    }
+
     public function billingEnabled(): bool
     {
         return $this->isBillingEnabled($this->propertyId);
@@ -773,8 +788,13 @@ class SimpleBillingInvoice extends Component
                         }
 
                         $oldReading = $this->parseNumber($utility['old_reading']) ?? 0.0;
+                        // Same max(0, new - old) as before, except a meter also
+                        // applies its multiplier and unwraps a digit rollover.
+                        $meter = isset($utility['meter_id'])
+                            ? \App\Models\UtilityMeter::find($utility['meter_id'])
+                            : null;
                         $amountUsed = $requiresReading
-                            ? max(0, round($newReading - $oldReading, 3))
+                            ? app(\App\Services\MeterReadingResolver::class)->consumption($oldReading, (float) $newReading, $meter)
                             : 0.0;
 
                         $usages[] = UtilityUsage::updateOrCreate(
@@ -1043,11 +1063,12 @@ class SimpleBillingInvoice extends Component
 
         $readings = [];
         foreach ($utilities as $utility) {
-            $latestUsage = UtilityUsage::where('unit_id', $rental->unit_id)
-                ->where('property_utility_id', $utility->id)
-                ->orderByDesc('reading_date')
-                ->orderByDesc('id')
-                ->first();
+            // Previous index comes from the room's ACTIVE meter when it has one
+            // (its last reading, else its installed_reading); rooms with no meter
+            // fall back to the original "latest reading row" lookup.
+            $meterContext = app(\App\Services\MeterReadingResolver::class)
+                ->previous((int) $rental->unit_id, (int) $utility->id);
+            $latestUsage = $meterContext['usage'];
 
             $resolver = app(\App\Services\ChargeRuleResolver::class);
             $decision = $resolver->resolve([
@@ -1071,7 +1092,9 @@ class SimpleBillingInvoice extends Component
                 'unit_of_measure' => $utility->unit_of_measure,
                 'requires_reading' => $utility->requiresReading(),
                 'previous_usage' => (float) ($latestUsage?->amount_used ?? 0),
-                'old_reading' => (string) ($latestUsage?->new_reading ?? 0),
+                'old_reading' => (string) $meterContext['previous'],
+                'meter_id' => $meterContext['meter']?->getKey(),
+                'meter_serial' => $meterContext['meter']?->serial,
                 'new_reading' => null,
                 'override_reason' => null,
                 'state_override' => $decision['effective_state'],
@@ -1155,7 +1178,7 @@ class SimpleBillingInvoice extends Component
         return $dueDate;
     }
 
-    protected function firstBlockingRoomIndex(): ?int
+    public function firstBlockingRoomIndex(): ?int
     {
         foreach (array_keys($this->rooms) as $index) {
             if ($this->rooms[$index]['skipped'] ?? false) {

@@ -439,9 +439,15 @@
                             </p>
                         </div>
                         @if($access !== \App\Enums\SubscriptionAccess::ReadOnly)
+                            {{-- Blocking rooms keep the server path (warning notification); otherwise open instantly client-side. --}}
                             <button
                                 type="button"
-                                wire:click="openCreateConfirmation"
+                                @if($this->firstBlockingRoomIndex() !== null)
+                                    wire:click="openCreateConfirmation"
+                                @else
+                                    x-data
+                                    x-on:click="$dispatch('open-billing-confirm')"
+                                @endif
                                 class="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-primary-500 transition w-full sm:w-auto justify-center"
                             >
                                 {{ __('Create invoices') }}
@@ -591,9 +597,15 @@
                             {{ __('Review complete? Ready to batch-generate invoices.') }}
                         </p>
                         @if($access !== \App\Enums\SubscriptionAccess::ReadOnly)
+                            {{-- Blocking rooms keep the server path (warning notification); otherwise open instantly client-side. --}}
                             <button
                                 type="button"
-                                wire:click="openCreateConfirmation"
+                                @if($this->firstBlockingRoomIndex() !== null)
+                                    wire:click="openCreateConfirmation"
+                                @else
+                                    x-data
+                                    x-on:click="$dispatch('open-billing-confirm')"
+                                @endif
                                 class="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-primary-500 transition w-full sm:w-auto justify-center"
                             >
                                 {{ __('Create invoices') }}
@@ -674,9 +686,18 @@
             </div>
         @endif
 
-        {{-- Confirmation Modal --}}
-        @if($this->showCreateConfirmation)
-            <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm transition-opacity">
+        {{-- Confirmation Modal — always in the DOM so opening is instant (Alpine);
+             entangled with showCreateConfirmation so server flows (tests, blocked-room
+             warnings, post-create reset) stay authoritative. --}}
+        @if($this->rooms !== [])
+            <div
+                x-data="{ show: $wire.entangle('showCreateConfirmation') }"
+                x-show="show"
+                x-cloak
+                x-on:open-billing-confirm.window="show = true"
+                x-on:keydown.escape.window="show = false"
+                style="display: none;"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm transition-opacity">
                 <div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-4">
                     <div>
                         <h3 class="text-sm font-bold text-gray-950 dark:text-white">
@@ -717,7 +738,7 @@
                     <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <button
                             type="button"
-                            wire:click="cancelCreateConfirmation"
+                            x-on:click="show = false"
                             class="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 sm:w-auto"
                         >
                             {{ __('Cancel') }}

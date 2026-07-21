@@ -10,6 +10,7 @@ use App\Filament\Resources\UnitResource\Pages;
 use App\Models\PropertyUtility;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
+use App\Services\MeterReadingResolver;
 use App\Services\RoomAccountService;
 use App\Support\ActiveProperty;
 use App\Support\Money;
@@ -292,14 +293,8 @@ class UnitResource extends Resource implements HasShieldPermissions
                 ];
 
                 foreach ($utilities as $utility) {
-                    $prior = static::latestUsage($record->getKey(), $utility->getKey());
                     $uom = $utility->unit_of_measure;
-                    $help = $prior && $prior->new_reading !== null
-                        ? __('Previous: :value:uom', [
-                            'value' => static::trimReading($prior->new_reading),
-                            'uom' => $uom ? ' '.$uom : '',
-                        ]).($prior->reading_date ? ' · '.$prior->reading_date->format('d M Y') : '')
-                        : __('First reading — sets the starting baseline (no consumption billed).');
+                    $help = static::readingHint($record->getKey(), $utility->getKey(), $uom);
 
                     $schema[] = Forms\Components\TextInput::make("meters.{$utility->getKey()}")
                         ->label($utility->name.($uom ? " ({$uom})" : ''))
@@ -339,15 +334,13 @@ class UnitResource extends Resource implements HasShieldPermissions
 
                         // Baseline = the latest reading STRICTLY BEFORE this date, so
                         // re-recording the same day corrects (not chains off) itself.
-                        $prior = static::priorReading($record->getKey(), $utilityId, $date);
-                        if ($prior && $prior->new_reading !== null) {
-                            $old = (float) $prior->new_reading;
-                            $amount = max(0.0, $new - $old);
-                        } else {
-                            // First reading → baseline; no consumption to bill yet.
-                            $old = $new;
-                            $amount = 0.0;
-                        }
+                        // With a meter this measures from its installed_reading, so the
+                        // first reading already bills; without one it stays a zero-usage
+                        // baseline as before. See MeterReadingResolver::baselineFor().
+                        $baseline = app(MeterReadingResolver::class)
+                            ->baselineFor($record->getKey(), $utilityId, $date, $new);
+                        $old = $baseline['old'];
+                        $amount = $baseline['amount'];
 
                         // Idempotent per (room, utility, date): a second submit for the
                         // same day updates the row instead of stacking duplicates.
@@ -391,6 +384,26 @@ class UnitResource extends Resource implements HasShieldPermissions
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Helper text under a reading input: what the consumption will be measured
+     * from. Three cases — a previous reading, a meter that has just been
+     * installed (its opening index), or nothing at all (legacy baseline rule).
+     */
+    public static function readingHint(int $unitId, int $utilityId, ?string $uom = null): string
+    {
+        $context = app(MeterReadingResolver::class)->previous($unitId, $utilityId);
+        $suffix = $uom ? ' '.$uom : '';
+        $value = static::trimReading($context['previous']).$suffix;
+
+        return match ($context['source']) {
+            'meter_reading' => __('Previous: :value', ['value' => $value])
+                .($context['usage']?->reading_date ? ' · '.$context['usage']->reading_date->format('d M Y') : ''),
+            'meter_install' => __('Meter installed at :value — first reading bills from there.', ['value' => $value]),
+            'usage' => __('Previous: :value', ['value' => $value]),
+            default => __('First reading — sets the starting baseline (no consumption billed).'),
+        };
     }
 
     /** Most recent reading for a room + utility, or null if none yet. */

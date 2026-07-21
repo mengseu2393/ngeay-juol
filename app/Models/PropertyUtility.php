@@ -77,6 +77,12 @@ class PropertyUtility extends Model
         return $this->hasMany(UtilityUsage::class);
     }
 
+    /** Physical devices — present only for metered utilities. */
+    public function meters(): HasMany
+    {
+        return $this->hasMany(UtilityMeter::class);
+    }
+
     public function waivers(): HasMany
     {
         return $this->hasMany(UtilityWaiver::class);

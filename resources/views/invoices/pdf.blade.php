@@ -404,7 +404,13 @@
                     <table>
                         <tr>
                             <td style="width: 34px; vertical-align: top;">
-                                <div class="logo">{{ $initials }}</div>
+                                <div class="logo">
+                                    @if ($logoDataUri)
+                                        <img src="{{ $logoDataUri }}" alt="{{ $business }}">
+                                    @else
+                                        <span>{{ $initials }}</span>
+                                    @endif
+                                </div>
                             </td>
                             <td style="vertical-align: top; padding-left: 11px;">
                                 <div class="biz">{{ $business }}</div>

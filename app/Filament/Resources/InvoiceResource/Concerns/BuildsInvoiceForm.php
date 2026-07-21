@@ -9,6 +9,7 @@ use App\Models\Rental;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Models\UtilityWaiver;
+use App\Services\MeterReadingResolver;
 use App\Support\ActiveProperty;
 use App\Support\Money;
 use Filament\Forms;
@@ -196,10 +197,9 @@ trait BuildsInvoiceForm
             ->where('is_active', true)->get();
 
         $set('readings', $utilities->map(function (PropertyUtility $util) use ($unit) {
-            $old = UtilityUsage::where('unit_id', $unit->id)
-                ->where('property_utility_id', $util->id)
-                ->orderByDesc('reading_date')->orderByDesc('id')
-                ->value('new_reading');
+            // Active meter's index (or its installed_reading), falling back to
+            // the latest raw reading for rooms with no meter — see MeterReadingResolver.
+            $old = app(MeterReadingResolver::class)->previousReading($unit->id, $util->id);
 
             return [
                 'property_utility_id' => $util->id,
@@ -210,7 +210,7 @@ trait BuildsInvoiceForm
                 'unit_of_measure' => $util->unit_of_measure,
                 'requires_reading' => $util->requiresReading(),
                 'is_waived' => UtilityWaiver::isWaivedFor($util->id, $unit->activeRental?->id, $unit->id),
-                'old_reading' => (string) ($old ?? 0),
+                'old_reading' => (string) $old,
                 'new_reading' => null,
             ];
         })->all());

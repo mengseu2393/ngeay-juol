@@ -64,6 +64,21 @@ class SimpleInvoiceList extends Component
         $this->paySuccess = false;
     }
 
+    /**
+     * One-shot payment save for the client-side (Alpine) modal: the modal opens
+     * instantly on the phone with data already in the DOM, so the only server
+     * round-trip is this save. Validation and scoping stay identical to submitPay().
+     */
+    public function submitPayFor(int $invoiceId, string $amount, int $method, string $note = ''): void
+    {
+        $this->payingInvoiceId = $invoiceId;
+        $this->payAmount = $amount;
+        $this->payMethod = $method;
+        $this->payNote = $note;
+
+        $this->submitPay();
+    }
+
     public function submitPay(): void
     {
         $this->validate([
@@ -98,6 +113,7 @@ class SimpleInvoiceList extends Component
 
         $this->payingInvoiceId = null;
         $this->resetPage();
+        $this->dispatch('pay-saved');
     }
 
     private function loadInvoice(?int $id): ?Invoice
@@ -145,14 +161,12 @@ class SimpleInvoiceList extends Component
 
         $invoices = $query->orderByDesc('issue_date')->paginate(15);
 
-        $payingInvoice = $this->payingInvoiceId ? $this->loadInvoice($this->payingInvoiceId) : null;
         $paymentMethods = collect(PaymentMethod::cases())
             ->mapWithKeys(fn ($m) => [$m->value => $m->getLabel()])
             ->all();
 
         return view('livewire.simple-invoice-list', [
             'invoices' => $invoices,
-            'payingInvoice' => $payingInvoice,
             'paymentMethods' => $paymentMethods,
         ]);
     }

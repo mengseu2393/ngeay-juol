@@ -14,6 +14,7 @@ use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Models\UtilityWaiver;
 use App\Services\ChargeRuleResolver;
+use App\Services\MeterReadingResolver;
 use App\Support\ActiveProperty;
 use App\Support\Money;
 use Filament\Forms;
@@ -123,6 +124,7 @@ class PropertyUtilityResource extends Resource
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     static::initializeReadingsAction(),
+                    static::resetReadingsAction(),
                     static::manageApplicabilityAction(),
                     static::addWaiverAction(),
                     Tables\Actions\EditAction::make(),
@@ -544,9 +546,163 @@ class PropertyUtilityResource extends Resource
             });
     }
 
+    /**
+     * Meter replacement: the physical meter changed, so its counter restarts
+     * (usually at 0) and the old counter must never be subtracted again.
+     *
+     * Billing always reads the *latest* usage row's new_reading as the next
+     * cycle's old_reading (see MonthlyBilling::buildRoomRow), so a reset is
+     * simply a fresh baseline row — old_reading = new_reading = the new meter's
+     * starting value, amount_used = 0 — dated today. Anything still un-invoiced
+     * on the old meter is gone after this, hence the warning in the modal.
+     */
+    protected static function resetReadingsAction(): Tables\Actions\Action
+    {
+        return Tables\Actions\Action::make('resetReadings')
+            ->label(__('Reset meter (replacement)'))
+            ->icon('heroicon-o-arrow-path')
+            ->color('danger')
+            ->visible(fn ($record) => $record->billing_type === BillingType::Metered)
+            ->modalWidth('lg')
+            ->modalHeading(fn ($record) => __('Reset meter — :utility', ['utility' => $record->name]))
+            ->modalDescription(__('Use this when a meter was physically replaced. Issue the current invoice FIRST — any consumption on the old meter that has not been billed yet is lost once you reset.'))
+            ->modalSubmitActionLabel(__('Reset meters'))
+            ->form(function ($record): array {
+                $units = Unit::where('property_id', $record->property_id)
+                    ->orderBy('room_number')
+                    ->get();
+
+                $latestByUnit = static::latestUsagesByUnit($record, $units->pluck('id')->all());
+
+                if ($latestByUnit->isEmpty()) {
+                    return [
+                        Forms\Components\Placeholder::make('no_readings')
+                            ->label('')
+                            ->content(__('No readings recorded yet — use “Initialize readings” to set the opening baseline instead.')),
+                    ];
+                }
+
+                $schema = [
+                    Forms\Components\DatePicker::make('reading_date')
+                        ->label(__('Replacement date'))
+                        ->default(now())
+                        ->required()
+                        ->maxDate(now()),
+                ];
+
+                foreach ($units as $unit) {
+                    $latest = $latestByUnit->get($unit->id);
+                    if (! $latest) {
+                        continue;
+                    }
+
+                    $schema[] = Forms\Components\TextInput::make("units.{$unit->id}")
+                        ->label(__('Room :room', ['room' => $unit->room_number]))
+                        ->numeric()
+                        ->minValue(0)
+                        ->step('0.001')
+                        ->maxValue(999999999)
+                        ->suffix($record->unit_of_measure)
+                        ->placeholder('0')
+                        ->helperText(__('Last reading :value — leave blank to keep this meter unchanged.', [
+                            'value' => static::formatReading($latest->new_reading).' '.$record->unit_of_measure,
+                        ]));
+                }
+
+                return $schema;
+            })
+            ->action(function ($record, array $data): void {
+                $units = Unit::where('property_id', $record->property_id)
+                    ->with('activeRental')
+                    ->get()
+                    ->keyBy('id');
+
+                $saved = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $record, $units): int {
+                    $count = 0;
+                    $latestByUnit = static::latestUsagesByUnit($record, $units->keys()->all());
+
+                    foreach (($data['units'] ?? []) as $unitId => $value) {
+                        if ($value === null || $value === '') {
+                            continue;
+                        }
+                        $unitId = (int) $unitId;
+                        $unit = $units->get($unitId);
+                        // Only rooms that already have a meter history can be reset;
+                        // the rest belong to "Initialize readings".
+                        if (! $unit || ! $latestByUnit->has($unitId)) {
+                            continue;
+                        }
+
+                        // Rooms that have a real meter get a real replacement —
+                        // the old device is retired with its final reading and
+                        // the new one opens at $value. Rooms without one keep the
+                        // original behaviour: a fresh zero-usage baseline row.
+                        $resolver = app(MeterReadingResolver::class);
+                        if ($meter = $resolver->activeMeter($unitId, $record->getKey())) {
+                            $resolver->replace($meter, $data['reading_date'], (float) $value);
+                            $count++;
+
+                            continue;
+                        }
+
+                        UtilityUsage::create([
+                            'unit_id' => $unitId,
+                            'property_utility_id' => $record->getKey(),
+                            'rental_id' => $unit->activeRental?->getKey(),
+                            'reading_type' => ReadingType::Actual->value,
+                            'reading_date' => $data['reading_date'],
+                            'old_reading' => $value,
+                            'new_reading' => $value,
+                            'amount_used' => 0,
+                            'recorded_by_id' => auth()->id(),
+                        ]);
+                        $count++;
+                    }
+
+                    return $count;
+                });
+
+                Notification::make()
+                    ->title($saved
+                        ? __(':count meter(s) reset — next invoice starts from the new baseline', ['count' => $saved])
+                        : __('No meters reset.'))
+                    ->{$saved ? 'success' : 'warning'}()
+                    ->send();
+            });
+    }
+
+    /**
+     * Latest usage row per unit for one utility, keyed by unit_id. Mirrors the
+     * ordering billing uses to pick the previous reading (date, then id).
+     *
+     * @param  array<int, int>  $unitIds
+     * @return \Illuminate\Support\Collection<int, UtilityUsage>
+     */
+    protected static function latestUsagesByUnit(PropertyUtility $utility, array $unitIds): \Illuminate\Support\Collection
+    {
+        if ($unitIds === []) {
+            return collect();
+        }
+
+        return UtilityUsage::where('property_utility_id', $utility->getKey())
+            ->whereIn('unit_id', $unitIds)
+            ->orderBy('reading_date')
+            ->orderBy('id')
+            ->get()
+            ->keyBy('unit_id'); // keyBy keeps the last row per unit — the latest
+    }
+
+    protected static function formatReading(mixed $value): string
+    {
+        $formatted = rtrim(rtrim(number_format((float) $value, 3), '0'), '.');
+
+        return $formatted === '' ? '0' : $formatted; // a 0 reading trims down to an empty string
+    }
+
     public static function getRelations(): array
     {
         return [
+            RelationManagers\MetersRelationManager::class,
             RelationManagers\WaiversRelationManager::class,
             RelationManagers\ChargeRulesRelationManager::class,
         ];

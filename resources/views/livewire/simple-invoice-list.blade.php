@@ -1,4 +1,16 @@
-<div class="space-y-4">
+<div
+    class="space-y-4"
+    x-data="{
+        payOpen: false,
+        pay: { id: null, room: '', tenant: '', balance: '', amount: '', method: '{{ \App\Enums\PaymentMethod::Cash->value }}', note: '' },
+        openPay(invoice) {
+            this.pay = { ...invoice, method: '{{ \App\Enums\PaymentMethod::Cash->value }}', note: '' };
+            this.payOpen = true;
+        },
+    }"
+    @pay-saved.window="payOpen = false"
+>
+    <style>[x-cloak] { display: none !important; }</style>
 
     {{-- ── Filters ── --}}
     <div class="rw-sm-filter-bar flex gap-2 overflow-x-auto pb-1">
@@ -31,57 +43,70 @@
         </div>
     @endif
 
-    {{-- ── Pay modal ── --}}
-    @if($payingInvoice)
-        <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0">
-            <div class="rw-sm-modal w-full max-w-sm">
-                <h3 class="rw-sm-modal-title">{{ __('Record payment') }}</h3>
-                <p class="rw-sm-modal-sub">
-                    {{ $payingInvoice->rental?->unit?->room_number ?? '—' }}
-                    &bull;
-                    {{ $payingInvoice->rental?->occupant_name ?: ($payingInvoice->tenant?->name ?? '—') }}
-                </p>
-                <p class="rw-sm-modal-balance">
-                    {{ __('Balance') }}: <strong>{{ \App\Support\Money::formatForRecord($payingInvoice->balance, $payingInvoice) }}</strong>
-                </p>
+    {{-- ── Pay modal (opens instantly client-side; only the Save hits the server) ── --}}
+    <div
+        x-cloak
+        x-show="payOpen"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0"
+        @keydown.escape.window="payOpen = false"
+    >
+        <div class="rw-sm-modal w-full max-w-sm" @click.outside="payOpen = false">
+            <h3 class="rw-sm-modal-title">{{ __('Record payment') }}</h3>
+            <p class="rw-sm-modal-sub">
+                <span x-text="pay.room"></span>
+                &bull;
+                <span x-text="pay.tenant"></span>
+            </p>
+            <p class="rw-sm-modal-balance">
+                {{ __('Balance') }}: <strong x-text="pay.balance"></strong>
+            </p>
 
-                <div class="mt-4 space-y-3">
-                    <div>
-                        <label class="rw-sm-label" for="pay-amount">{{ __('Amount') }}</label>
-                        <input
-                            type="number"
-                            id="pay-amount"
-                            wire:model="payAmount"
-                            step="0.01"
-                            min="0.01"
-                            class="rw-sm-input"
-                            placeholder="0.00"
-                        >
-                        @error('payAmount') <p class="rw-sm-error">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div>
-                        <label class="rw-sm-label" for="pay-method">{{ __('Method') }}</label>
-                        <select id="pay-method" wire:model="payMethod" class="rw-sm-input">
-                            @foreach($paymentMethods as $val => $label)
-                                <option value="{{ $val }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="rw-sm-label" for="pay-note">{{ __('Note (optional)') }}</label>
-                        <input type="text" id="pay-note" wire:model="payNote" class="rw-sm-input" placeholder="…">
-                    </div>
+            <div class="mt-4 space-y-3">
+                <div>
+                    <label class="rw-sm-label" for="pay-amount">{{ __('Amount') }}</label>
+                    <input
+                        type="number"
+                        id="pay-amount"
+                        x-model="pay.amount"
+                        step="0.01"
+                        min="0.01"
+                        class="rw-sm-input"
+                        placeholder="0.00"
+                    >
+                    @error('payAmount') <p class="rw-sm-error">{{ $message }}</p> @enderror
                 </div>
 
-                <div class="mt-5 flex gap-3">
-                    <button wire:click="cancelPay" class="rw-sm-btn-secondary flex-1" id="pay-cancel-btn">{{ __('Cancel') }}</button>
-                    <button wire:click="submitPay" class="rw-sm-btn-primary flex-1" id="pay-submit-btn">{{ __('Save') }}</button>
+                <div>
+                    <label class="rw-sm-label" for="pay-method">{{ __('Method') }}</label>
+                    <select id="pay-method" x-model="pay.method" class="rw-sm-input">
+                        @foreach($paymentMethods as $val => $label)
+                            <option value="{{ $val }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="rw-sm-label" for="pay-note">{{ __('Note (optional)') }}</label>
+                    <input type="text" id="pay-note" x-model="pay.note" class="rw-sm-input" placeholder="…">
                 </div>
             </div>
+
+            <div class="mt-5 flex gap-3">
+                <button type="button" @click="payOpen = false" class="rw-sm-btn-secondary flex-1" id="pay-cancel-btn">{{ __('Cancel') }}</button>
+                <button
+                    type="button"
+                    @click="$wire.submitPayFor(pay.id, String(pay.amount), Number(pay.method), pay.note)"
+                    wire:loading.attr="disabled"
+                    wire:target="submitPayFor"
+                    class="rw-sm-btn-primary flex-1"
+                    id="pay-submit-btn"
+                >
+                    <span wire:loading.remove wire:target="submitPayFor">{{ __('Save') }}</span>
+                    <span wire:loading wire:target="submitPayFor">{{ __('Saving…') }}</span>
+                </button>
+            </div>
         </div>
-    @endif
+    </div>
 
     {{-- ── Invoice cards ── --}}
     @forelse($invoices as $invoice)
@@ -141,7 +166,14 @@
 
                 @if($balance > 0.009)
                     <button
-                        wire:click="startPay({{ $invoice->id }})"
+                        type="button"
+                        @click="openPay(@js([
+                            'id' => $invoice->id,
+                            'room' => $unit?->room_number ?? '—',
+                            'tenant' => $tenantName,
+                            'balance' => \App\Support\Money::formatForRecord($balance, $invoice),
+                            'amount' => number_format($balance, 2, '.', ''),
+                        ]))"
                         class="rw-sm-btn-primary flex-1"
                         id="invoice-pay-{{ $invoice->id }}"
                     >{{ __('Record payment') }}</button>

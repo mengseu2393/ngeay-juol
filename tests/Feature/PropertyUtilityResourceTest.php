@@ -216,4 +216,130 @@ class PropertyUtilityResourceTest extends TestCase
         // No new utility usage record should be created
         $this->assertEquals(1, UtilityUsage::count());
     }
+
+    public function test_reset_readings_action_creates_a_zero_baseline_after_meter_replacement(): void
+    {
+        $landlord = User::create([
+            'name' => 'Landlord User',
+            'email' => 'landlord@example.com',
+            'password' => bcrypt('password'),
+        ]);
+        $landlord->assignRole('landlord');
+
+        $property = Property::create([
+            'landlord_id' => $landlord->id,
+            'name' => 'Property Alpha',
+        ]);
+        ActiveProperty::set($property->id);
+
+        $utility = PropertyUtility::create([
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'name' => 'Electricity',
+            'billing_type' => BillingType::Metered,
+            'rate' => 0.15,
+            'unit_of_measure' => 'kWh',
+        ]);
+
+        $unit1 = Unit::create([
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'room_number' => '101',
+            'room_type' => 'Standard',
+            'rent_amount' => 500,
+        ]);
+
+        $unit2 = Unit::create([
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'room_number' => '102',
+            'room_type' => 'Standard',
+            'rent_amount' => 500,
+        ]);
+
+        foreach ([$unit1, $unit2] as $unit) {
+            UtilityUsage::create([
+                'unit_id' => $unit->id,
+                'property_utility_id' => $utility->id,
+                'reading_date' => '2026-07-01',
+                'old_reading' => 8000,
+                'new_reading' => 8432,
+                'amount_used' => 432,
+                'reading_type' => ReadingType::Actual->value,
+                'recorded_by_id' => $landlord->id,
+            ]);
+        }
+
+        $this->actingAs($landlord);
+
+        Livewire::test(ListPropertyUtilities::class)
+            ->assertTableActionExists('resetReadings')
+            ->callTableAction('resetReadings', $utility, data: [
+                'reading_date' => '2026-07-10',
+                'units' => [
+                    $unit1->id => '0',
+                    $unit2->id => '', // untouched meter
+                ],
+            ])
+            ->assertHasNoTableActionErrors();
+
+        // Room 102 keeps its single, pre-existing row.
+        $this->assertEquals(1, UtilityUsage::where('unit_id', $unit2->id)->count());
+
+        // What billing will pick up as the next cycle's old_reading.
+        $latest = UtilityUsage::where('unit_id', $unit1->id)
+            ->where('property_utility_id', $utility->id)
+            ->orderByDesc('reading_date')
+            ->orderByDesc('id')
+            ->first();
+        $this->assertSame('2026-07-10', $latest->reading_date->toDateString());
+        $this->assertEquals(0, (float) $latest->new_reading);
+        $this->assertEquals(0, (float) $latest->old_reading);
+        $this->assertEquals(0, (float) $latest->amount_used);
+        $this->assertEquals(2, UtilityUsage::where('unit_id', $unit1->id)->count());
+    }
+
+    public function test_reset_readings_action_ignores_rooms_without_a_meter_history(): void
+    {
+        $landlord = User::create([
+            'name' => 'Landlord User',
+            'email' => 'landlord@example.com',
+            'password' => bcrypt('password'),
+        ]);
+        $landlord->assignRole('landlord');
+
+        $property = Property::create([
+            'landlord_id' => $landlord->id,
+            'name' => 'Property Alpha',
+        ]);
+        ActiveProperty::set($property->id);
+
+        $utility = PropertyUtility::create([
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'name' => 'Electricity',
+            'billing_type' => BillingType::Metered,
+            'rate' => 0.15,
+            'unit_of_measure' => 'kWh',
+        ]);
+
+        $unit = Unit::create([
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'room_number' => '101',
+            'room_type' => 'Standard',
+            'rent_amount' => 500,
+        ]);
+
+        $this->actingAs($landlord);
+
+        Livewire::test(ListPropertyUtilities::class)
+            ->callTableAction('resetReadings', $utility, data: [
+                'reading_date' => '2026-07-10',
+                'units' => [$unit->id => '0'],
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertEquals(0, UtilityUsage::count());
+    }
 }

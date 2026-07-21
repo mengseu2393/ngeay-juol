@@ -979,8 +979,13 @@ class MonthlyBilling extends Page
                         }
 
                         $oldReading = $this->parseNumber($utility['old_reading']) ?? 0.0;
+                        // Same max(0, new - old) as before, except a meter also
+                        // applies its multiplier and unwraps a digit rollover.
+                        $meter = isset($utility['meter_id'])
+                            ? \App\Models\UtilityMeter::find($utility['meter_id'])
+                            : null;
                         $amountUsed = $requiresReading
-                            ? max(0, round($newReading - $oldReading, 3))
+                            ? app(\App\Services\MeterReadingResolver::class)->consumption($oldReading, (float) $newReading, $meter)
                             : 0.0;
 
                         $usages[] = UtilityUsage::updateOrCreate(
@@ -1266,11 +1271,12 @@ class MonthlyBilling extends Page
 
         $readings = [];
         foreach ($utilities as $utility) {
-            $latestUsage = UtilityUsage::where('unit_id', $rental->unit_id)
-                ->where('property_utility_id', $utility->id)
-                ->orderByDesc('reading_date')
-                ->orderByDesc('id')
-                ->first();
+            // Previous index comes from the room's ACTIVE meter when it has one
+            // (its last reading, else its installed_reading); rooms with no meter
+            // fall back to the original "latest reading row" lookup.
+            $meterContext = app(\App\Services\MeterReadingResolver::class)
+                ->previous((int) $rental->unit_id, (int) $utility->id);
+            $latestUsage = $meterContext['usage'];
 
             $resolver = app(\App\Services\ChargeRuleResolver::class);
             $decision = $resolver->resolve([
@@ -1294,7 +1300,9 @@ class MonthlyBilling extends Page
                 'unit_of_measure' => $utility->unit_of_measure,
                 'requires_reading' => $utility->requiresReading(),
                 'previous_usage' => (float) ($latestUsage?->amount_used ?? 0),
-                'old_reading' => (string) ($latestUsage?->new_reading ?? 0),
+                'old_reading' => (string) $meterContext['previous'],
+                'meter_id' => $meterContext['meter']?->getKey(),
+                'meter_serial' => $meterContext['meter']?->serial,
                 'new_reading' => null,
                 'override_reason' => $decision['reason'],
                 'state_override' => $decision['effective_state'],
@@ -1396,7 +1404,7 @@ class MonthlyBilling extends Page
         return $dueDate;
     }
 
-    protected function firstBlockingRoomIndex(): ?int
+    public function firstBlockingRoomIndex(): ?int
     {
         foreach (array_keys($this->rooms) as $index) {
             if ($this->rooms[$index]['skipped'] ?? false) {

@@ -51,14 +51,8 @@ class EditUnit extends EditRecord
                     ];
 
                     foreach ($utilities as $utility) {
-                        $prior = UnitResource::latestUsage($record->getKey(), $utility->getKey());
                         $uom = $utility->unit_of_measure;
-                        $help = $prior && $prior->new_reading !== null
-                            ? __('Previous: :value:uom', [
-                                'value' => UnitResource::trimReading($prior->new_reading),
-                                'uom' => $uom ? ' '.$uom : '',
-                            ]).($prior->reading_date ? ' · '.$prior->reading_date->format('d M Y') : '')
-                            : __('First reading — sets the starting baseline (no consumption billed).');
+                        $help = UnitResource::readingHint($record->getKey(), $utility->getKey(), $uom);
 
                         $schema[] = Forms\Components\TextInput::make("meters.{$utility->getKey()}")
                             ->label($utility->name.($uom ? " ({$uom})" : ''))
@@ -88,14 +82,10 @@ class EditUnit extends EditRecord
                             }
                             $new = (float) $value;
 
-                            $prior = UnitResource::priorReading($record->getKey(), $utilityId, $date);
-                            if ($prior && $prior->new_reading !== null) {
-                                $old = (float) $prior->new_reading;
-                                $amount = max(0.0, $new - $old);
-                            } else {
-                                $old = $new;
-                                $amount = 0.0;
-                            }
+                            $baseline = app(\App\Services\MeterReadingResolver::class)
+                                ->baselineFor($record->getKey(), $utilityId, $date, $new);
+                            $old = $baseline['old'];
+                            $amount = $baseline['amount'];
 
                             UtilityUsage::updateOrCreate(
                                 [
