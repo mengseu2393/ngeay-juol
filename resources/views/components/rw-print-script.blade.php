@@ -72,5 +72,32 @@
             window.rwPrintInvoice(el);
             return false;
         };
+
+        // 58mm thermal print handler: applies 58mm print CSS class and triggers browser print
+        window.rwPrintInvoice58mm = function (btn) {
+            const wrap = btn ? (btn.closest('.rw-invoice-wrap') || document.querySelector('.rw-invoice-wrap')) : document.querySelector('.rw-invoice-wrap');
+
+            if (! wrap) {
+                if (btn && btn.dataset && (btn.dataset.streamUrl || btn.dataset.downloadUrl)) {
+                    window.rwPrintInvoice(btn);
+                }
+                return;
+            }
+
+            document.body.classList.add('print-58mm-active');
+
+            const cleanup = () => {
+                document.body.classList.remove('print-58mm-active');
+                window.removeEventListener('afterprint', cleanup);
+            };
+
+            window.addEventListener('afterprint', cleanup);
+
+            try {
+                window.print();
+            } finally {
+                setTimeout(cleanup, 1500);
+            }
+        };
     }
 </script>

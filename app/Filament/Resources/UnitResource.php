@@ -98,6 +98,13 @@ class UnitResource extends Resource implements HasShieldPermissions
                 ]),
             Forms\Components\DatePicker::make('due_date'),
             Forms\Components\Select::make('status')->options(UnitStatus::class)->default(UnitStatus::Available)->required(),
+            Forms\Components\TextInput::make('max_occupants')
+                ->label(__('Max occupants'))
+                ->numeric()
+                ->default(1)
+                ->minValue(1)
+                ->maxValue(20)
+                ->helperText(__('Maximum number of people allowed in this room (default: 1).')),
             Forms\Components\Textarea::make('description')->columnSpanFull(),
         ])->columns(2);
     }
@@ -120,11 +127,14 @@ class UnitResource extends Resource implements HasShieldPermissions
                     // Click an occupied room's status to end its current tenancy.
                     ->action(static::endTenancyAction())
                     ->tooltip(fn (Unit $record) => $record->activeRental ? __('Click to end tenancy') : null),
-                // Who currently rents the room (the active tenancy's occupant).
+                // Who currently rents the room (the active tenancy's occupant(s)).
                 Tables\Columns\TextColumn::make('activeRental.occupant_name')->label(__('Tenant'))
-                    ->state(fn (Unit $record) => $record->activeRental?->occupant_name
+                    ->state(fn (Unit $record) => $record->activeRental?->occupant_names
+                        ?: $record->activeRental?->occupant_name
                         ?: $record->activeRental?->tenant?->name)
-                    ->description(fn (Unit $record) => $record->activeRental?->tenant?->username)
+                    ->description(fn (Unit $record) => $record->activeRental
+                        ? $record->activeRental->occupants()->count().'/'.$record->max_occupants.' '.__('occupants')
+                        : null)
                     ->placeholder('— vacant —')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('account.username')->label(__('Login'))

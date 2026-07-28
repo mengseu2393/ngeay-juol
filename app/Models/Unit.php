@@ -35,6 +35,7 @@ class Unit extends Model
         'due_date',
         'status',
         'description',
+        'max_occupants',
     ];
 
     protected function casts(): array

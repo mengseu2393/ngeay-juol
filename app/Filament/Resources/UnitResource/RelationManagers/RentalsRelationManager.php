@@ -170,6 +170,86 @@ class RentalsRelationManager extends RelationManager
                         ->placeholder(__('Private notes about this tenancy'))
                         ->columnSpanFull(),
                 ]),
+
+            Forms\Components\Section::make(__('Additional Occupants'))
+                ->description(__('Co-tenants and dependents sharing this room. The primary tenant is the person set in the Tenancy section above.'))
+                ->collapsed()
+                ->schema([
+                    Forms\Components\Placeholder::make('primary_occupant_badge')
+                        ->label('')
+                        ->content(fn (?Rental $record) => $record?->occupant_name
+                            ? new \Illuminate\Support\HtmlString(
+                                '<span style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.375rem 0.75rem;background:rgb(209 250 229);border-radius:0.375rem;font-weight:600;color:rgb(22 101 52);">★ '
+                                . e(__('Primary Tenant')) . ': ' . e($record->occupant_name) . '</span>'
+                            )
+                            : __('The primary tenant will be set from the Tenancy section above.'))
+                        ->columnSpanFull(),
+
+                    Forms\Components\Repeater::make('additional_occupants')
+                        ->label('')
+                        ->schema([
+                            Forms\Components\Hidden::make('id'),
+                            Forms\Components\Select::make('role')
+                                ->label(__('Role'))
+                                ->options([
+                                    'co_tenant' => __('Co-Tenant'),
+                                    'dependent' => __('Dependent'),
+                                ])
+                                ->default('co_tenant')
+                                ->required(),
+                            Forms\Components\TextInput::make('occupant_name')
+                                ->label(__('Full name'))
+                                ->required()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('occupant_phone')
+                                ->label(__('Phone'))
+                                ->tel(),
+                            Forms\Components\TextInput::make('occupant_id_card')
+                                ->label(__('ID card number')),
+                            Forms\Components\Select::make('occupant_gender')
+                                ->label(__('Gender'))
+                                ->options([
+                                    'male'   => __('Male'),
+                                    'female' => __('Female'),
+                                    'other'  => __('Other'),
+                                ]),
+                            Forms\Components\DatePicker::make('occupant_dob')
+                                ->label(__('Date of birth'))
+                                ->maxDate(now()),
+                            Forms\Components\TextInput::make('occupant_nationality')
+                                ->label(__('Nationality'))
+                                ->placeholder(__('e.g. Khmer, Vietnamese')),
+                            Forms\Components\TextInput::make('occupant_workplace')
+                                ->label(__('Workplace'))
+                                ->placeholder(__('e.g. company name')),
+                            Forms\Components\SpatieMediaLibraryFileUpload::make('id_cards')
+                                ->collection('id_cards')
+                                ->label(__('ID card photos'))
+                                ->image()
+                                ->multiple()
+                                ->reorderable()
+                                ->maxFiles(4)
+                                ->helperText(__('Front/back of national ID, passport, etc.'))
+                                ->columnSpanFull(),
+
+                        ])
+                        ->columns(2)
+                        ->itemLabel(fn (array $state): ?string =>
+                            (! empty($state['occupant_name']) ? $state['occupant_name'] : __('New occupant'))
+                            . ' — '
+                            . match ($state['role'] ?? 'co_tenant') {
+                                'co_tenant' => __('Co-Tenant'),
+                                'dependent' => __('Dependent'),
+                                default     => '',
+                            })
+                        ->collapsible()
+                        ->addActionLabel(__('+ Add occupant'))
+                        ->maxItems(fn () => max(1, ($this->getOwnerRecord()->max_occupants ?? 20) - 1))
+                        ->defaultItems(0)
+                        ->helperText(fn () => __('This room allows up to :max occupants (including the primary tenant).', [
+                            'max' => $this->getOwnerRecord()->max_occupants ?? __('unlimited'),
+                        ])),
+                ]),
         ]);
     }
 
@@ -207,12 +287,57 @@ class RentalsRelationManager extends RelationManager
                         $rental = $this->getRelationship()->make($this->mutateRentalData($data));
                         $this->issueTenantLogin($rental);
 
+                        // Auto-create the primary occupant record from the rental's occupant fields.
+                        if (! empty($data['occupant_name'])) {
+                            $rental->occupants()->create([
+                                'role'                           => 'primary',
+                                'user_id'                        => $rental->tenant_id,
+                                'occupant_name'                  => $data['occupant_name'],
+                                'occupant_phone'                 => $data['occupant_phone'] ?? null,
+                                'occupant_id_card'               => $data['occupant_id_card'] ?? null,
+                                'occupant_address'               => $data['occupant_address'] ?? null,
+                                'occupant_gender'                => $data['occupant_gender'] ?? null,
+                                'occupant_dob'                   => $data['occupant_dob'] ?? null,
+                                'occupant_nationality'           => $data['occupant_nationality'] ?? null,
+                                'occupant_workplace'             => $data['occupant_workplace'] ?? null,
+                                'emergency_contact_name'         => $data['emergency_contact_name'] ?? null,
+                                'emergency_contact_phone'        => $data['emergency_contact_phone'] ?? null,
+                                'emergency_contact_relationship' => $data['emergency_contact_relationship'] ?? null,
+                                'guarantor_name'                 => $data['guarantor_name'] ?? null,
+                                'guarantor_phone'                => $data['guarantor_phone'] ?? null,
+                                'guarantor_id_number'            => $data['guarantor_id_number'] ?? null,
+                                'guarantor_address'              => $data['guarantor_address'] ?? null,
+                            ]);
+                        }
+
+                        // Create additional occupants (co-tenants / dependents).
+                        foreach ($data['additional_occupants'] ?? [] as $occupant) {
+                            if (empty($occupant['occupant_name'])) {
+                                continue;
+                            }
+                            $newOccupant = $rental->occupants()->create([
+                                'role'                 => $occupant['role'] ?? 'co_tenant',
+                                'occupant_name'        => $occupant['occupant_name'],
+                                'occupant_phone'       => $occupant['occupant_phone'] ?? null,
+                                'occupant_id_card'     => $occupant['occupant_id_card'] ?? null,
+                                'occupant_gender'      => $occupant['occupant_gender'] ?? null,
+                                'occupant_dob'         => $occupant['occupant_dob'] ?? null,
+                                'occupant_nationality' => $occupant['occupant_nationality'] ?? null,
+                                'occupant_workplace'   => $occupant['occupant_workplace'] ?? null,
+                            ]);
+
+                            if (isset($occupant['id_cards'])) {
+                                $newOccupant->syncFromMediaLibraryRequest($occupant['id_cards'])->toMediaCollection('id_cards');
+                            }
+                        }
+
                         return $rental;
                     }),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\ViewAction::make()
+                        ->mutateRecordDataUsing(fn (array $data, Rental $record) => $this->loadAdditionalOccupants($data, $record)),
                     Tables\Actions\Action::make('login')
                         ->label(__('Reset login'))
                         ->icon('heroicon-o-key')
@@ -227,7 +352,12 @@ class RentalsRelationManager extends RelationManager
                         ])
                         ->action(fn (Rental $record, array $data) => $this->issueTenantLogin($record, $data['password'] ?: null)),
                     Tables\Actions\EditAction::make()
-                        ->mutateFormDataUsing(fn (array $data) => $this->mutateRentalData($data)),
+                        ->mutateRecordDataUsing(fn (array $data, Rental $record) => $this->loadAdditionalOccupants($data, $record))
+                        ->mutateFormDataUsing(fn (array $data) => $this->mutateRentalData($data))
+                        ->after(function (Rental $record, array $data) {
+                            $this->syncPrimaryOccupant($record, $data);
+                            $this->syncAdditionalOccupants($record, $data['additional_occupants'] ?? []);
+                        }),
                     Tables\Actions\DeleteAction::make(),
                 ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
             ]);
@@ -288,5 +418,112 @@ class RentalsRelationManager extends RelationManager
             ->title($result['created'] ? __('Tenant login created') : __('Tenant login reset'))
             ->body(__('Username').': **'.$result['username'].'** · '.__('Password').': **'.$result['password'].'**')
             ->success()->persistent()->send();
+    }
+
+    /** Load additional (non-primary) occupants into the form data for view/edit. */
+    protected function loadAdditionalOccupants(array $data, Rental $record): array
+    {
+        $data['additional_occupants'] = $record->occupants()
+            ->where('role', '!=', 'primary')
+            ->get()
+            ->map(fn ($o) => [
+                'id'                   => $o->id,
+                'role'                 => $o->getRawOriginal('role'),
+                'occupant_name'        => $o->occupant_name,
+                'occupant_phone'       => $o->occupant_phone,
+                'occupant_id_card'     => $o->occupant_id_card,
+                'occupant_gender'      => $o->occupant_gender,
+                'occupant_dob'         => $o->occupant_dob?->format('Y-m-d'),
+                'occupant_nationality' => $o->occupant_nationality,
+                'occupant_workplace'   => $o->occupant_workplace,
+                'id_cards'             => is_array($o->id_cards) ? $o->id_cards : [],
+            ])
+            ->values()
+            ->toArray();
+
+        return $data;
+    }
+
+    /** Sync the primary occupant record when the rental's occupant fields are updated. */
+    protected function syncPrimaryOccupant(Rental $record, array $data): void
+    {
+        if (empty($data['occupant_name'])) {
+            return;
+        }
+
+        $record->occupants()->updateOrCreate(
+            ['rental_id' => $record->id, 'role' => 'primary'],
+            [
+                'user_id'                        => $record->tenant_id,
+                'occupant_name'                  => $data['occupant_name'],
+                'occupant_phone'                 => $data['occupant_phone'] ?? null,
+                'occupant_id_card'               => $data['occupant_id_card'] ?? null,
+                'occupant_address'               => $data['occupant_address'] ?? null,
+                'occupant_gender'                => $data['occupant_gender'] ?? null,
+                'occupant_dob'                   => $data['occupant_dob'] ?? null,
+                'occupant_nationality'           => $data['occupant_nationality'] ?? null,
+                'occupant_workplace'             => $data['occupant_workplace'] ?? null,
+                'emergency_contact_name'         => $data['emergency_contact_name'] ?? null,
+                'emergency_contact_phone'        => $data['emergency_contact_phone'] ?? null,
+                'emergency_contact_relationship' => $data['emergency_contact_relationship'] ?? null,
+                'guarantor_name'                 => $data['guarantor_name'] ?? null,
+                'guarantor_phone'                => $data['guarantor_phone'] ?? null,
+                'guarantor_id_number'            => $data['guarantor_id_number'] ?? null,
+                'guarantor_address'              => $data['guarantor_address'] ?? null,
+            ]
+        );
+    }
+
+    /** Sync additional occupants: update existing, create new, delete removed. */
+    protected function syncAdditionalOccupants(Rental $record, array $occupants): void
+    {
+        $existingIds = $record->occupants()
+            ->where('role', '!=', 'primary')
+            ->pluck('id')
+            ->toArray();
+
+        $keepIds = [];
+
+        foreach ($occupants as $occupant) {
+            if (empty($occupant['occupant_name'])) {
+                continue;
+            }
+
+            $fields = [
+                'role'                 => $occupant['role'] ?? 'co_tenant',
+                'occupant_name'        => $occupant['occupant_name'],
+                'occupant_phone'       => $occupant['occupant_phone'] ?? null,
+                'occupant_id_card'     => $occupant['occupant_id_card'] ?? null,
+                'occupant_gender'      => $occupant['occupant_gender'] ?? null,
+                'occupant_dob'         => $occupant['occupant_dob'] ?? null,
+                'occupant_nationality' => $occupant['occupant_nationality'] ?? null,
+                'occupant_workplace'   => $occupant['occupant_workplace'] ?? null,
+            ];
+
+            $id = ! empty($occupant['id']) ? (int) $occupant['id'] : null;
+
+            if ($id && in_array($id, $existingIds, true)) {
+                $occupantModel = $record->occupants()->where('id', $id)->first();
+                if ($occupantModel) {
+                    $occupantModel->update($fields);
+                    if (isset($occupant['id_cards'])) {
+                        $occupantModel->syncFromMediaLibraryRequest($occupant['id_cards'])->toMediaCollection('id_cards');
+                    }
+                    $keepIds[] = $id;
+                }
+            } else {
+                $new = $record->occupants()->create($fields);
+                if (isset($occupant['id_cards'])) {
+                    $new->syncFromMediaLibraryRequest($occupant['id_cards'])->toMediaCollection('id_cards');
+                }
+                $keepIds[] = $new->id;
+            }
+        }
+
+        // Remove occupants that were deleted from the repeater.
+        $record->occupants()
+            ->where('role', '!=', 'primary')
+            ->whereNotIn('id', $keepIds)
+            ->delete();
     }
 }

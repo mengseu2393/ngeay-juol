@@ -159,6 +159,323 @@
         .rw-notes { margin-top: 1.75rem; padding: .8rem 1rem; border: 1px solid var(--rw-line-soft); border-left: 3px solid var(--rw-emerald); background: var(--rw-surface-2); border-radius: .5rem; }
         .rw-notes .rw-label { margin-bottom: .3rem; }
         .rw-notes p { margin: 0; font-size: .8rem; color: var(--rw-ink-soft); line-height: 1.5; }
+
+        @media print {
+            body.print-58mm-active {
+                background: #fff !important;
+                color: #000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.print-58mm-active * {
+                visibility: hidden !important;
+            }
+            body.print-58mm-active .rw-invoice-wrap,
+            body.print-58mm-active .rw-invoice-wrap * {
+                visibility: visible !important;
+            }
+            body.print-58mm-active .rw-invoice-wrap {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 58mm !important;
+                max-width: 58mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.print-58mm-active .rw-invoice-toolbar {
+                display: none !important;
+            }
+            @page {
+                size: 58mm auto;
+                margin: 0;
+            }
+            body.print-58mm-active .rw-invoice {
+                width: 58mm !important;
+                max-width: 58mm !important;
+                box-sizing: border-box !important;
+                padding: 3mm 3mm !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: #fff !important;
+                color: #000 !important;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 9.5pt !important;
+                line-height: 1.25 !important;
+                border-radius: 0 !important;
+            }
+            body.print-58mm-active .rw-head {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+                gap: 3px !important;
+                padding-bottom: 6px !important;
+                border-bottom: 1px dashed #000 !important;
+            }
+            body.print-58mm-active .rw-brand {
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+                gap: 2px !important;
+                width: 100% !important;
+            }
+            body.print-58mm-active .rw-logo {
+                width: 32px !important;
+                height: 32px !important;
+                margin: 0 auto !important;
+                border-color: #000 !important;
+            }
+            body.print-58mm-active .rw-biz-name {
+                font-size: 11pt !important;
+                font-weight: bold !important;
+                text-align: center !important;
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-biz-addr {
+                font-size: 7.5pt !important;
+                text-align: center !important;
+                justify-content: center !important;
+                color: #333 !important;
+                max-width: 100% !important;
+                margin-top: 1px !important;
+                line-height: 1.2 !important;
+            }
+            body.print-58mm-active .rw-biz-addr svg {
+                display: none !important;
+            }
+            body.print-58mm-active .rw-doc {
+                text-align: center !important;
+                margin-top: 2px !important;
+                width: 100% !important;
+            }
+            body.print-58mm-active .rw-doc-label {
+                font-size: 8.5pt !important;
+                font-weight: bold !important;
+                letter-spacing: 0.05em !important;
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-doc-no {
+                font-size: 10pt !important;
+                font-weight: bold !important;
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-badge {
+                display: inline-block !important;
+                border: 1px solid #000 !important;
+                background: #fff !important;
+                color: #000 !important;
+                font-size: 7.5pt !important;
+                padding: 0px 4px !important;
+                margin-top: 2px !important;
+                border-radius: 2px !important;
+            }
+            body.print-58mm-active .rw-meta {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px !important;
+                padding: 6px 0 !important;
+                border-bottom: 1px dashed #000 !important;
+            }
+            body.print-58mm-active .rw-label {
+                font-size: 7.5pt !important;
+                letter-spacing: 0.05em !important;
+                color: #000 !important;
+                margin-bottom: 1px !important;
+            }
+            body.print-58mm-active .rw-billto-name {
+                font-size: 10pt !important;
+                font-weight: bold !important;
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-room {
+                display: inline-block !important;
+                font-size: 8pt !important;
+                font-weight: bold !important;
+                border: 1px solid #000 !important;
+                background: #fff !important;
+                color: #000 !important;
+                padding: 0px 4px !important;
+                margin-top: 1px !important;
+                border-radius: 2px !important;
+            }
+            body.print-58mm-active .rw-phone {
+                font-size: 8pt !important;
+                color: #000 !important;
+                margin-top: 1px !important;
+            }
+            body.print-58mm-active .rw-phone svg {
+                display: none !important;
+            }
+            body.print-58mm-active .rw-defs {
+                display: block !important;
+                margin-top: 2px !important;
+                width: 100% !important;
+            }
+            body.print-58mm-active .rw-defs dt {
+                font-size: 7.5pt !important;
+                color: #333 !important;
+                float: left !important;
+                clear: left !important;
+                padding: 1px 0 !important;
+            }
+            body.print-58mm-active .rw-defs dd {
+                font-size: 8pt !important;
+                font-weight: bold !important;
+                color: #000 !important;
+                float: right !important;
+                clear: right !important;
+                text-align: right !important;
+                padding: 1px 0 !important;
+            }
+            body.print-58mm-active .rw-items {
+                display: block !important;
+                width: 100% !important;
+                margin-top: 6px !important;
+                border-collapse: collapse !important;
+            }
+            body.print-58mm-active .rw-items thead {
+                display: block !important;
+                border-bottom: 1px solid #000 !important;
+            }
+            body.print-58mm-active .rw-items thead tr {
+                display: flex !important;
+                justify-content: space-between !important;
+                width: 100% !important;
+            }
+            body.print-58mm-active .rw-items thead th {
+                display: block !important;
+                font-size: 7.5pt !important;
+                padding: 2px 0 !important;
+                border: none !important;
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-items thead th.num {
+                display: none !important;
+            }
+            body.print-58mm-active .rw-items tbody {
+                display: block !important;
+                width: 100% !important;
+            }
+            body.print-58mm-active .rw-items tbody tr {
+                display: block !important;
+                padding: 4px 0 !important;
+                border-bottom: 1px dotted #666 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+            body.print-58mm-active .rw-items tbody tr:last-child {
+                border-bottom: none !important;
+            }
+            body.print-58mm-active .rw-items tbody td {
+                display: block !important;
+                padding: 0 !important;
+                border: none !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                font-size: 8.5pt !important;
+            }
+            body.print-58mm-active .rw-items tbody td.num {
+                display: none !important;
+            }
+            body.print-58mm-active .rw-items .desc {
+                font-size: 9pt !important;
+                font-weight: bold !important;
+                color: #000 !important;
+                word-break: break-word !important;
+                overflow-wrap: anywhere !important;
+            }
+            body.print-58mm-active .rw-58mm-subline {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: baseline !important;
+                font-size: 8pt !important;
+                color: #000 !important;
+                margin-top: 2px !important;
+            }
+            body.print-58mm-active .rw-58mm-amount {
+                font-weight: bold !important;
+                font-size: 8.5pt !important;
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-tags {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 2px !important;
+                margin-top: 2px !important;
+            }
+            body.print-58mm-active .rw-tag,
+            body.print-58mm-active .rw-tag--waived {
+                font-size: 7pt !important;
+                border: 1px solid #666 !important;
+                background: #fff !important;
+                color: #000 !important;
+                padding: 0 2px !important;
+                border-radius: 2px !important;
+            }
+            body.print-58mm-active .rw-usage {
+                font-size: 7.5pt !important;
+                padding: 2px 0 !important;
+                margin-top: 2px !important;
+                background: transparent !important;
+                border: none !important;
+                color: #000 !important;
+                line-height: 1.2 !important;
+            }
+            body.print-58mm-active .rw-totals {
+                width: 100% !important;
+                margin-top: 6px !important;
+                border-top: 1px dashed #000 !important;
+                padding-top: 4px !important;
+            }
+            body.print-58mm-active .rw-total-row {
+                display: flex !important;
+                justify-content: space-between !important;
+                font-size: 8.5pt !important;
+                padding: 1px 0 !important;
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-total-row .k,
+            body.print-58mm-active .rw-total-row .v {
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-total-row.grand {
+                border-top: 1px solid #000 !important;
+                margin-top: 3px !important;
+                padding-top: 3px !important;
+            }
+            body.print-58mm-active .rw-total-row.grand .k,
+            body.print-58mm-active .rw-total-row.grand .v {
+                font-size: 10pt !important;
+                font-weight: bold !important;
+                color: #000 !important;
+            }
+            body.print-58mm-active .rw-balance {
+                display: flex !important;
+                justify-content: space-between !important;
+                border: 1px solid #000 !important;
+                background: #fff !important;
+                padding: 3px 4px !important;
+                border-radius: 0 !important;
+                margin-top: 4px !important;
+            }
+            body.print-58mm-active .rw-balance .k,
+            body.print-58mm-active .rw-balance .v {
+                color: #000 !important;
+                font-size: 9.5pt !important;
+                font-weight: bold !important;
+            }
+            body.print-58mm-active .rw-notes {
+                margin-top: 6px !important;
+                padding: 4px !important;
+                border: 1px dotted #000 !important;
+                background: #fff !important;
+                font-size: 8pt !important;
+                border-left: 1px dotted #000 !important;
+                color: #000 !important;
+            }
+        }
     </style>
 
     {{-- Toolbar (screen only — printing/PDF is server-rendered, so no browser headers).
@@ -180,6 +497,17 @@
                 <path fill-rule="evenodd" d="M5 2.75C5 1.784 5.784 1 6.75 1h6.5c.966 0 1.75.784 1.75 1.75v1.5A1.75 1.75 0 0 1 16.75 6H18a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-.25v1.25a1.75 1.75 0 0 1-1.75 1.75h-8.5A1.75 1.75 0 0 1 4 17.25V16H3.75A2 2 0 0 1 1.75 14V8a2 2 0 0 1 2-2h1.25A1.75 1.75 0 0 1 6.75 4.25v-1.5ZM6.5 4.25c0-.138.112-.25.25-.25h6.5c.138 0 .25.112.25.25v1.5c0 .138-.112.25-.25.25h-6.5a.25.25 0 0 1-.25-.25v-1.5ZM5.5 17.25c0-.138.112-.25.25-.25h8.5c.138 0 .25.112.25.25v-3.5c0-.138-.112-.25-.25-.25h-8.5c-.138 0-.25.112-.25.25v3.5Z" clip-rule="evenodd" />
             </svg>
             <span data-label>{{ __('Print') }}</span>
+        </button>
+        <button type="button" class="rw-btn rw-btn--ghost"
+                id="btn-print-58mm"
+                data-stream-url="{{ route('invoices.pdf', ['invoice' => $invoice, 'size' => '58mm', 'mode' => 'stream']) }}"
+                data-download-url="{{ route('invoices.pdf', ['invoice' => $invoice, 'size' => '58mm']) }}"
+                data-filename="{{ \App\Services\InvoicePdfService::filename($invoice, 'pdf') }}"
+                onclick="rwPrintInvoice58mm(this)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon">
+                <path fill-rule="evenodd" d="M5 2.75C5 1.784 5.784 1 6.75 1h6.5c.966 0 1.75.784 1.75 1.75v1.5A1.75 1.75 0 0 1 16.75 6H18a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-.25v1.25a1.75 1.75 0 0 1-1.75 1.75h-8.5A1.75 1.75 0 0 1 4 17.25V16H3.75A2 2 0 0 1 1.75 14V8a2 2 0 0 1 2-2h1.25A1.75 1.75 0 0 1 6.75 4.25v-1.5ZM6.5 4.25c0-.138.112-.25.25-.25h6.5c.138 0 .25.112.25.25v1.5c0 .138-.112.25-.25.25h-6.5a.25.25 0 0 1-.25-.25v-1.5ZM5.5 17.25c0-.138.112-.25.25-.25h8.5c.138 0 .25.112.25.25v-3.5c0-.138-.112-.25-.25-.25h-8.5c-.138 0-.25.112-.25.25v3.5Z" clip-rule="evenodd" />
+            </svg>
+            <span data-label>{{ __('Print 58mm') }}</span>
         </button>
         {{-- window.rwPrintInvoice is loaded globally (components.rw-print-script):
              scripts inside this component would not execute when Livewire injects
@@ -272,6 +600,18 @@
                     <tr class="{{ $line->resolvedChargeState() === 'waived' ? 'waived' : '' }}">
                         <td>
                             <div class="desc">{{ $line->getTranslatedDescription() }}</div>
+                            <div class="rw-58mm-subline" style="display: none;">
+                                <span>{{ $qty($line->quantity) }} × {{ Money::format($line->unit_price, $line->currency) }}</span>
+                                <span class="rw-58mm-amount">
+                                    @if ($line->resolvedChargeState() === 'free')
+                                        {{ __('Free') }}
+                                    @elseif ($line->resolvedChargeState() === 'waived')
+                                        {{ __('Waived') }}
+                                    @else
+                                        {{ Money::format($line->amount, $line->currency) }}
+                                    @endif
+                                </span>
+                            </div>
                             @if ($line->line_type || $line->resolvedChargeState() !== 'normal')
                                 <div class="rw-tags">
                                     @if ($line->line_type)

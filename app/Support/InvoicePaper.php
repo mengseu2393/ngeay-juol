@@ -18,7 +18,7 @@ class InvoicePaper
     private const PT_PER_MM = 2.83465;
 
     /** Every size we can render, in menu order. */
-    public const SIZES = ['a4', 'a5', '80mm', '65mm'];
+    public const SIZES = ['a4', 'a5', '80mm', '65mm', '58mm'];
 
     /** Page width in millimetres, keyed by size. */
     private const WIDTH_MM = [
@@ -26,12 +26,13 @@ class InvoicePaper
         'a5' => 148.0,
         '80mm' => 80.0,
         '65mm' => 65.0,
+        '58mm' => 58.0,
     ];
 
     /** Is this one of the narrow thermal receipt widths? */
     public static function isThermal(string $size): bool
     {
-        return $size === '80mm' || $size === '65mm';
+        return $size === '80mm' || $size === '65mm' || $size === '58mm';
     }
 
     /** Page width in millimetres for the given size (0 for unknown sizes). */
@@ -48,6 +49,7 @@ class InvoicePaper
             'a5' => __('A5'),
             '80mm' => __('80 mm (receipt)'),
             '65mm' => __('65 mm (receipt)'),
+            '58mm' => __('58 mm (receipt)'),
             default => $size,
         };
     }

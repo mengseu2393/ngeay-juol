@@ -115,6 +115,9 @@ class InvoicePdfService
             $browsershot->format('A4');
         } elseif ($size === 'a5') {
             $browsershot->format('A5');
+        } elseif ($size === '58mm') {
+            $browsershot->paperWidth(58, 'mm')
+                ->paperHeight(220, 'mm');
         } else {
             // Thermal receipt: pass exact mm dimensions to Puppeteer
             $browsershot->paperWidth(80, 'mm')

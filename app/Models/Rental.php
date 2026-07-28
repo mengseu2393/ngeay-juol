@@ -292,4 +292,30 @@ class Rental extends Model implements HasMedia
     {
         return $this->hasMany(RentalMoveInRequirement::class);
     }
+
+    // ---------------------------------------------------------------------
+    // Occupants (multi-tenant per room)
+    // ---------------------------------------------------------------------
+
+    /** All occupants living in this rental (primary + co-tenants + dependents). */
+    public function occupants(): HasMany
+    {
+        return $this->hasMany(RentalOccupant::class);
+    }
+
+    /** The primary (responsible) occupant for this rental. */
+    public function primaryOccupant(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(RentalOccupant::class)->where('role', 'primary');
+    }
+
+    /** All occupant names, comma-separated (for display on invoices etc.). */
+    public function getOccupantNamesAttribute(): string
+    {
+        $occupants = $this->occupants()->pluck('occupant_name')->filter();
+
+        return $occupants->isNotEmpty()
+            ? $occupants->implode(', ')
+            : ($this->occupant_name ?? '');
+    }
 }

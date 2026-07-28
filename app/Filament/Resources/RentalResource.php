@@ -130,7 +130,7 @@ class RentalResource extends Resource
                 ])->columns(2),
 
             Forms\Components\Section::make(__('Tenant / Occupant'))
-                ->description(__('The actual person renting this period (e.g. C1, then C2 next year). Kept per tenancy so history is preserved. Their login is created automatically.'))
+                ->description(__('Primary occupant details. Additional co-tenants or dependents can be managed from the "Occupants" tab after saving.'))
                 ->schema([
                     Forms\Components\TextInput::make('occupant_name')->label(__('Full name'))->required(),
                     Forms\Components\TextInput::make('occupant_phone')->label(__('Phone'))->tel(),
@@ -200,6 +200,12 @@ class RentalResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('unit.room_number')->label(__('Unit'))->sortable(),
                 Tables\Columns\TextColumn::make('occupant_name')->label(__('Occupant'))->placeholder('—')->searchable(),
+                Tables\Columns\TextColumn::make('occupants_count')
+                    ->label(__('Occupants'))
+                    ->counts('occupants')
+                    ->badge()
+                    ->color(fn ($state) => $state > 1 ? 'info' : 'gray')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('occupant_id_card')->label(__('ID card'))->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('tenant.username')->label(__('Login'))->placeholder('—')->toggleable(),
                 Tables\Columns\TextColumn::make('monthly_rent')
@@ -229,6 +235,7 @@ class RentalResource extends Resource
     public static function getRelations(): array
     {
         return [
+            \App\Filament\Resources\RentalResource\RelationManagers\OccupantsRelationManager::class,
             \App\Filament\Resources\UnitResource\RelationManagers\UtilityUsageRelationManager::class,
             \App\Filament\Resources\PropertyUtilityResource\RelationManagers\ChargeRulesRelationManager::class,
         ];

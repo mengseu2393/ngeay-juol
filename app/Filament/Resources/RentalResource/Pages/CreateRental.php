@@ -25,6 +25,29 @@ class CreateRental extends CreateRecord
 
         $rental = Rental::create($data);
 
+        // Auto-create the primary occupant record from the rental's occupant fields.
+        if (! empty($data['occupant_name'])) {
+            $rental->occupants()->create([
+                'role'                           => 'primary',
+                'user_id'                        => $rental->tenant_id,
+                'occupant_name'                  => $data['occupant_name'],
+                'occupant_phone'                 => $data['occupant_phone'] ?? null,
+                'occupant_id_card'               => $data['occupant_id_card'] ?? null,
+                'occupant_address'               => $data['occupant_address'] ?? null,
+                'occupant_gender'                => $data['occupant_gender'] ?? null,
+                'occupant_dob'                   => $data['occupant_dob'] ?? null,
+                'occupant_nationality'           => $data['occupant_nationality'] ?? null,
+                'occupant_workplace'             => $data['occupant_workplace'] ?? null,
+                'emergency_contact_name'         => $data['emergency_contact_name'] ?? null,
+                'emergency_contact_phone'        => $data['emergency_contact_phone'] ?? null,
+                'emergency_contact_relationship' => $data['emergency_contact_relationship'] ?? null,
+                'guarantor_name'                 => $data['guarantor_name'] ?? null,
+                'guarantor_phone'                => $data['guarantor_phone'] ?? null,
+                'guarantor_id_number'            => $data['guarantor_id_number'] ?? null,
+                'guarantor_address'              => $data['guarantor_address'] ?? null,
+            ]);
+        }
+
         Notification::make()
             ->title(__('Tenant created'))
             ->body(__('Occupant').': **'.$rental->occupant_name.'**')
