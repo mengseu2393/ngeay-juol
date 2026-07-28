@@ -11,7 +11,7 @@ Add a new button for printing invoices specifically formatted for 58mm thermal p
 
 2.  **Print Formatting (Crucial for 58mm)**:
     *   **Paper Width**: The print layout must be strictly constrained to fit within a 58mm width (typically around `48mm` printable area or ~`204px` to `220px` width depending on density).
-    *   **Font Size & Readability**: Ensure fonts are legible and clear. They must not be too small, but also not so large that they cause unwanted text wrapping or horizontal scrolling. 
+    *   **Font Size, Readability & Boldness**: Ensure fonts are legible and clear. They must not be too small, but also not so large that they cause unwanted text wrapping or horizontal scrolling. Crucially, **make all fonts 50% more bold** (e.g., using `font-weight: 600` or higher compared to normal text) to ensure the thermal print is dark and easy to read.
     *   **Margins/Padding**: Remove excessive margins and padding in the print stylesheet (`@media print`) to maximize the usable width.
     *   **Content Layout**: Reformat the invoice content to be completely vertical. Avoid horizontal multi-column layouts (like tables with many columns) that won't fit a narrow receipt. Use a simple, linear layout for items, quantities, and prices.
     *   **Text Wrapping**: Ensure long item names or text wrap correctly without bleeding off the edge of the paper.

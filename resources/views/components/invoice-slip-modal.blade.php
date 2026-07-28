@@ -201,9 +201,11 @@
                 background: #fff !important;
                 color: #000 !important;
                 font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                font-size: 9.5pt !important;
+                font-size: 10pt !important;
+                font-weight: 800 !important;
                 line-height: 1.25 !important;
                 border-radius: 0 !important;
+                -webkit-text-stroke: 0.2px #000 !important;
             }
             body.print-58mm-active .rw-head {
                 display: flex !important;
@@ -212,7 +214,7 @@
                 text-align: center !important;
                 gap: 3px !important;
                 padding-bottom: 6px !important;
-                border-bottom: 1px dashed #000 !important;
+                border-bottom: 1.5px dashed #000 !important;
             }
             body.print-58mm-active .rw-brand {
                 flex-direction: column !important;
@@ -228,19 +230,22 @@
                 border-color: #000 !important;
             }
             body.print-58mm-active .rw-biz-name {
-                font-size: 11pt !important;
-                font-weight: bold !important;
+                font-size: 12pt !important;
+                font-weight: 900 !important;
                 text-align: center !important;
                 color: #000 !important;
+                -webkit-text-stroke: 0.4px #000 !important;
             }
             body.print-58mm-active .rw-biz-addr {
-                font-size: 7.5pt !important;
+                font-size: 8pt !important;
+                font-weight: 700 !important;
                 text-align: center !important;
                 justify-content: center !important;
-                color: #333 !important;
+                color: #000 !important;
                 max-width: 100% !important;
                 margin-top: 1px !important;
                 line-height: 1.2 !important;
+                -webkit-text-stroke: 0.15px #000 !important;
             }
             body.print-58mm-active .rw-biz-addr svg {
                 display: none !important;
@@ -251,57 +256,66 @@
                 width: 100% !important;
             }
             body.print-58mm-active .rw-doc-label {
-                font-size: 8.5pt !important;
-                font-weight: bold !important;
+                font-size: 9pt !important;
+                font-weight: 900 !important;
                 letter-spacing: 0.05em !important;
                 color: #000 !important;
+                -webkit-text-stroke: 0.3px #000 !important;
             }
             body.print-58mm-active .rw-doc-no {
-                font-size: 10pt !important;
-                font-weight: bold !important;
+                font-size: 10.5pt !important;
+                font-weight: 900 !important;
                 color: #000 !important;
+                -webkit-text-stroke: 0.35px #000 !important;
             }
             body.print-58mm-active .rw-badge {
                 display: inline-block !important;
-                border: 1px solid #000 !important;
+                border: 1.5px solid #000 !important;
                 background: #fff !important;
                 color: #000 !important;
-                font-size: 7.5pt !important;
+                font-size: 8pt !important;
+                font-weight: 900 !important;
                 padding: 0px 4px !important;
                 margin-top: 2px !important;
                 border-radius: 2px !important;
+                -webkit-text-stroke: 0.25px #000 !important;
             }
             body.print-58mm-active .rw-meta {
                 display: flex !important;
                 flex-direction: column !important;
                 gap: 4px !important;
                 padding: 6px 0 !important;
-                border-bottom: 1px dashed #000 !important;
+                border-bottom: 1.5px dashed #000 !important;
             }
             body.print-58mm-active .rw-label {
-                font-size: 7.5pt !important;
+                font-size: 8pt !important;
+                font-weight: 900 !important;
                 letter-spacing: 0.05em !important;
                 color: #000 !important;
                 margin-bottom: 1px !important;
+                -webkit-text-stroke: 0.25px #000 !important;
             }
             body.print-58mm-active .rw-billto-name {
-                font-size: 10pt !important;
-                font-weight: bold !important;
+                font-size: 10.5pt !important;
+                font-weight: 900 !important;
                 color: #000 !important;
+                -webkit-text-stroke: 0.35px #000 !important;
             }
             body.print-58mm-active .rw-room {
                 display: inline-block !important;
-                font-size: 8pt !important;
-                font-weight: bold !important;
-                border: 1px solid #000 !important;
+                font-size: 8.5pt !important;
+                font-weight: 900 !important;
+                border: 1.5px solid #000 !important;
                 background: #fff !important;
                 color: #000 !important;
                 padding: 0px 4px !important;
                 margin-top: 1px !important;
                 border-radius: 2px !important;
+                -webkit-text-stroke: 0.25px #000 !important;
             }
             body.print-58mm-active .rw-phone {
-                font-size: 8pt !important;
+                font-size: 8.5pt !important;
+                font-weight: 800 !important;
                 color: #000 !important;
                 margin-top: 1px !important;
             }
@@ -314,20 +328,22 @@
                 width: 100% !important;
             }
             body.print-58mm-active .rw-defs dt {
-                font-size: 7.5pt !important;
-                color: #333 !important;
+                font-size: 8pt !important;
+                font-weight: 800 !important;
+                color: #000 !important;
                 float: left !important;
                 clear: left !important;
                 padding: 1px 0 !important;
             }
             body.print-58mm-active .rw-defs dd {
-                font-size: 8pt !important;
-                font-weight: bold !important;
+                font-size: 8.5pt !important;
+                font-weight: 900 !important;
                 color: #000 !important;
                 float: right !important;
                 clear: right !important;
                 text-align: right !important;
                 padding: 1px 0 !important;
+                -webkit-text-stroke: 0.25px #000 !important;
             }
             body.print-58mm-active .rw-items {
                 display: block !important;
@@ -337,7 +353,7 @@
             }
             body.print-58mm-active .rw-items thead {
                 display: block !important;
-                border-bottom: 1px solid #000 !important;
+                border-bottom: 1.5px solid #000 !important;
             }
             body.print-58mm-active .rw-items thead tr {
                 display: flex !important;
@@ -346,10 +362,12 @@
             }
             body.print-58mm-active .rw-items thead th {
                 display: block !important;
-                font-size: 7.5pt !important;
+                font-size: 8pt !important;
+                font-weight: 900 !important;
                 padding: 2px 0 !important;
                 border: none !important;
                 color: #000 !important;
+                -webkit-text-stroke: 0.25px #000 !important;
             }
             body.print-58mm-active .rw-items thead th.num {
                 display: none !important;
@@ -361,7 +379,7 @@
             body.print-58mm-active .rw-items tbody tr {
                 display: block !important;
                 padding: 4px 0 !important;
-                border-bottom: 1px dotted #666 !important;
+                border-bottom: 1px dashed #000 !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
             }
@@ -374,30 +392,35 @@
                 border: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
-                font-size: 8.5pt !important;
+                font-size: 9pt !important;
+                font-weight: 800 !important;
             }
             body.print-58mm-active .rw-items tbody td.num {
                 display: none !important;
             }
             body.print-58mm-active .rw-items .desc {
-                font-size: 9pt !important;
-                font-weight: bold !important;
+                font-size: 9.5pt !important;
+                font-weight: 900 !important;
                 color: #000 !important;
                 word-break: break-word !important;
                 overflow-wrap: anywhere !important;
+                -webkit-text-stroke: 0.35px #000 !important;
             }
             body.print-58mm-active .rw-58mm-subline {
                 display: flex !important;
                 justify-content: space-between !important;
                 align-items: baseline !important;
-                font-size: 8pt !important;
+                font-size: 8.5pt !important;
+                font-weight: 800 !important;
                 color: #000 !important;
                 margin-top: 2px !important;
+                -webkit-text-stroke: 0.2px #000 !important;
             }
             body.print-58mm-active .rw-58mm-amount {
-                font-weight: bold !important;
-                font-size: 8.5pt !important;
+                font-weight: 900 !important;
+                font-size: 9pt !important;
                 color: #000 !important;
+                -webkit-text-stroke: 0.3px #000 !important;
             }
             body.print-58mm-active .rw-tags {
                 display: flex !important;
@@ -407,15 +430,17 @@
             }
             body.print-58mm-active .rw-tag,
             body.print-58mm-active .rw-tag--waived {
-                font-size: 7pt !important;
-                border: 1px solid #666 !important;
+                font-size: 7.5pt !important;
+                font-weight: 800 !important;
+                border: 1px solid #000 !important;
                 background: #fff !important;
                 color: #000 !important;
                 padding: 0 2px !important;
                 border-radius: 2px !important;
             }
             body.print-58mm-active .rw-usage {
-                font-size: 7.5pt !important;
+                font-size: 8pt !important;
+                font-weight: 800 !important;
                 padding: 2px 0 !important;
                 margin-top: 2px !important;
                 background: transparent !important;
@@ -426,35 +451,38 @@
             body.print-58mm-active .rw-totals {
                 width: 100% !important;
                 margin-top: 6px !important;
-                border-top: 1px dashed #000 !important;
+                border-top: 1.5px dashed #000 !important;
                 padding-top: 4px !important;
             }
             body.print-58mm-active .rw-total-row {
                 display: flex !important;
                 justify-content: space-between !important;
-                font-size: 8.5pt !important;
+                font-size: 9pt !important;
+                font-weight: 800 !important;
                 padding: 1px 0 !important;
                 color: #000 !important;
             }
             body.print-58mm-active .rw-total-row .k,
             body.print-58mm-active .rw-total-row .v {
                 color: #000 !important;
+                font-weight: 800 !important;
             }
             body.print-58mm-active .rw-total-row.grand {
-                border-top: 1px solid #000 !important;
+                border-top: 1.5px solid #000 !important;
                 margin-top: 3px !important;
                 padding-top: 3px !important;
             }
             body.print-58mm-active .rw-total-row.grand .k,
             body.print-58mm-active .rw-total-row.grand .v {
-                font-size: 10pt !important;
-                font-weight: bold !important;
+                font-size: 10.5pt !important;
+                font-weight: 900 !important;
                 color: #000 !important;
+                -webkit-text-stroke: 0.35px #000 !important;
             }
             body.print-58mm-active .rw-balance {
                 display: flex !important;
                 justify-content: space-between !important;
-                border: 1px solid #000 !important;
+                border: 1.5px solid #000 !important;
                 background: #fff !important;
                 padding: 3px 4px !important;
                 border-radius: 0 !important;
@@ -463,16 +491,18 @@
             body.print-58mm-active .rw-balance .k,
             body.print-58mm-active .rw-balance .v {
                 color: #000 !important;
-                font-size: 9.5pt !important;
-                font-weight: bold !important;
+                font-size: 10pt !important;
+                font-weight: 900 !important;
+                -webkit-text-stroke: 0.35px #000 !important;
             }
             body.print-58mm-active .rw-notes {
                 margin-top: 6px !important;
                 padding: 4px !important;
-                border: 1px dotted #000 !important;
+                border: 1px dashed #000 !important;
                 background: #fff !important;
-                font-size: 8pt !important;
-                border-left: 1px dotted #000 !important;
+                font-size: 8.5pt !important;
+                font-weight: 800 !important;
+                border-left: 1px dashed #000 !important;
                 color: #000 !important;
             }
         }
