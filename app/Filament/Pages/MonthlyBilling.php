@@ -48,8 +48,6 @@ class MonthlyBilling extends Page
 
     public string $step = 'blocked';
 
-    public bool $manualMode = false;
-
     public array $selectedRentalIds = [];
 
     public ?int $propertyId = null;
@@ -59,6 +57,12 @@ class MonthlyBilling extends Page
     public int $currentRoomIndex = 0;
 
     public array $rooms = [];
+
+    public array $selectedRoomIndexes = [];
+
+    public ?int $bulkUtilityId = null;
+
+    public string $bulkUtilityState = 'normal';
 
     public ?int $reviewFocusIndex = null;
 
@@ -267,60 +271,36 @@ class MonthlyBilling extends Page
             ->get();
     }
 
-    public function startBilling(): void
+    /**
+     * Reload the room list whenever the billing date changes, resetting the
+     * room selection back to whatever is due on the new date.
+     */
+    public function updatedIssueDate(): void
     {
         if (! $this->propertyId) {
-            Notification::make()
-                ->warning()
-                ->title(__('Select a property from the sidebar to start billing.'))
-                ->send();
-
             return;
         }
 
-        if (! $this->billingEnabled()) {
-            Notification::make()
-                ->warning()
-                ->title(__('Monthly billing is disabled for this property.'))
-                ->send();
-
-            return;
-        }
-
-        if ($this->manualMode) {
-            if (count($this->selectedRentalIds) === 0) {
-                Notification::make()
-                    ->warning()
-                    ->title(__('Please select at least one room for manual billing.'))
-                    ->send();
-
-                return;
-            }
-        } else {
-            if ($this->dueRoomCount() === 0) {
-                Notification::make()
-                    ->warning()
-                    ->title(__('No rooms are due for billing on this date.'))
-                    ->send();
-
-                return;
-            }
-        }
-
+        $issueDate = Carbon::parse($this->issueDate ?: now()->toDateString());
+        $this->selectedRentalIds = $this->dueRentalIds($this->propertyId, $issueDate);
+        $this->currentRoomIndex = 0;
+        $this->reviewFocusIndex = null;
         $this->loadRooms();
+    }
 
-        if ($this->rooms === []) {
-            Notification::make()
-                ->warning()
-                ->title($this->manualMode ? __('None of the selected rooms have active rentals.') : __('No rooms are due for billing on this date.'))
-                ->send();
-
+    /**
+     * Reload the room list whenever the user checks/unchecks a room in the
+     * "add or remove rooms" checklist, so totals recalculate live.
+     */
+    public function updatedSelectedRentalIds(): void
+    {
+        if (! $this->propertyId) {
             return;
         }
 
         $this->currentRoomIndex = 0;
         $this->reviewFocusIndex = null;
-        $this->step = 'reading';
+        $this->loadRooms();
     }
 
     public function chooseProperty(int $propertyId): void
@@ -357,7 +337,7 @@ class MonthlyBilling extends Page
 
     public function updateIssueDate(): void
     {
-        if ($this->step === 'reading' || $this->step === 'review') {
+        if ($this->step === 'billing') {
             return;
         }
     }
@@ -792,7 +772,7 @@ class MonthlyBilling extends Page
         }
 
         if ($this->currentRoomIndex <= 0) {
-            $this->step = 'start';
+            $this->step = 'billing';
 
             return;
         }
@@ -823,6 +803,52 @@ class MonthlyBilling extends Page
         }
     }
 
+    public function moveRoomUp(int $index): void
+    {
+        $this->swapRooms($index, $index - 1);
+    }
+
+    public function moveRoomDown(int $index): void
+    {
+        $this->swapRooms($index, $index + 1);
+    }
+
+    protected function swapRooms(int $index, int $targetIndex): void
+    {
+        if (! isset($this->rooms[$index]) || ! isset($this->rooms[$targetIndex])) {
+            return;
+        }
+
+        $wasCurrent = $this->currentRoomIndex === $index;
+        $wasTarget = $this->currentRoomIndex === $targetIndex;
+
+        [$this->rooms[$index], $this->rooms[$targetIndex]] = [$this->rooms[$targetIndex], $this->rooms[$index]];
+
+        if ($wasCurrent) {
+            $this->currentRoomIndex = $targetIndex;
+        } elseif ($wasTarget) {
+            $this->currentRoomIndex = $index;
+        }
+
+        $this->recomputeRoomGrouping();
+    }
+
+    protected function recomputeRoomGrouping(): void
+    {
+        $previousTenantId = null;
+        $previousTenantName = null;
+
+        foreach ($this->rooms as $index => $room) {
+            $tenantKey = $room['tenant_id'] ?? $room['occupant_name'] ?? null;
+            $isSameTenant = $index > 0 && $tenantKey !== null && $tenantKey === $previousTenantId
+                && $room['occupant_name'] === $previousTenantName;
+
+            $this->rooms[$index]['is_grouped_with_previous'] = $isSameTenant;
+            $previousTenantId = $tenantKey;
+            $previousTenantName = $room['occupant_name'];
+        }
+    }
+
     public function editRoom(int $index): void
     {
         if (! isset($this->rooms[$index])) {
@@ -831,12 +857,12 @@ class MonthlyBilling extends Page
 
         $this->currentRoomIndex = $index;
         $this->reviewFocusIndex = $index;
-        $this->step = 'reading';
+        $this->step = 'billing';
     }
 
     public function returnToReview(): void
     {
-        $this->step = 'review';
+        $this->step = 'billing';
     }
 
     public function goToReview(): void
@@ -848,7 +874,7 @@ class MonthlyBilling extends Page
         $blockingIndex = $this->firstBlockingRoomIndex();
         if ($blockingIndex !== null) {
             $this->currentRoomIndex = $blockingIndex;
-            $this->step = 'reading';
+            $this->step = 'billing';
             $this->reviewFocusIndex = $blockingIndex;
 
             Notification::make()
@@ -859,7 +885,7 @@ class MonthlyBilling extends Page
             return;
         }
 
-        $this->step = 'review';
+        $this->step = 'billing';
     }
 
     public function openCreateConfirmation(): void
@@ -911,7 +937,7 @@ class MonthlyBilling extends Page
 
         if (($blockingIndex = $this->firstBlockingRoomIndex()) !== null) {
             $this->currentRoomIndex = $blockingIndex;
-            $this->step = 'reading';
+            $this->step = 'billing';
             $this->showCreateConfirmation = false;
 
             Notification::make()
@@ -1025,7 +1051,7 @@ class MonthlyBilling extends Page
                     $invoice = $builder->create($params);
 
                     $shouldAdvanceSchedule = true;
-                    if ($this->manualMode) {
+                    {
                         $currentNextInvoiceDate = $rental->next_invoice_date;
                         if ($currentNextInvoiceDate !== null) {
                             $expectedStart = Carbon::parse($currentNextInvoiceDate);
@@ -1125,8 +1151,9 @@ class MonthlyBilling extends Page
     {
         $this->propertyId = $propertyId;
         $this->issueDate = $this->suggestIssueDate($propertyId);
-        $this->step = 'start';
+        $this->step = 'billing';
         $this->rooms = [];
+        $this->selectedRoomIndexes = [];
         $this->currentRoomIndex = 0;
         $this->reviewFocusIndex = null;
         $this->showCreateConfirmation = false;
@@ -1137,6 +1164,9 @@ class MonthlyBilling extends Page
             'invoice_ids' => [],
             'failures' => [],
         ];
+
+        $this->selectedRentalIds = $this->dueRentalIds($propertyId, Carbon::parse($this->issueDate));
+        $this->loadRooms();
     }
 
     protected function resetWizard(): void
@@ -1144,6 +1174,8 @@ class MonthlyBilling extends Page
         $this->propertyId = null;
         $this->issueDate = now()->toDateString();
         $this->rooms = [];
+        $this->selectedRentalIds = [];
+        $this->selectedRoomIndexes = [];
         $this->currentRoomIndex = 0;
         $this->reviewFocusIndex = null;
         $this->showCreateConfirmation = false;
@@ -1184,7 +1216,7 @@ class MonthlyBilling extends Page
     /**
      * @return array<int>
      */
-    protected function dueRentalIds(int $propertyId, Carbon $issueDate): array
+    public function dueRentalIds(int $propertyId, Carbon $issueDate): array
     {
         return Rental::where('property_id', $propertyId)
             ->where('status', RentalStatus::Active->value)
@@ -1197,15 +1229,10 @@ class MonthlyBilling extends Page
             ->all();
     }
 
-    protected function dueRentalsQuery(int $propertyId, Carbon $issueDate): Builder
-    {
-        return Rental::whereIn('id', $this->dueRentalIds($propertyId, $issueDate))
-            ->where('status', RentalStatus::Active->value)
-            ->with(['unit', 'tenant']);
-    }
-
     protected function loadRooms(): void
     {
+        $this->selectedRoomIndexes = [];
+
         if (! $this->propertyId || ! $this->billingEnabled()) {
             $this->rooms = [];
             return;
@@ -1215,15 +1242,11 @@ class MonthlyBilling extends Page
         $utilities = $this->activeUtilities();
         $propertySetting = PropertySetting::where('property_id', $this->propertyId)->first();
 
-        if ($this->manualMode) {
-            $rentals = Rental::whereIn('id', $this->selectedRentalIds)
-                ->where('property_id', $this->propertyId)
-                ->where('status', RentalStatus::Active->value)
-                ->with(['unit', 'tenant'])
-                ->get();
-        } else {
-            $rentals = $this->dueRentalsQuery($this->propertyId, $issueDate)->get();
-        }
+        $rentals = Rental::whereIn('id', $this->selectedRentalIds)
+            ->where('property_id', $this->propertyId)
+            ->where('status', RentalStatus::Active->value)
+            ->with(['unit', 'tenant'])
+            ->get();
 
         $rooms = [];
 
@@ -1235,6 +1258,14 @@ class MonthlyBilling extends Page
         }
 
         usort($rooms, function (array $left, array $right): int {
+            $leftTenant = Str::lower((string) ($left['occupant_name'] ?? ''));
+            $rightTenant = Str::lower((string) ($right['occupant_name'] ?? ''));
+
+            $tenantComparison = strnatcasecmp($leftTenant, $rightTenant);
+            if ($tenantComparison !== 0) {
+                return $tenantComparison;
+            }
+
             $leftNumber = Str::lower((string) ($left['room_number'] ?? ''));
             $rightNumber = Str::lower((string) ($right['room_number'] ?? ''));
 
@@ -1242,6 +1273,7 @@ class MonthlyBilling extends Page
         });
 
         $this->rooms = array_values($rooms);
+        $this->recomputeRoomGrouping();
     }
 
     protected function buildRoomState(Rental $rental, Collection $utilities, ?PropertySetting $propertySetting, Carbon $issueDate): ?array
@@ -1259,9 +1291,6 @@ class MonthlyBilling extends Page
         }
 
         if ($periodStart->isAfter($periodEnd)) {
-            if (! $this->manualMode) {
-                return null;
-            }
             $rent = 0.0;
         } else {
             $rent = $isFirstInvoice
@@ -1318,6 +1347,7 @@ class MonthlyBilling extends Page
         return [
             'rental_id' => $rental->id,
             'unit_id' => $rental->unit_id,
+            'tenant_id' => $rental->tenant_id,
             'room_number' => $rental->unit?->room_number ?? '—',
             'occupant_name' => $rental->occupant_name ?: ($rental->tenant?->name ?? __('Tenant')),
             'period_start' => $periodStart->toDateString(),
@@ -1441,6 +1471,63 @@ class MonthlyBilling extends Page
         } else {
             $this->selectedRentalIds = $allIds;
         }
+    }
+
+    public function toggleSelectAllRooms(): void
+    {
+        $allIndexes = array_keys($this->rooms);
+
+        if (count($this->selectedRoomIndexes) === count($allIndexes)) {
+            $this->selectedRoomIndexes = [];
+        } else {
+            $this->selectedRoomIndexes = array_map('strval', $allIndexes);
+        }
+    }
+
+    public function bulkSkipSelected(bool $skip): void
+    {
+        foreach ($this->selectedRoomIndexes as $index) {
+            $index = (int) $index;
+            if (! isset($this->rooms[$index])) {
+                continue;
+            }
+
+            $this->rooms[$index]['skipped'] = $skip;
+            $this->rooms[$index]['skip_reason'] = $skip ? __('Skipped by user') : null;
+        }
+    }
+
+    public function applyBulkUtilityState(): void
+    {
+        if (! $this->bulkUtilityId || $this->selectedRoomIndexes === []) {
+            return;
+        }
+
+        $allowedStates = ['normal', 'free', 'waived', 'not_applicable', 'skipped_this_cycle'];
+        if (! in_array($this->bulkUtilityState, $allowedStates, true)) {
+            return;
+        }
+
+        $updated = 0;
+
+        foreach ($this->selectedRoomIndexes as $index) {
+            $index = (int) $index;
+            if (! isset($this->rooms[$index]['utilities'])) {
+                continue;
+            }
+
+            foreach ($this->rooms[$index]['utilities'] as $utilityIndex => $utility) {
+                if ((int) $utility['property_utility_id'] === (int) $this->bulkUtilityId) {
+                    $this->rooms[$index]['utilities'][$utilityIndex]['state_override'] = $this->bulkUtilityState;
+                    $updated++;
+                }
+            }
+        }
+
+        Notification::make()
+            ->success()
+            ->title(__('Updated :count room(s).', ['count' => $updated]))
+            ->send();
     }
 
     public function hasDuplicateInvoice(int $roomIndex): bool

@@ -50,14 +50,14 @@
                 >{{ __('Invoices') }}</a>
 
                 @if($room->status === \App\Enums\UnitStatus::Available)
-                    {{-- Add tenant --}}
-                    <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'add-tenant']) }}"
+                    {{-- Add tenant — deep-links straight past the room-picker step --}}
+                    <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'add-tenant', 'unit_id' => $room->id]) }}"
                        class="rw-sm-btn-primary text-sm"
                        id="room-add-tenant-{{ $room->id }}"
                     >{{ __('Add tenant') }}</a>
                 @elseif($room->status === \App\Enums\UnitStatus::Occupied)
-                    {{-- End tenancy --}}
-                    <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'end-tenancy']) }}"
+                    {{-- End tenancy — deep-links straight past the room-picker step --}}
+                    <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'end-tenancy', 'unit_id' => $room->id]) }}"
                        class="rw-sm-btn-warning text-sm"
                        id="room-end-tenancy-{{ $room->id }}"
                     >{{ __('End tenancy') }}</a>

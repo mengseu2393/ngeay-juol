@@ -116,96 +116,24 @@
                         </div>
                     </div>
                 @else
-                    <div class="grid grid-cols-2 gap-1 rounded-xl border border-gray-200 bg-gray-100/80 p-1 dark:border-gray-700 dark:bg-gray-900/80">
-                        <button
-                            type="button"
-                            wire:click="$set('manualMode', false)"
-                            class="rounded-lg px-3 py-2 text-[10px] font-bold text-center transition {{ !$this->manualMode ? 'bg-white text-primary-700 shadow-sm dark:bg-gray-800 dark:text-primary-300' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200' }}"
-                        >
-                            {{ __('Scheduled billing') }}
-                        </button>
-                        <button
-                            type="button"
-                            wire:click="$set('manualMode', true)"
-                            class="rounded-lg px-3 py-2 text-[10px] font-bold text-center transition {{ $this->manualMode ? 'bg-primary-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200' }}"
-                        >
-                            {{ __('Manual billing') }}
-                        </button>
-                    </div>
-
-                    @if($this->manualMode)
-                        <div class="rounded-2xl border border-gray-200 bg-white p-2.5 shadow-sm dark:border-gray-700 dark:bg-gray-900 space-y-2.5">
-                            <div class="flex items-center justify-between gap-2 border-b border-gray-100 px-1 pb-2 dark:border-gray-800">
-                                <div>
-                                    <p class="text-[11px] font-bold leading-tight text-gray-900 dark:text-white">{{ __('Select rooms to bill') }}</p>
-                                    <p class="mt-0.5 text-[9px] leading-tight text-gray-500 dark:text-gray-400">
-                                        {{ count($this->selectedRentalIds) }} / {{ $this->activeRentals()->count() }} {{ __('rooms selected') }}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    wire:click="toggleSelectAllRentals"
-                                    class="shrink-0 rounded-lg border border-primary-200 bg-primary-50 px-2 py-1 text-[9px] font-bold leading-tight text-primary-700 transition hover:bg-primary-100 dark:border-primary-900/60 dark:bg-primary-500/10 dark:text-primary-300"
-                                >
-                                    {{ count($this->selectedRentalIds) === $this->activeRentals()->count() ? __('Clear all') : __('Select all') }}
-                                </button>
-                            </div>
-                            <div class="grid max-h-48 grid-cols-1 gap-1.5 overflow-y-auto pr-1">
-                                @forelse($this->activeRentals() as $rental)
-                                    <label class="group flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-2 py-1.5 transition {{ in_array($rental->id, $this->selectedRentalIds) ? 'border-primary-500 bg-primary-50/70 ring-1 ring-primary-500/20 dark:border-primary-500 dark:bg-primary-500/10' : 'border-gray-200 bg-gray-50/50 hover:border-primary-300 hover:bg-primary-50/40 dark:border-gray-700 dark:bg-gray-800/40' }}">
-                                        <input
-                                            type="checkbox"
-                                            value="{{ $rental->id }}"
-                                            wire:model.live="selectedRentalIds"
-                                            class="h-3.5 w-3.5 shrink-0 rounded border-gray-300 text-primary-600 shadow-sm focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800"
-                                        >
-                                        <div class="min-w-0">
-                                            <p class="truncate text-[11px] font-bold leading-tight text-gray-900 dark:text-white">
-                                                {{ $rental->unit?->room_number }}
-                                            </p>
-                                            <p class="truncate text-[9px] leading-tight text-gray-500 dark:text-gray-400">
-                                                {{ $rental->occupant_name }}
-                                            </p>
-                                        </div>
-                                    </label>
-                                @empty
-                                    <div class="col-span-full py-3 text-center text-[10px] text-gray-500 dark:text-gray-400">
-                                        {{ __('No active tenancies in this property.') }}
-                                    </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    @endif
-
                     <div class="pt-0.5">
-                        @if($this->manualMode)
+                        @if($this->dueRoomCount() > 0)
                             <button
                                 type="button"
                                 wire:click="startBilling"
-                                @disabled(count($this->selectedRentalIds) === 0)
-                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-primary-500"
                             >
                                 {{ __('Start billing') }}
                             </button>
                         @else
-                            @if($this->dueRoomCount() > 0)
-                                <button
-                                    type="button"
-                                    wire:click="startBilling"
-                                    class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-primary-500"
-                                >
-                                    {{ __('Start billing') }}
-                                </button>
-                            @else
-                                <div class="w-full rounded-xl border border-gray-250 bg-gray-50 p-3 text-center dark:border-gray-800 dark:bg-gray-800/40">
-                                    <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                        {{ __('No rooms are due for billing on this date.') }}
-                                    </p>
-                                    <p class="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
-                                        {{ __('Try changing the billing date above, select another property, or select Manual billing.') }}
-                                    </p>
-                                </div>
-                            @endif
+                            <div class="w-full rounded-xl border border-gray-250 bg-gray-50 p-3 text-center dark:border-gray-800 dark:bg-gray-800/40">
+                                <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                    {{ __('No rooms are due for billing on this date.') }}
+                                </p>
+                                <p class="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                                    {{ __('Try changing the billing date above or select another property.') }}
+                                </p>
+                            </div>
                         @endif
                     </div>
                 @endif

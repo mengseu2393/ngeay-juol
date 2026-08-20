@@ -60,9 +60,9 @@ trait BuildsInvoiceForm
                         ->default(InvoiceStatus::Pending)
                         ->required(),
                     Forms\Components\Hidden::make('period_start')
-                        ->default(fn () => Carbon::now()->startOfMonth()),
+                        ->default(fn () => Carbon::now()->startOfMonth()->toDateString()),
                     Forms\Components\Hidden::make('period_end')
-                        ->default(fn () => Carbon::now()->endOfMonth()),
+                        ->default(fn () => Carbon::now()->endOfMonth()->toDateString()),
                     Forms\Components\DatePicker::make('issue_date')
                         ->required()
                         ->default(now())

@@ -36,6 +36,7 @@
 
     {{-- ── Step: enter details ── --}}
     @elseif($step === 'details')
+        <div class="rw-sm-form space-y-4">
         <div class="rw-sm-wizard-header">
             <button wire:click="backToPick" class="rw-sm-back-btn-sm" id="add-tenant-back">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
@@ -86,6 +87,7 @@
                 {{ __('Advanced fields (ID card, guarantor, etc.) are available in') }}
                 <a href="{{ \App\Filament\Resources\RentalResource::getUrl('create', panel: 'landlord') }}" class="underline text-primary-600 dark:text-primary-400">{{ __('Full Mode') }}</a>.
             </p>
+        </div>
         </div>
 
     {{-- ── Step: done ── --}}

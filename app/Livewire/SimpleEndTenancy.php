@@ -30,6 +30,13 @@ class SimpleEndTenancy extends Component
     {
         $this->endDate = now()->toDateString();
         $this->status = RentalStatus::Vacated->value;
+
+        $unitId = (int) request()->query('unit_id');
+        $unit = $unitId ? $this->loadUnit($unitId) : null;
+
+        if ($unit && $unit->status === UnitStatus::Occupied) {
+            $this->pickRoom($unit->id);
+        }
     }
 
     public function pickRoom(int $unitId): void

@@ -165,7 +165,7 @@ class ChargeRuleResolver
                     scopeId: $rentalRule->id,
                     reason: $rentalRule->reason,
                     amount: $rentalRule->state === 'custom' ? (float) $rentalRule->amount_override : $defaultAmount,
-                    currency: $rentalRule->state === 'custom' ? $rentalRule->currency_override : $defaultCurrency,
+                    currency: $rentalRule->state === 'custom' ? $rentalRule->currency_override ?? $defaultCurrency : $defaultCurrency,
                     chargeName: $chargeName
                 );
             }
@@ -181,7 +181,7 @@ class ChargeRuleResolver
                     scopeId: $unitRule->id,
                     reason: $unitRule->reason,
                     amount: $unitRule->state === 'custom' ? (float) $unitRule->amount_override : $defaultAmount,
-                    currency: $unitRule->state === 'custom' ? $unitRule->currency_override : $defaultCurrency,
+                    currency: $unitRule->state === 'custom' ? $unitRule->currency_override ?? $defaultCurrency : $defaultCurrency,
                     chargeName: $chargeName
                 );
             }
@@ -197,7 +197,7 @@ class ChargeRuleResolver
                     scopeId: $propertyRule->id,
                     reason: $propertyRule->reason,
                     amount: $propertyRule->state === 'custom' ? (float) $propertyRule->amount_override : $defaultAmount,
-                    currency: $propertyRule->state === 'custom' ? $propertyRule->currency_override : $defaultCurrency,
+                    currency: $propertyRule->state === 'custom' ? $propertyRule->currency_override ?? $defaultCurrency : $defaultCurrency,
                     chargeName: $chargeName
                 );
             }

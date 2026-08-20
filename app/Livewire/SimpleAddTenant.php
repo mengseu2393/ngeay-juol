@@ -34,6 +34,13 @@ class SimpleAddTenant extends Component
     public function mount(): void
     {
         $this->startDate = now()->toDateString();
+
+        $unitId = (int) request()->query('unit_id');
+        $unit = $unitId ? $this->loadUnit($unitId) : null;
+
+        if ($unit && $unit->status === UnitStatus::Available) {
+            $this->pickRoom($unit->id);
+        }
     }
 
     public function pickRoom(int $unitId): void
