@@ -78,7 +78,8 @@ class UtilityMeter extends Model
     {
         return LogOptions::defaults()
             ->logOnly(['serial', 'installed_on', 'installed_reading', 'removed_on', 'final_reading', 'status', 'multiplier'])
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function resolveLandlordId(): ?int

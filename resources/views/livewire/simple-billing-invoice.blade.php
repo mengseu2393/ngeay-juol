@@ -112,7 +112,7 @@
                         <x-heroicon-o-exclamation-triangle class="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                         <div>
                             <p class="font-semibold">{{ __('Monthly billing is disabled for this property.') }}</p>
-                            <p class="mt-0.5 text-[10px] text-gray-655 dark:text-gray-400">{{ __('Please enable it in property settings before continuing.') }}</p>
+                            <p class="mt-0.5 text-[10px] text-gray-600 dark:text-gray-400">{{ __('Please enable it in property settings before continuing.') }}</p>
                         </div>
                     </div>
                 @else
@@ -126,7 +126,7 @@
                                 {{ __('Start billing') }}
                             </button>
                         @else
-                            <div class="w-full rounded-xl border border-gray-250 bg-gray-50 p-3 text-center dark:border-gray-800 dark:bg-gray-800/40">
+                            <div class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-center dark:border-gray-800 dark:bg-gray-800/40">
                                 <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">
                                     {{ __('No rooms are due for billing on this date.') }}
                                 </p>
@@ -186,7 +186,7 @@
                             </div>
 
                             @if($this->roomHasInvalidPeriodOrDuplicate($cardIndex))
-                                <div class="rounded-lg border border-red-200 bg-red-50/50 p-2 text-[10px] font-semibold text-red-650 dark:border-red-900/30 dark:bg-red-950/10 dark:text-red-400">{{ __('Please check this billing period or duplicate invoice.') }}</div>
+                                <div class="rounded-lg border border-red-200 bg-red-50/50 p-2 text-[10px] font-semibold text-red-600 dark:border-red-900/30 dark:bg-red-950/10 dark:text-red-400">{{ __('Please check this billing period or duplicate invoice.') }}</div>
                             @endif
 
                             <div class="space-y-2.5 pt-1">
@@ -265,7 +265,7 @@
                                             >
                                         </div>
                                         @if($this->roomHasInvalidPeriodOrDuplicate($index))
-                                            <div class="mt-0.5 text-[8px] text-red-650 dark:text-red-400 font-semibold">
+                                            <div class="mt-0.5 text-[8px] text-red-600 dark:text-red-400 font-semibold">
                                                 @if(\Carbon\Carbon::parse($room['period_start'])->isAfter(\Carbon\Carbon::parse($room['period_end'])))
                                                     <span>⚠ {{ __('Period start is after end') }}</span>
                                                 @elseif($this->hasDuplicateInvoice($index))
@@ -297,7 +297,7 @@
                                                             type="text"
                                                             wire:model.live.debounce.300ms="rooms.{{ $index }}.utilities.{{ $utilityIndex }}.override_reason"
                                                             placeholder="{{ __('Reason') }}"
-                                                            class="w-full rounded border-amber-300 bg-amber-50/50 px-1 py-0.5 text-[8px] focus:border-amber-500 dark:border-amber-900/30 dark:bg-amber-950/20 text-gray-955 dark:text-white"
+                                                            class="w-full rounded border-amber-300 bg-amber-50/50 px-1 py-0.5 text-[8px] focus:border-amber-500 dark:border-amber-900/30 dark:bg-amber-950/20 text-gray-950 dark:text-white"
                                                             {{ $room['skipped'] ? 'disabled' : '' }}
                                                         >
                                                     </div>
@@ -308,11 +308,11 @@
                                                     </div>
                                                 @endif
                                             @else
-                                                <span class="text-[10px] text-gray-550 dark:text-gray-400 font-medium">{{ __('Fixed') }}: {{ \App\Support\Money::format($preview['charge'], $utility['currency'] ?? 'USD') }}</span>
+                                                <span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{{ __('Fixed') }}: {{ \App\Support\Money::format($preview['charge'], $utility['currency'] ?? 'USD') }}</span>
                                             @endif
                                         </td>
                                     @endforeach
-                                    <td class="px-2 py-2 text-right font-bold text-gray-955 dark:text-white text-[10px]">
+                                    <td class="px-2 py-2 text-right font-bold text-gray-950 dark:text-white text-[10px]">
                                         {{ $summary['estimated_total_display'] }}
                                     </td>
                                     <td class="px-2 py-2 text-center">
@@ -362,7 +362,7 @@
                             <h2 class="text-sm font-bold text-gray-950 dark:text-white">
                                 {{ __('Review billing summary') }}
                             </h2>
-                            <p class="text-[10px] text-gray-550 dark:text-gray-400">
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400">
                                 {{ __('Review charges before creating invoices.') }}
                             </p>
                         </div>
@@ -393,11 +393,11 @@
                             <span class="text-lg font-bold text-gray-950 dark:text-white block">{{ $this->skippedRoomCount() }}</span>
                         </div>
                         <div class="rounded-lg bg-gray-50/50 p-2 dark:bg-gray-800/30">
-                            <span class="text-[9px] font-medium text-gray-550 dark:text-gray-400 block">{{ __('Warnings') }}</span>
+                            <span class="text-[9px] font-medium text-gray-500 dark:text-gray-400 block">{{ __('Warnings') }}</span>
                             <span class="text-lg font-bold text-amber-600 dark:text-amber-400 block">{{ $this->roomsWithWarningsCount() }}</span>
                         </div>
                         <div class="rounded-lg bg-gray-50/50 p-2 dark:bg-gray-800/30">
-                            <span class="text-[9px] font-medium text-gray-550 dark:text-gray-400 block">{{ __('Invoices') }}</span>
+                            <span class="text-[9px] font-medium text-gray-500 dark:text-gray-400 block">{{ __('Invoices') }}</span>
                             <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400 block">{{ $this->estimatedInvoiceCount() }}</span>
                         </div>
                     </div>
@@ -452,7 +452,7 @@
                                 </div>
                                 <div class="rounded-lg bg-gray-50/50 p-2 dark:bg-gray-800/30">
                                     <span class="text-[9px] font-medium text-gray-500 dark:text-gray-400 block">{{ __('Rent') }}</span>
-                                    <span class="text-xs font-bold text-gray-955 dark:text-white mt-0.5 block">
+                                    <span class="text-xs font-bold text-gray-950 dark:text-white mt-0.5 block">
                                         {{ \App\Support\Money::format($summary['rent'], $summary['rent_currency'] ?? 'USD') }}
                                     </span>
                                 </div>
@@ -519,7 +519,7 @@
                     @endforeach
                 </div>
 
-                <div class="sticky bottom-0 z-40 rounded-xl border border-gray-250 bg-white p-3 shadow-lg dark:border-gray-850 dark:bg-gray-950 backdrop-blur-md bg-opacity-95">
+                <div class="sticky bottom-0 z-40 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-800 dark:bg-gray-950 backdrop-blur-md bg-opacity-95">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <p class="text-[10px] text-gray-500 dark:text-gray-400">
                             {{ __('Review complete? Ready to batch-generate invoices.') }}
@@ -550,7 +550,7 @@
                     <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-500/10">
                         <x-heroicon-o-check class="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
                     </div>
-                    <h2 class="text-base font-bold text-gray-955 dark:text-white mt-3">
+                    <h2 class="text-base font-bold text-gray-950 dark:text-white mt-3">
                         {{ __('Billing complete') }}
                     </h2>
                     <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
@@ -559,7 +559,7 @@
                 </div>
 
                 <div class="space-y-2">
-                    <h3 class="text-[9px] font-semibold text-gray-400 dark:text-gray-550 uppercase tracking-wider">
+                    <h3 class="text-[9px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                         {{ __('Billing run summary') }}
                     </h3>
                     <div class="rounded-lg border border-gray-100 bg-gray-50/50 p-3 dark:border-gray-800 dark:bg-gray-800/30 space-y-2">
@@ -582,10 +582,10 @@
 
                 @if($this->resultSummary['failures'])
                     <div class="space-y-1.5">
-                        <h4 class="text-[9px] font-semibold text-red-650 dark:text-red-400 uppercase tracking-wider">
+                        <h4 class="text-[9px] font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">
                             {{ __('Details of failures') }}
                         </h4>
-                        <div class="max-h-32 overflow-y-auto rounded-lg border border-red-100 bg-red-50/30 p-2 dark:border-red-900/30 dark:bg-red-950/20 text-[10px] text-red-900 dark:text-red-205 space-y-1">
+                        <div class="max-h-32 overflow-y-auto rounded-lg border border-red-100 bg-red-50/30 p-2 dark:border-red-900/30 dark:bg-red-950/20 text-[10px] text-red-900 dark:text-red-200 space-y-1">
                             @foreach($this->resultSummary['failures'] as $failure)
                                 <div>
                                     <span class="font-bold">{{ __('Room') }} {{ $failure['room_number'] }}</span>: {{ $failure['message'] }}

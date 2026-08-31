@@ -13,6 +13,11 @@ class EditSubscriptionPayment extends EditRecord
 {
     protected static string $resource = SubscriptionPaymentResource::class;
 
+    protected function getRedirectUrl(): string
+    {
+        return ListSubscriptionPayments::mergedPageUrl();
+    }
+
     protected function getHeaderActions(): array
     {
         return [

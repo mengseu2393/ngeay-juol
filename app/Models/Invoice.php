@@ -76,7 +76,8 @@ class Invoice extends Model
     {
         return LogOptions::defaults()
             ->logOnly(['invoice_number', 'amount_due', 'amount_paid', 'payment_status'])
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     // ---------------------------------------------------------------------

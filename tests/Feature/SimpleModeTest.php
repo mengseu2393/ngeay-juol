@@ -41,7 +41,7 @@ class SimpleModeTest extends TestCase
         $landlord = $this->makeLandlord();
 
         $this->actingAs($landlord)
-            ->get('/landlord/simple')
+            ->get('/app/simple')
             ->assertSuccessful();
     }
 
@@ -52,7 +52,7 @@ class SimpleModeTest extends TestCase
 
         // Tenant has no subscription so subscription guard fires first (redirect).
         // Either way they must NOT get a 200 on the landlord panel.
-        $response = $this->actingAs($tenant)->get('/landlord/simple');
+        $response = $this->actingAs($tenant)->get('/app/simple');
         $this->assertTrue(
             in_array($response->getStatusCode(), [302, 403], true),
             "Expected redirect or forbidden, got {$response->getStatusCode()}"
@@ -61,7 +61,7 @@ class SimpleModeTest extends TestCase
 
     public function test_unauthenticated_user_is_redirected_from_simple_mode(): void
     {
-        $this->get('/landlord/simple')->assertRedirect();
+        $this->get('/app/simple')->assertRedirect();
     }
 
     public function test_landlord_dashboard_redirects_to_simple_mode_when_preference_is_enabled(): void
@@ -70,11 +70,11 @@ class SimpleModeTest extends TestCase
         $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
 
         $this->actingAs($landlord)
-            ->get('/landlord')
+            ->get('/app')
             ->assertRedirect(route('filament.landlord.pages.simple'));
 
         $this->actingAs($landlord)
-            ->get('/landlord/simple')
+            ->get('/app/simple')
             ->assertSuccessful();
     }
 
@@ -84,7 +84,7 @@ class SimpleModeTest extends TestCase
         $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
 
         $this->actingAs($landlord)
-            ->get('/landlord/properties')
+            ->get('/app/properties')
             ->assertRedirect(route('filament.landlord.pages.simple'));
     }
 

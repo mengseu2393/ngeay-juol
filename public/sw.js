@@ -3,7 +3,7 @@
  *
  * Caching strategy:
  *   - Shell assets (JS/CSS/icons/fonts): cache-first, long TTL
- *   - App shell routes (/, /login, /landlord/simple): stale-while-revalidate
+ *   - App shell routes (/, /login, /app/simple): stale-while-revalidate
  *   - Google Fonts: cache-first, 1-year TTL
  *   - Financial routes (invoices, payments, billing, tenants, rentals, subscription): network-only (NEVER cached)
  *   - Livewire / API / POST: network-only (pass-through)
@@ -12,7 +12,7 @@
  * Financial data is NEVER cached for offline reads or writes.
  */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const SHELL_CACHE   = `ngeay-juol-shell-${CACHE_VERSION}`;
 const FONT_CACHE    = `ngeay-juol-fonts-${CACHE_VERSION}`;
 
@@ -27,12 +27,14 @@ const PRECACHE_ASSETS = [
 
 /** Routes that must ALWAYS go to the network — no cache reads or writes */
 const NETWORK_ONLY_PREFIXES = [
-    '/landlord/invoices',
-    '/landlord/monthly-billing',
-    '/landlord/payments',
-    '/landlord/tenants',
-    '/landlord/rentals',
-    '/landlord/subscription',
+    '/app/invoices',
+    '/app/monthly-billing',
+    '/app/payments',
+    '/app/rentals',
+    '/app/utility-usages',
+    // Legacy prefix — the panel moved to /app, but old installs may still request
+    // these. They 301 to /app/*; never serve or store a cached redirect for money screens.
+    '/landlord',
     '/livewire',
     '/api',
     '/locale',

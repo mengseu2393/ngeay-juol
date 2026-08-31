@@ -247,6 +247,22 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
         return $this->hasMany(Property::class, 'landlord_id');
     }
 
+    /** Rooms this landlord owns — the unit-cap denominator and the usage signal. */
+    public function units(): HasMany
+    {
+        return $this->hasMany(Unit::class, 'landlord_id');
+    }
+
+    /**
+     * The landlord's single subscription. HasOne rather than HasMany: uniqueness
+     * per landlord is enforced in {@see \App\Services\SubscriptionService::assign()}
+     * because MariaDB/MySQL 5.x cannot express a partial unique index.
+     */
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class, 'landlord_id');
+    }
+
     public function rentalsAsLandlord(): HasMany
     {
         return $this->hasMany(Rental::class, 'landlord_id');

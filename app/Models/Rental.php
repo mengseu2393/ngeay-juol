@@ -87,7 +87,8 @@ class Rental extends Model implements HasMedia
     {
         return LogOptions::defaults()
             ->logOnly(['tenant_id', 'unit_id', 'monthly_rent', 'status', 'start_date', 'end_date'])
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function isActive(): bool

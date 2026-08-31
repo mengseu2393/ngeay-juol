@@ -49,7 +49,8 @@ class PropertyUtility extends Model
     {
         return LogOptions::defaults()
             ->logOnly(['name', 'rate', 'provider', 'billing_type', 'is_active'])
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     protected static function booted(): void

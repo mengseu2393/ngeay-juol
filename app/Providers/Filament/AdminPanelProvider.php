@@ -4,12 +4,18 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\AdminSettings;
 use App\Filament\Pages\QrCodeGenerator;
+use App\Filament\Pages\Renewals;
+use App\Filament\Resources\ActivityLogResource;
 use App\Filament\Resources\LandlordResource;
 use App\Filament\Resources\SubscriptionPaymentResource;
 use App\Filament\Resources\SubscriptionPlanResource;
 use App\Filament\Resources\SubscriptionResource;
 use App\Filament\Resources\UserResource;
+use App\Filament\Widgets\AdminGrowthChartWidget;
+use App\Filament\Widgets\AdminLandlordActivityWidget;
+use App\Filament\Widgets\AdminPlanMixWidget;
 use App\Filament\Widgets\AdminPlatformStatsWidget;
+use App\Filament\Widgets\AdminPlatformUsageWidget;
 use App\Http\Middleware\SetLocale;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
@@ -63,9 +69,9 @@ class AdminPanelProvider extends PanelProvider
                 url('/admin/logout'),
                 url('/login'),
                 url('/admin/login'),
-                url('/landlord/*'),
-                url('/landlord/invoices/*/pdf*'),
-                url('/landlord/invoices/*/excel*'),
+                url('/'.LandlordPanelProvider::PATH.'/*'),
+                url('/'.LandlordPanelProvider::PATH.'/invoices/*/pdf*'),
+                url('/'.LandlordPanelProvider::PATH.'/invoices/*/excel*'),
                 'mailto:*',
             ])
             ->databaseNotifications()
@@ -75,7 +81,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn (): string => '<link rel="stylesheet" href="'.asset('css/rentwise-admin.css').'?v='.@filemtime(public_path('css/rentwise-admin.css')).'">',
+                fn (): string => '<link rel="preconnect" href="https://fonts.googleapis.com">'.
+                    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'.
+                    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap">'.
+                    '<link rel="stylesheet" href="'.asset('css/rentwise-admin.css').'?v='.@filemtime(public_path('css/rentwise-admin.css')).'">'.
+                    view('components.rw-loader-head')->render(),
             )
             ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
@@ -105,15 +115,25 @@ class AdminPanelProvider extends PanelProvider
                 SubscriptionPaymentResource::class,
                 LandlordResource::class,
                 UserResource::class,
+                ActivityLogResource::class,
             ])
             ->pages([
                 Dashboard::class,
+                Renewals::class,
                 AdminSettings::class,
                 QrCodeGenerator::class,
             ])
+            // Dashboard, top to bottom: what the business earns, what the product
+            // carries, where both are heading, then the customer list the first
+            // three are aggregates of. AccountWidget and FilamentInfoWidget keep
+            // Filament's own -3/-2 sorts and so fall in below all of it.
             ->widgets([
+                AdminPlatformStatsWidget::class,     // -40
+                AdminPlatformUsageWidget::class,     // -38
+                AdminGrowthChartWidget::class,       // -36
+                AdminPlanMixWidget::class,           // -35
+                AdminLandlordActivityWidget::class,  // -34
                 AccountWidget::class,
-                AdminPlatformStatsWidget::class,
                 FilamentInfoWidget::class,
             ])
             ->plugins([

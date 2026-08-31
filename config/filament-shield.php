@@ -76,7 +76,11 @@ return [
             'AccountWidget', 'FilamentInfoWidget',
         ],
 
-        'resources' => [],
+        // Gated on the pre-existing `view_activity_log` permission instead of
+        // Shield-generated `*_activity` ones — see ActivityLogResource.
+        'resources' => [
+            'ActivityLogResource',
+        ],
     ],
 
     // Role management (RoleResource) lives in the /admin panel, but most resources

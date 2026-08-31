@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ __('View details') }} · {{ $invoice->invoice_number }}</title>
     <link rel="stylesheet" href="{{ asset('css/rentwise-admin.css') }}?v={{ filemtime(public_path('css/rentwise-admin.css')) }}">
+    @include('components.rw-loader-head')
 </head>
 <body class="rw-invoice-page min-h-screen bg-gray-100 p-3 sm:p-6" style="color-scheme: light;">
     <main class="mx-auto w-full max-w-4xl">

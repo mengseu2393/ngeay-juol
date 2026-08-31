@@ -49,14 +49,14 @@ class LoginRedirectTest extends TestCase
         $landlord->assignRole('landlord');
 
         // Put the landlord sub-page URL in session
-        session(['url.intended' => '/landlord/invoices']);
+        session(['url.intended' => '/app/invoices']);
 
         $response = $this->post(route('login'), [
             'login' => $landlord->email,
             'password' => 'password',
         ]);
 
-        $response->assertRedirect('/landlord/invoices');
+        $response->assertRedirect('/app/invoices');
     }
 
     public function test_tenant_login_with_admin_or_landlord_intended_url_redirects_to_tenant_portal(): void
@@ -81,7 +81,7 @@ class LoginRedirectTest extends TestCase
         $this->post(route('logout'));
 
         // Case 2: /landlord intended url
-        session(['url.intended' => '/landlord/invoices']);
+        session(['url.intended' => '/app/invoices']);
         $response = $this->post(route('login'), [
             'login' => $tenant->email,
             'password' => 'password',

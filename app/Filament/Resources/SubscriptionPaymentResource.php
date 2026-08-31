@@ -46,9 +46,14 @@ class SubscriptionPaymentResource extends Resource
         return auth()->user()?->isSuperAdmin() ?? false;
     }
 
+    /**
+     * Merged into SubscriptionResource's list page as its "Payments" tab, so this
+     * resource no longer gets its own navigation entry. Its create/view/edit routes
+     * stay registered — the merged page links to them.
+     */
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return false;
     }
 
     public static function form(Form $form): Form

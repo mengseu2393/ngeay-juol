@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
 use App\Enums\UserStatus;
+use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Providers\Filament\LandlordPanelProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -70,7 +71,8 @@ class LoginController extends Controller
                     session()->forget('url.intended');
                 }
             } elseif ($user->hasRole('tenant')) {
-                if ($path === '/admin' || str_starts_with($path, '/admin/') || $path === '/landlord' || str_starts_with($path, '/landlord/')) {
+                $panel = '/'.LandlordPanelProvider::PATH;
+                if ($path === '/admin' || str_starts_with($path, '/admin/') || $path === $panel || str_starts_with($path, $panel.'/')) {
                     session()->forget('url.intended');
                 }
             }

@@ -44,6 +44,7 @@ class ViewProperty extends ViewRecord
             Actions\Action::make('monthlyBilling')
                 ->label(__('Monthly billing'))
                 ->icon('heroicon-o-calendar-days')
+                ->visible(fn () => MonthlyBilling::canAccess())
                 ->action(function ($record) {
                     ActiveProperty::set($record->getKey());
 

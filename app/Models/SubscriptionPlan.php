@@ -54,7 +54,8 @@ class SubscriptionPlan extends Model
     {
         return LogOptions::defaults()
             ->logOnly(['name', 'price', 'max_units', 'is_active'])
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function subscriptions(): HasMany

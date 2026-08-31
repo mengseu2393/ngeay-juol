@@ -51,7 +51,8 @@ class Unit extends Model
     {
         return LogOptions::defaults()
             ->logOnly(['room_number', 'rent_amount', 'status'])
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /** Enforce subscription unit cap on create (super-admin creates bypass via policy). */

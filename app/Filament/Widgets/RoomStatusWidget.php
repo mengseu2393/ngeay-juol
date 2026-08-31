@@ -3,13 +3,15 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\UnitStatus;
+use App\Filament\Widgets\Concerns\HasActivePropertyScope;
 use App\Models\Unit;
-use App\Support\ActiveProperty;
 use Filament\Widgets\ChartWidget;
 
 class RoomStatusWidget extends ChartWidget
 {
-    protected static ?int $sort = -2;
+    use HasActivePropertyScope;
+
+    protected static ?int $sort = 2;
 
     protected function getType(): string
     {
@@ -23,14 +25,8 @@ class RoomStatusWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $query = Unit::query();
-
-        $propertyId = ActiveProperty::id();
-        if ($propertyId !== null) {
-            $query->where('property_id', $propertyId);
-        }
-
-        $counts = $query->selectRaw('status, count(*) as count')
+        $counts = $this->scopeToActiveProperty(Unit::query())
+            ->selectRaw('status, count(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')
             ->all();

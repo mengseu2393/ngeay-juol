@@ -46,7 +46,10 @@ class Property extends Model implements HasMedia
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnly(['name', 'property_type', 'landlord_id'])->logOnlyDirty();
+        return LogOptions::defaults()
+            ->logOnly(['name', 'property_type', 'landlord_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function registerMediaCollections(): void

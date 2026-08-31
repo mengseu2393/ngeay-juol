@@ -38,7 +38,8 @@ class EnsureActiveSubscription
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->to('/landlord/login')
+            // The panel has no login page of its own — auth lives on the shared /login route.
+            return redirect()->route('login')
                 ->with('error', __('Your subscription has expired. Please contact the administrator to restore access.'));
         }
 

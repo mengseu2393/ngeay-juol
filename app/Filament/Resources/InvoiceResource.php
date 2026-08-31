@@ -15,8 +15,12 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
+use Filament\Tables\Columns\TextColumn\TextColumnSize;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class InvoiceResource extends Resource
 {
@@ -39,6 +43,15 @@ class InvoiceResource extends Resource
     public static function getModelLabel(): string
     {
         return __('Invoice');
+    }
+
+    /**
+     * Payments no longer have their own page — they live in the expandable panel
+     * on each invoice row — so the sidebar entry names both.
+     */
+    public static function getNavigationLabel(): string
+    {
+        return __('Invoices & Payments');
     }
 
     public static function form(Form $form): Form
@@ -86,43 +99,80 @@ class InvoiceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // The payments panel renders for every row, so pull the ledger (and the
+            // tenant) in one go instead of N queries per page.
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['payments.recordedBy', 'tenant']))
             ->columns([
-                Tables\Columns\TextColumn::make('row_number')
-                    ->label('#')
-                    ->rowIndex(),
-                Tables\Columns\TextColumn::make('invoice_number')
-                    ->searchable()->sortable()
-                    ->action(
-                        Tables\Actions\Action::make('viewSlip')
-                            ->label(__('View invoice'))
-                            ->modalHeading('')
-                            ->modalCloseButton(true)
-                            ->modalWidth('4xl')
-                            ->modalSubmitAction(false)
-                            ->modalCancelActionLabel(__('Close'))
+                // One combined ledger: the invoice summary on top, its payments in
+                // the collapsible panel underneath — this replaces the standalone
+                // /app/payments page. A collapsible Panel switches Filament to its
+                // card layout (no column headers), so the row is built from
+                // Split/Stack and every value carries its own label prefix.
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('invoice_number')
+                            ->weight(FontWeight::Bold)
+                            ->searchable()->sortable()
+                            ->action(
+                                Tables\Actions\Action::make('viewSlip')
+                                    ->label(__('View invoice'))
+                                    ->modalHeading('')
+                                    ->modalCloseButton(true)
+                                    ->modalWidth('4xl')
+                                    ->modalSubmitAction(false)
+                                    ->modalCancelActionLabel(__('Close'))
+                                    ->color('gray')
+                                    ->modalContent(function (Invoice $record) {
+                                        $record->loadMissing(['lines.utilityUsage.propertyUtility', 'rental.unit.property', 'tenant', 'property']);
+                                        return view('components.invoice-slip-modal', ['invoice' => $record]);
+                                    })
+                            ),
+                        Tables\Columns\TextColumn::make('tenant.name')
+                            ->label(__('Tenant'))
+                            ->icon('heroicon-m-user')
+                            ->size(TextColumnSize::Small)
                             ->color('gray')
-                            ->modalContent(function (Invoice $record) {
-                                $record->loadMissing(['lines.utilityUsage.propertyUtility', 'rental.unit.property', 'tenant', 'property']);
-                                return view('components.invoice-slip-modal', ['invoice' => $record]);
-                            })
-                    ),
-                Tables\Columns\TextColumn::make('tenant.name')->label(__('Tenant'))->searchable(),
-                Tables\Columns\TextColumn::make('amount_due')
-                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatForRecord($state, $record))
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('amount_paid')
-                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatForRecord($state, $record)),
-                Tables\Columns\TextColumn::make('balance')
-                    ->state(fn (Invoice $r) => $r->balance)
-                    ->formatStateUsing(fn ($state, Invoice $record) => Money::formatForRecord($state, $record)),
-                Tables\Columns\TextColumn::make('payment_status')->badge()
-                    // Click the status to manage payments: add when owing, or edit
-                    // existing payments once paid.
-                    ->action(static::managePaymentsAction('managePaymentsFromStatus'))
-                    ->tooltip(fn (Invoice $record) => $record->balance > 0
-                        ? __('Click to record a payment')
-                        : __('Click to view / edit payments')),
-                Tables\Columns\TextColumn::make('due_date')->date()->sortable(),
+                            ->searchable(),
+                    ])->space(1),
+
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('amount_due')
+                            ->prefix(fn () => __('Total').': ')
+                            ->formatStateUsing(fn ($state, Invoice $record) => Money::formatForRecord($state, $record))
+                            ->size(TextColumnSize::Small)
+                            ->sortable(),
+                        Tables\Columns\TextColumn::make('balance')
+                            ->state(fn (Invoice $r) => $r->balance)
+                            ->prefix(fn () => __('Balance').': ')
+                            ->formatStateUsing(fn ($state, Invoice $record) => Money::formatForRecord($state, $record))
+                            ->size(TextColumnSize::Small)
+                            ->weight(FontWeight::Medium)
+                            ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'success'),
+                    ])->space(1),
+
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('payment_status')->badge()
+                            // Click the status to manage payments: add when owing, or
+                            // edit existing payments once paid.
+                            ->action(static::managePaymentsAction('managePaymentsFromStatus'))
+                            ->tooltip(fn (Invoice $record) => $record->balance > 0
+                                ? __('Click to record a payment')
+                                : __('Click to view / edit payments')),
+                        Tables\Columns\TextColumn::make('due_date')
+                            ->prefix(fn () => __('Due').' ')
+                            ->date()
+                            ->size(TextColumnSize::Small)
+                            ->color('gray')
+                            ->sortable(),
+                    ])->space(1)->alignment(Alignment::End),
+                ])->from('md'),
+
+                // Expandable payments ledger (chevron on the right of each row).
+                Tables\Columns\Layout\Panel::make([
+                    Tables\Columns\ViewColumn::make('payments_ledger')
+                        ->label(__('Payments'))
+                        ->view('filament.tables.invoice-payments-panel'),
+                ])->collapsible(),
             ])
             ->filters([
                 Tables\Filters\Filter::make('due_date')

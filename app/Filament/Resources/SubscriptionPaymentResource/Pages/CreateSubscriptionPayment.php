@@ -11,6 +11,11 @@ class CreateSubscriptionPayment extends CreateRecord
 {
     protected static string $resource = SubscriptionPaymentResource::class;
 
+    protected function getRedirectUrl(): string
+    {
+        return ListSubscriptionPayments::mergedPageUrl();
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $sub = \App\Models\Subscription::withoutGlobalScopes()->find($data['subscription_id']);

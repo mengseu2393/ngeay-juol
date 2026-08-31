@@ -231,6 +231,35 @@ class MaintenanceRequestResource extends Resource
         ];
     }
 
+    /**
+     * Unresolved requests, so the sidebar carries the count without the dashboard
+     * needing a table of its own. Cached like the monthly-billing badge — it is
+     * re-rendered on every SPA navigation.
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        $landlordId = auth()->user()?->effectiveLandlordId();
+
+        if (! $landlordId) {
+            return null;
+        }
+
+        $count = cache()->remember(
+            'maintenance-open-badge:'.$landlordId.':'.(ActiveProperty::id() ?? 'all'),
+            60,
+            fn () => static::getEloquentQuery()
+                ->whereIn('status', [MaintenanceStatus::Open->value, MaintenanceStatus::InProgress->value])
+                ->count(),
+        );
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
     public static function getPages(): array
     {
         return [

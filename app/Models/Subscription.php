@@ -71,7 +71,8 @@ class Subscription extends Model
     {
         return LogOptions::defaults()
             ->logOnly(['plan_id', 'status', 'ends_at', 'price', 'max_units', 'auto_renew'])
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /** Fallback landlord_id derivation for staff/nested creates. */

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Providers\Filament\LandlordPanelProvider;
 
 Route::get('/', function () {
     return view('welcome');
@@ -19,7 +20,7 @@ Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 // Invoice documents — PDF (A4 / A5 / thermal receipt) + Excel export. Behind
 // 'auth'; the LandlordScope on Invoice scopes the binding so cross-landlord
 // access 404s. The /pdf|/excel suffix doesn't collide with Filament's
-// /landlord/invoices/{record}. Lives under /landlord (landlords' panel) now that
+// /app/invoices/{record}. Lives under the landlord panel prefix (/app) now that
 // landlords no longer use /admin; the route names are unchanged so callers stay put.
 // ---------------------------------------------------------------------------
 // SetLocale makes the documents render in the user's chosen language (Khmer when
@@ -27,15 +28,15 @@ Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 Route::middleware(['auth', \App\Http\Middleware\SetLocale::class])->group(function () {
     // Batch "print all" — registered before the {invoice} routes so 'batch'
     // never hits the model binding.
-    Route::get('landlord/invoices/batch/pdf', [InvoiceDocumentController::class, 'batchPdf'])->name('invoices.batch-pdf');
-    Route::get('landlord/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'pdf'])->name('invoices.pdf');
-    Route::get('landlord/invoices/{invoice}/excel', [InvoiceDocumentController::class, 'excel'])->name('invoices.excel');
-    Route::get('landlord/invoices/{invoice}/view', [InvoiceDocumentController::class, 'view'])->name('invoices.view');
+    Route::get(LandlordPanelProvider::PATH.'/invoices/batch/pdf', [InvoiceDocumentController::class, 'batchPdf'])->name('invoices.batch-pdf');
+    Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'pdf'])->name('invoices.pdf');
+    Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/excel', [InvoiceDocumentController::class, 'excel'])->name('invoices.excel');
+    Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/view', [InvoiceDocumentController::class, 'view'])->name('invoices.view');
 
     Route::post('api/properties/{property_id}/utility-usages/export', [\App\Http\Controllers\UtilityExportController::class, 'export'])->name('exports.utility-usages');
     Route::get('api/exports/{file_id}/download', [\App\Http\Controllers\UtilityExportController::class, 'download'])->name('exports.download');
 
-    Route::post('landlord/simple-mode/toggle', function (\Illuminate\Http\Request $request) {
+    Route::post(LandlordPanelProvider::PATH.'/simple-mode/toggle', function (\Illuminate\Http\Request $request) {
         $user = $request->user();
 
         abort_unless(\App\Support\SimpleLandlordMode::canUse($user), 403);
@@ -78,3 +79,14 @@ Route::get('/locale/{locale}', function (string $locale) {
 
     return redirect()->back();
 })->name('locale.switch');
+
+// ---------------------------------------------------------------------------
+// Legacy /landlord/* → /app/* (301). The panel moved off the role-named prefix;
+// this keeps existing bookmarks, installed PWA shortcuts and any cached service
+// worker entries working. Registered last so it can never shadow a real route.
+// ---------------------------------------------------------------------------
+Route::any('landlord/{path?}', function (?string $path = null) {
+    $target = '/'.LandlordPanelProvider::PATH.($path !== null && $path !== '' ? '/'.$path : '');
+
+    return redirect()->to($target.(request()->getQueryString() ? '?'.request()->getQueryString() : ''), 301);
+})->where('path', '.*')->name('landlord.legacy-redirect');

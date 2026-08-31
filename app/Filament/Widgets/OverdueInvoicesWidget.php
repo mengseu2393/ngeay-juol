@@ -3,8 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\InvoiceStatus;
+use App\Filament\Widgets\Concerns\HasActivePropertyScope;
 use App\Models\Invoice;
-use App\Support\ActiveProperty;
 use App\Support\Money;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -12,7 +12,11 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class OverdueInvoicesWidget extends BaseWidget
 {
-    protected static ?int $sort = 0; // after the charts
+    use HasActivePropertyScope;
+
+    protected static ?int $sort = 7;
+
+    protected int|string|array $columnSpan = 'full';
 
     public function getHeading(): string
     {
@@ -21,7 +25,7 @@ class OverdueInvoicesWidget extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $query = Invoice::query()
+        $query = $this->scopeToActiveProperty(Invoice::query())
             ->with(['rental.unit'])
             ->whereIn('payment_status', [
                 InvoiceStatus::Overdue,
@@ -31,11 +35,6 @@ class OverdueInvoicesWidget extends BaseWidget
             ->whereDate('due_date', '<', now()->toDateString())
             ->orderBy('due_date', 'asc')
             ->limit(5);
-
-        $propertyId = ActiveProperty::id();
-        if ($propertyId !== null) {
-            $query->where('property_id', $propertyId);
-        }
 
         return $table
             ->query($query)

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Providers\Filament\LandlordPanelProvider;
 use Illuminate\Http\Request;
 
 class SimpleLandlordMode
@@ -27,7 +28,9 @@ class SimpleLandlordMode
             return false;
         }
 
-        return ($request->is('landlord') || $request->is('landlord/*'))
-            && ! $request->is('landlord/simple', 'landlord/simple/*');
+        $panel = LandlordPanelProvider::PATH;
+
+        return ($request->is($panel) || $request->is($panel.'/*'))
+            && ! $request->is($panel.'/simple', $panel.'/simple/*');
     }
 }

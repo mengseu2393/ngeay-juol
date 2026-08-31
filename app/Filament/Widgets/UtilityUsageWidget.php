@@ -2,24 +2,27 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\HasActivePropertyScope;
 use App\Models\UtilityUsage;
-use App\Support\ActiveProperty;
+use App\Support\Money;
 use Filament\Widgets\ChartWidget;
 
 class UtilityUsageWidget extends ChartWidget
 {
-    protected static ?int $sort = -1;
+    use HasActivePropertyScope;
 
-    protected function getType(): string
-    {
-        return 'bar';
-    }
+    protected static ?int $sort = 3;
 
     public ?string $filter = null;
 
     public function getHeading(): string
     {
-        return __('Utility Usage');
+        return __('Utility cost').' ('.Money::activeSymbol().')';
+    }
+
+    protected function getType(): string
+    {
+        return 'bar';
     }
 
     protected function getFilters(): ?array
@@ -36,48 +39,45 @@ class UtilityUsageWidget extends ChartWidget
     protected function getData(): array
     {
         $year = (int) ($this->filter ?? now()->year);
+        $reportingCurrency = Money::activeCurrency();
 
-        $query = UtilityUsage::query()
-            ->with('propertyUtility')
-            ->whereYear('reading_date', $year);
-
-        $propertyId = ActiveProperty::id();
-        if ($propertyId !== null) {
-            $query->whereHas('unit', fn ($q) => $q->where('property_id', $propertyId));
-        }
-
-        $usages = $query->get();
+        $usages = $this->scopeThroughRelation(
+            UtilityUsage::query()->whereYear('reading_date', $year),
+            'unit',
+        )
+            ->with(['propertyUtility', 'unit.property.settings'])
+            ->get();
 
         $dataByUtility = [];
         foreach ($usages as $usage) {
-            $utilityName = $usage->propertyUtility?->name ?? 'Unknown';
-            $month = $usage->reading_date ? $usage->reading_date->month : null;
-            if (! $month) {
+            $utility = $usage->propertyUtility;
+            $month = $usage->reading_date?->month;
+
+            if (! $month || ! $utility) {
                 continue;
             }
 
-            if (! isset($dataByUtility[$utilityName])) {
-                $dataByUtility[$utilityName] = array_fill(1, 12, 0.0);
-            }
+            $utilityName = $utility->name ?: __('Unknown');
+            $dataByUtility[$utilityName] ??= array_fill(1, 12, 0.0);
 
-            $rate = (float) ($usage->propertyUtility?->rate ?? 0.0);
-            $cost = $usage->is_waived ? 0.0 : (float) $usage->amount_used * $rate;
-            $dataByUtility[$utilityName][$month] += round($cost, 2);
+            // Each utility prices in its own currency (៛/kWh electricity next to
+            // $/m³ water is normal), so costs are converted before they meet on
+            // one axis — otherwise 800 and 0.30 get added together.
+            $nativeCost = $usage->is_waived
+                ? 0.0
+                : (float) $usage->amount_used * (float) ($utility->rate ?? 0.0);
+
+            $dataByUtility[$utilityName][$month] += round(Money::convert(
+                $nativeCost,
+                Money::normalize($utility->currency),
+                $reportingCurrency,
+                (float) ($usage->unit?->property?->settings?->usd_khr_exchange_rate ?: 4000),
+            ), 2);
         }
 
         $monthLabels = [
-            __('Jan'),
-            __('Feb'),
-            __('Mar'),
-            __('Apr'),
-            __('May'),
-            __('Jun'),
-            __('Jul'),
-            __('Aug'),
-            __('Sep'),
-            __('Oct'),
-            __('Nov'),
-            __('Dec'),
+            __('Jan'), __('Feb'), __('Mar'), __('Apr'), __('May'), __('Jun'),
+            __('Jul'), __('Aug'), __('Sep'), __('Oct'), __('Nov'), __('Dec'),
         ];
 
         $colors = [
@@ -86,11 +86,11 @@ class UtilityUsageWidget extends ChartWidget
             'gas' => '#f97316',         // Orange
         ];
 
+        $symbol = Money::symbol($reportingCurrency);
         $datasets = [];
         $index = 0;
         foreach ($dataByUtility as $utilityName => $monthsData) {
-            $key = strtolower($utilityName);
-            $color = $colors[$key] ?? null;
+            $color = $colors[strtolower($utilityName)] ?? null;
             if (! $color) {
                 $palette = ['#10b981', '#a855f7', '#ec4899', '#6366f1', '#14b8a6'];
                 $color = $palette[$index % count($palette)];
@@ -98,7 +98,7 @@ class UtilityUsageWidget extends ChartWidget
             }
 
             $datasets[] = [
-                'label' => __($utilityName) . ' ($)',
+                'label' => __($utilityName).' ('.$symbol.')',
                 'data' => array_values($monthsData),
                 'backgroundColor' => $color,
             ];

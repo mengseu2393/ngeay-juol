@@ -32,6 +32,8 @@
 
         <!-- Styles / Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        @include('components.rw-loader-head')
         
         <style>
             body {

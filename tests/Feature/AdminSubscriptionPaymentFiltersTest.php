@@ -8,7 +8,9 @@ use App\Enums\PlanInterval;
 use App\Enums\SubscriptionPaymentStatus;
 use App\Enums\SubscriptionStatus;
 use App\Filament\Resources\SubscriptionPaymentResource;
-use App\Filament\Resources\SubscriptionPaymentResource\Pages\ListSubscriptionPayments;
+use App\Filament\Resources\SubscriptionResource;
+use App\Filament\Resources\SubscriptionResource\Pages\ListSubscriptions;
+use App\Filament\Widgets\SubscriptionPaymentsTableWidget;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
@@ -45,6 +47,31 @@ class AdminSubscriptionPaymentFiltersTest extends TestCase
         $this->assertStringEndsWith('/admin/subscription-payments', SubscriptionPaymentResource::getUrl('index'));
     }
 
+    public function test_subscription_payments_are_reachable_as_a_tab_of_the_merged_subscriptions_page(): void
+    {
+        $this->actingAs($this->superAdmin()->fresh());
+
+        $this->get(SubscriptionResource::getUrl('index', ['tab' => ListSubscriptions::TAB_PAYMENTS]))
+            ->assertOk()
+            ->assertSeeLivewire(SubscriptionPaymentsTableWidget::class);
+    }
+
+    public function test_the_old_subscription_payments_url_redirects_to_the_merged_page(): void
+    {
+        $this->actingAs($this->superAdmin()->fresh());
+
+        $this->get(SubscriptionPaymentResource::getUrl('index'))
+            ->assertRedirect(SubscriptionResource::getUrl('index', ['tab' => ListSubscriptions::TAB_PAYMENTS]));
+    }
+
+    public function test_subscription_payments_no_longer_have_their_own_navigation_entry(): void
+    {
+        $this->actingAs($this->superAdmin()->fresh());
+
+        $this->assertFalse(SubscriptionPaymentResource::shouldRegisterNavigation());
+        $this->assertTrue(SubscriptionResource::shouldRegisterNavigation());
+    }
+
     public function test_status_filter_limits_records_to_the_selected_subscription_payment_status(): void
     {
         $staff = $this->superAdmin();
@@ -73,7 +100,7 @@ class AdminSubscriptionPaymentFiltersTest extends TestCase
 
         $this->actingAs($staff);
 
-        Livewire::test(ListSubscriptionPayments::class)
+        Livewire::test(SubscriptionPaymentsTableWidget::class)
             ->filterTable('status', SubscriptionPaymentStatus::Succeeded->value)
             ->assertCanSeeTableRecords([$succeeded])
             ->assertCanNotSeeTableRecords([$failed]);
@@ -107,7 +134,7 @@ class AdminSubscriptionPaymentFiltersTest extends TestCase
 
         $this->actingAs($staff);
 
-        Livewire::test(ListSubscriptionPayments::class)
+        Livewire::test(SubscriptionPaymentsTableWidget::class)
             ->filterTable('method', PaymentMethod::Cash->value)
             ->assertCanSeeTableRecords([$cash])
             ->assertCanNotSeeTableRecords([$bank]);
@@ -143,7 +170,7 @@ class AdminSubscriptionPaymentFiltersTest extends TestCase
 
         $this->actingAs($staff);
 
-        Livewire::test(ListSubscriptionPayments::class)
+        Livewire::test(SubscriptionPaymentsTableWidget::class)
             ->filterTable('landlord_id', $landlordOne->id)
             ->assertCanSeeTableRecords([$owned])
             ->assertCanNotSeeTableRecords([$other]);
@@ -186,17 +213,17 @@ class AdminSubscriptionPaymentFiltersTest extends TestCase
 
         $this->actingAs($staff);
 
-        Livewire::test(ListSubscriptionPayments::class)
+        Livewire::test(SubscriptionPaymentsTableWidget::class)
             ->filterTable('paid_at', ['period' => 'this_month'])
             ->assertCanSeeTableRecords([$thisMonth])
             ->assertCanNotSeeTableRecords([$lastMonth, $outsideCustomWindow]);
 
-        Livewire::test(ListSubscriptionPayments::class)
+        Livewire::test(SubscriptionPaymentsTableWidget::class)
             ->filterTable('paid_at', ['period' => 'last_month'])
             ->assertCanSeeTableRecords([$lastMonth])
             ->assertCanNotSeeTableRecords([$thisMonth, $outsideCustomWindow]);
 
-        Livewire::test(ListSubscriptionPayments::class)
+        Livewire::test(SubscriptionPaymentsTableWidget::class)
             ->filterTable('paid_at', [
                 'period' => 'custom',
                 'from' => now()->subMonth()->startOfMonth()->toDateString(),
@@ -234,7 +261,7 @@ class AdminSubscriptionPaymentFiltersTest extends TestCase
 
         $this->actingAs($staff);
 
-        Livewire::test(ListSubscriptionPayments::class)
+        Livewire::test(SubscriptionPaymentsTableWidget::class)
             ->filterTable('coverage_period', [
                 'coverage_from' => now()->startOfMonth()->toDateString(),
                 'coverage_until' => now()->startOfMonth()->addDays(20)->toDateString(),

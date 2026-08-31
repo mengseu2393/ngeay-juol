@@ -2,13 +2,17 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\BillingType;
 use App\Enums\FirstMonthBillingMode;
 use App\Models\PropertySetting;
+use App\Models\PropertyUtility;
 use App\Support\ActiveProperty;
 use App\Support\Money;
 use App\Services\ExchangeRateService;
+use App\Services\OpeningReadingService;
 use App\Services\SubscriptionService;
 use Carbon\Carbon;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -16,6 +20,7 @@ use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Database\Eloquent\Collection;
 use Throwable;
 
 /**
@@ -90,6 +95,162 @@ class PropertySettings extends Page implements HasForms
         );
 
         $this->form->fill($this->setting->attributesToArray());
+    }
+
+    /**
+     * Opening readings live here rather than on the utility itself because this
+     * is the "before you bill anything" page: monthly billing is switched on a
+     * few fields below, and the index each meter starts from is the other half
+     * of that same setup step. PropertyUtilityResource keeps its own per-utility
+     * version for later corrections.
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('openingReadings')
+                ->label(__('Opening readings'))
+                ->icon('heroicon-o-bolt')
+                ->color('warning')
+                ->visible(fn (): bool => $this->meteredUtilities()->isNotEmpty())
+                ->modalWidth('3xl')
+                ->modalHeading(__('Opening utility readings'))
+                ->modalDescription(__('What each meter showed on the day you started. Without it the first invoice charges the meter\'s whole lifetime reading.'))
+                ->modalSubmitActionLabel(__('Save opening readings'))
+                ->form([
+                    Forms\Components\Select::make('property_utility_id')
+                        ->label(__('Utility'))
+                        ->options(fn (): array => $this->meteredUtilities()->pluck('name', 'id')->all())
+                        ->default(fn () => $this->meteredUtilities()->first()?->getKey())
+                        ->selectablePlaceholder(false)
+                        ->required()
+                        // Rebuilds the room list below: which rooms still need an
+                        // opening index is a per-utility question.
+                        ->live(),
+
+                    Forms\Components\DatePicker::make('reading_date')
+                        ->label(__('Reading date'))
+                        ->default(now())
+                        ->maxDate(now())
+                        ->required()
+                        ->helperText(__('The day these numbers were read off the meters.')),
+
+                    Forms\Components\Group::make()
+                        ->schema(fn (Get $get): array => $this->openingReadingFields($get('property_utility_id')))
+                        ->columnSpanFull(),
+                ])
+                ->action(fn (array $data) => $this->saveOpeningReadings($data)),
+        ];
+    }
+
+    /** Metered utilities of the active property — the only kind with an index. */
+    protected function meteredUtilities(): Collection
+    {
+        return PropertyUtility::query()
+            ->where('property_id', ActiveProperty::id())
+            ->where('billing_type', BillingType::Metered->value)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * One number per room, with the rooms whose opening index is already settled
+     * shown but locked — seeing them is the point, since "why is this room
+     * greyed out" is answered by the value next to it.
+     *
+     * @return array<int, Forms\Components\Component>
+     */
+    protected function openingReadingFields(mixed $utilityId): array
+    {
+        $utility = $utilityId
+            ? $this->meteredUtilities()->firstWhere('id', (int) $utilityId)
+            : null;
+
+        if (! $utility) {
+            return [];
+        }
+
+        $rows = app(OpeningReadingService::class)->rows($utility);
+
+        if ($rows->isEmpty()) {
+            return [
+                Forms\Components\Placeholder::make('no_rooms')
+                    ->label('')
+                    ->content(__('No rooms are set up for this property yet.')),
+            ];
+        }
+
+        $fields = $rows->map(function (array $row) use ($utility): Forms\Components\TextInput {
+            $input = Forms\Components\TextInput::make('readings.'.$row['unit']->getKey())
+                ->label(__('Room :room', ['room' => $row['unit']->room_number]))
+                ->numeric()
+                ->minValue(0)
+                ->maxValue(999999999)
+                ->step('0.001')
+                ->suffix($utility->unit_of_measure);
+
+            return match ($row['state']) {
+                OpeningReadingService::OPEN_METER => $input->helperText(__('Meter :meter — sets its opening index.', [
+                    'meter' => $row['meter']->serial ?: __('Meter #:id', ['id' => $row['meter']->getKey()]),
+                ])),
+                OpeningReadingService::OPEN_LEGACY => $input->helperText(__('Sets the starting baseline (no consumption billed).')),
+                default => $input
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->placeholder(static::formatReading($row['baseline']))
+                    ->helperText(__('Already set (:value) — reading from here on.', [
+                        'value' => static::formatReading($row['baseline']),
+                    ])),
+            };
+        })->values()->all();
+
+        return [
+            Forms\Components\Fieldset::make(__('Rooms'))
+                ->schema($fields)
+                ->columns(2),
+        ];
+    }
+
+    /** Trailing zeros off a decimal:3 reading — "1091" beats "1091.000". */
+    protected static function formatReading(?float $value): string
+    {
+        return $value === null ? '—' : rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
+    }
+
+    protected function saveOpeningReadings(array $data): void
+    {
+        if (! SubscriptionService::canMutate(auth()->user())) {
+            Notification::make()
+                ->danger()
+                ->title(__('Write actions are disabled until payment is completed.'))
+                ->send();
+
+            return;
+        }
+
+        $utility = $this->meteredUtilities()->firstWhere('id', (int) $data['property_utility_id']);
+
+        if (! $utility) {
+            Notification::make()->danger()->title(__('That utility is no longer available.'))->send();
+
+            return;
+        }
+
+        $result = app(OpeningReadingService::class)->apply(
+            $utility,
+            Carbon::parse($data['reading_date'])->toDateString(),
+            $data['readings'] ?? [],
+        );
+
+        $recorded = $result['meters'] + $result['baselines'];
+
+        Notification::make()
+            ->{$recorded > 0 ? 'success' : 'warning'}()
+            ->title($recorded > 0
+                ? __(':count opening reading(s) initialized', ['count' => $recorded])
+                : __('No readings entered.'))
+            ->body($recorded > 0 ? __('Billing measures :utility from these numbers.', ['utility' => $utility->name]) : null)
+            ->send();
     }
 
     public function form(Form $form): Form

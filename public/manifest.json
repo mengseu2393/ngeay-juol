@@ -19,9 +19,9 @@
         { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
     ],
     "shortcuts": [
-        { "name": "ចេញវិក្កយបត្រ", "short_name": "Billing", "url": "/landlord/monthly-billing", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-        { "name": "វិក្កយបត្រ", "short_name": "Invoices", "url": "/landlord/invoices", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-        { "name": "បន្ទប់", "short_name": "Rooms", "url": "/landlord/units", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+        { "name": "ចេញវិក្កយបត្រ", "short_name": "Billing", "url": "/app/monthly-billing", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+        { "name": "វិក្កយបត្រ", "short_name": "Invoices", "url": "/app/invoices", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+        { "name": "បន្ទប់", "short_name": "Rooms", "url": "/app/units", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
     ],
     "screenshots": [
         { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "form_factor": "narrow", "label": "ងាយជួល — Dashboard" },

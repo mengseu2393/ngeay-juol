@@ -1,0 +1,152 @@
+/*
+ | RentWise — the loading spinner
+ |
+ | Four dots on a ring, turning half a turn a second on an ease curve.
+ |
+ | Two forms of one mark:
+ |   1. `.rw-spinner` / `.rw-spin` — an inline SVG element (resources/views/components/
+ |                          rw-spinner.blade.php, and the published Filament loading-indicator
+ |                          override). Four circles, filled with `currentColor`, so a spinner
+ |                          inside a primary button still comes out white.
+ |   2. `html.rw-loading` — the full-page loader, the CSS-gradient version of the same four
+ |                          dots. Drawn entirely with pseudo-elements on <html>, so it needs no
+ |                          markup on any page and survives Livewire's SPA body swaps. Toggled
+ |                          by public/js/rentwise-loader.js.
+ |
+ | Geometry — dots sit on the four edge midpoints of a square box, each one 24% of the box
+ | (12px at the reference size of 50px). The SVG says the same thing as four r=6 circles at
+ | (25,6) (6,25) (44,25) (25,44) in a 50x50 viewBox. Because the arrangement is symmetric
+ | every 90deg, a 180deg rotation lands back on itself — which is why the keyframe stops at
+ | .5turn and still loops seamlessly.
+*/
+
+:root {
+    --rw-loader-color: #25b09b;
+    --rw-loader-speed: 1s;
+    --rw-loader-size: 3.125rem;
+
+    /* Page-loader backdrop — matches the app shell so the handover doesn't flash. */
+    --rw-loader-backdrop: #f8fafc;
+    --rw-loader-backdrop-soft: rgba(248, 250, 252, 0.75);
+}
+
+/* Filament (and the auth screens) put `dark` on <html>, alongside `rw-loading`. */
+html.dark {
+    --rw-loader-backdrop: #020617;
+    --rw-loader-backdrop-soft: rgba(2, 6, 23, 0.72);
+}
+
+/* No `from`, and no timing function: the default ease curve is what gives the dots their
+   swing. Half a turn is a full visual cycle for a shape this symmetric. */
+@keyframes rw-spin {
+    to { transform: rotate(0.5turn); }
+}
+
+@keyframes rw-loader-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ----------------------------------------------------------------------------
+ | Inline spinner
+ | -------------------------------------------------------------------------- */
+
+/* Animation only — no colour, no size. This is what the Filament indicator wears, so it can
+   keep inheriting the size utilities and text colour of whatever it sits inside. */
+.rw-spin,
+.rw-spinner {
+    animation: rw-spin var(--rw-loader-speed) infinite;
+}
+
+/* Defaults rather than decisions. `:where()` zeroes the specificity, so a caller's single
+   utility class still wins — `class="h-6 w-6 text-white"`, or `hidden` on a spinner that is
+   toggled — without an !important arms race. Size can also be set with --rw-spinner-size. */
+:where(.rw-spinner) {
+    display: inline-block;
+    flex-shrink: 0;
+    width: var(--rw-spinner-size, 1.25rem);
+    height: var(--rw-spinner-size, 1.25rem);
+    color: var(--rw-loader-color);
+}
+
+/* ----------------------------------------------------------------------------
+ | Full-page loader
+ | -------------------------------------------------------------------------- */
+html.rw-loading::before,
+html.rw-loading::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    /* Never swallow clicks: if this ever outlives a load, the app underneath still works. */
+    pointer-events: none;
+}
+
+html.rw-loading::before {
+    background-color: var(--rw-loader-backdrop);
+}
+
+html.rw-loading::after {
+    --rw-loader-dot: no-repeat radial-gradient(farthest-side, var(--rw-loader-color) 92%, #0000);
+
+    width: var(--rw-loader-size);
+    height: var(--rw-loader-size);
+    margin: auto;
+    background:
+        var(--rw-loader-dot) top,
+        var(--rw-loader-dot) left,
+        var(--rw-loader-dot) right,
+        var(--rw-loader-dot) bottom;
+    /* Percentages, not the reference's 12px, so the dots keep their proportion at any
+       --rw-loader-size. */
+    background-size: 24% 24%;
+    animation: rw-spin var(--rw-loader-speed) infinite;
+}
+
+/* In-app navigation: the page you came from stays readable underneath. No backdrop-filter —
+   blurring a full viewport is a GPU job, and this app is used on cheap Android phones where
+   that lands as a stutter at exactly the moment the UI is meant to feel responsive. */
+html.rw-loading--nav::before {
+    background-color: var(--rw-loader-backdrop-soft);
+    animation: rw-loader-fade-in 160ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rw-spin,
+    .rw-spinner,
+    html.rw-loading::after {
+        animation-duration: 2s;
+    }
+
+    html.rw-loading--nav::before {
+        animation: none;
+    }
+}
+
+/* ----------------------------------------------------------------------------
+ | Livewire's navigation progress bar
+ |
+ | The panels run in SPA mode, so Livewire ran its own thin bar across the top of the viewport
+ | on every navigation — a second loading indicator, arriving a beat after the overlay above
+ | had already cleared. One loader per navigation; this is the one we keep.
+ |
+ | Not turned off at the source (`livewire.navigate.show_progress_bar`) because in Livewire
+ | 3.8.1 that config is broken: supportNavigate.js runs
+ |     shouldHideProgressBar() && Alpine.navigate.disableProgressBar();
+ | during bundle init, where the bare `Alpine` identifier is not bound yet. Leaving the bar on
+ | short-circuits past it; switching it off throws a ReferenceError that takes down the whole
+ | Livewire bundle — no Alpine, no SPA navigation. So the bar is hidden here instead. Revisit
+ | when Livewire fixes it. !important because Livewire injects the bar's stylesheet at runtime,
+ | after this file.
+ | -------------------------------------------------------------------------- */
+#nprogress {
+    display: none !important;
+}
+
+/* Invoices and receipts print straight from the page — a loader must never reach paper. */
+@media print {
+    html.rw-loading::before,
+    html.rw-loading::after {
+        display: none;
+    }
+}

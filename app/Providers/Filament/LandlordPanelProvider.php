@@ -2,23 +2,29 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Billing;
-
 use App\Filament\Pages\MonthlyBilling;
+
 use App\Filament\Pages\PropertySettings;
 use App\Filament\Resources\InvoiceResource;
-use App\Filament\Resources\PaymentResource;
+use App\Filament\Resources\MaintenanceRequestResource;
 use App\Filament\Resources\PropertyResource;
 use App\Filament\Resources\PropertyUtilityResource;
 use App\Filament\Resources\RentalResource;
 use App\Filament\Resources\UnitResource;
 use App\Filament\Resources\UtilityUsageResource;
+use App\Filament\Widgets\BillingCycleWidget;
+use App\Filament\Widgets\LeaseExpiryWidget;
 use App\Filament\Widgets\OverdueInvoicesWidget;
 use App\Filament\Widgets\PortfolioStatsWidget;
+use App\Filament\Widgets\ReceivablesAgingWidget;
+use App\Filament\Widgets\RecentPaymentsWidget;
 use App\Filament\Widgets\RevenueChartWidget;
+use App\Filament\Widgets\RoomsMissingReadingsWidget;
 use App\Filament\Widgets\RoomStatusWidget;
 use App\Filament\Widgets\SubscriptionStatusWidget;
+use App\Filament\Widgets\TopDebtorsWidget;
+use App\Filament\Widgets\UtilityAnomalyWidget;
 use App\Filament\Widgets\UtilityUsageWidget;
 use App\Http\Middleware\EnsureActiveSubscription;
 use App\Http\Middleware\RedirectToSimpleLandlordMode;
@@ -36,7 +42,6 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -46,17 +51,28 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
- * Landlord back-office at /landlord. This is the property-management workspace:
+ * Landlord back-office at /app. This is the property-management workspace:
  * the sidebar follows a selected property (the property switcher), and only the
  * landlord-owned resources live here. Platform staff use the separate /admin panel.
+ *
+ * The URL prefix is /app (neutral — the panel is also used by landlord_manager
+ * staff and by platform staff drilling in), while the panel *id* stays 'landlord'
+ * so every filament.landlord.* route name is unchanged. Anything that needs the
+ * prefix as a string reads self::PATH rather than hardcoding it again.
  */
 class LandlordPanelProvider extends PanelProvider
 {
+    /** URL prefix for this panel. Legacy /landlord/* is 301'd here in routes/web.php. */
+    public const PATH = 'app';
+
+    /** Panel id — unchanged by the move to /app, so filament.landlord.* route names still resolve. */
+    public const ID = 'landlord';
+
     public function panel(Panel $panel): Panel
     {
         return $panel
-            ->id('landlord')
-            ->path('landlord')
+            ->id(self::ID)
+            ->path(self::PATH)
             ->brandName(__('ngeay juol'))
             ->brandLogo(fn () => view('filament.components.brand-logo'))
             ->favicon(asset('favicon.ico'))
@@ -71,12 +87,11 @@ class LandlordPanelProvider extends PanelProvider
                 url('/locale/en'),
                 url('/locale/km'),
                 url('/logout'),
-                url('/landlord/logout'),
+                url('/'.self::PATH.'/logout'),
                 url('/login'),
-                url('/landlord/login'),
                 url('/admin/*'),
-                url('/landlord/invoices/*/pdf*'),
-                url('/landlord/invoices/*/excel*'),
+                url('/'.self::PATH.'/invoices/*/pdf*'),
+                url('/'.self::PATH.'/invoices/*/excel*'),
                 'mailto:*',
             ])
             ->globalSearch(false)
@@ -90,21 +105,26 @@ class LandlordPanelProvider extends PanelProvider
             // popup to wire up here; just load the shared admin theme.
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn (): string => '<link rel="stylesheet" href="'.asset('css/rentwise-admin.css').'?v='.@filemtime(public_path('css/rentwise-admin.css')).'">'.
+                fn (): string => '<link rel="preconnect" href="https://fonts.googleapis.com">'.
+                    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'.
+                    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap">'.
+                    '<link rel="stylesheet" href="'.asset('css/rentwise-admin.css').'?v='.@filemtime(public_path('css/rentwise-admin.css')).'">'.
                     '<link rel="manifest" href="/manifest.json">'.
                     '<meta name="theme-color" content="#059669">'.
                     '<meta name="mobile-web-app-capable" content="yes">'.
                     '<meta name="apple-mobile-web-app-capable" content="yes">'.
                     '<meta name="apple-mobile-web-app-status-bar-style" content="default">'.
                     '<meta name="apple-mobile-web-app-title" content="ងាយជួល">'.
-                    '<link rel="apple-touch-icon" href="/icons/icon-192.png">',
+                    '<link rel="apple-touch-icon" href="/icons/icon-192.png">'.
+                    view('components.rw-loader-head')->render(),
             )
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn (): string => Blade::render(
                     '<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(()=>{})})}</script>' .
                     '@include(\'filament.components.pwa-install-banner\')' .
-                    '@include(\'components.rw-print-script\')'
+                    '@include(\'components.rw-print-script\')' .
+                    '@include(\'components.rw-close-dropdown-on-action\')'
                 ),
             )
             ->renderHook(
@@ -126,6 +146,7 @@ class LandlordPanelProvider extends PanelProvider
                 'Tenancy' => NavigationGroup::make()->label(fn () => __('Tenancy')),
                 'Billing' => NavigationGroup::make()->label(fn () => __('Billing')),
                 'Utilities' => NavigationGroup::make()->label(fn () => __('Utilities')),
+                'Operations' => NavigationGroup::make()->label(fn () => __('Operations')),
             ])
             ->userMenuItems([
                 MenuItem::make()
@@ -162,7 +183,7 @@ class LandlordPanelProvider extends PanelProvider
                 UnitResource::class,
                 RentalResource::class,
                 InvoiceResource::class,
-                PaymentResource::class,
+                MaintenanceRequestResource::class,
                 PropertyUtilityResource::class,
                 UtilityUsageResource::class,
             ])
@@ -173,14 +194,24 @@ class LandlordPanelProvider extends PanelProvider
                 PropertySettings::class,
                 \App\Filament\Pages\SimpleDashboard::class,
             ])
+            // Dashboard, top to bottom. AccountWidget is deliberately absent: its
+            // "Hi, <name>" card occupied the first slot without telling a landlord
+            // anything. Ordering runs standing position → this month's work → the
+            // lists to act on → the retrospective charts.
             ->widgets([
-                AccountWidget::class,
-                PortfolioStatsWidget::class,
-                SubscriptionStatusWidget::class,
-                RoomStatusWidget::class,
-                UtilityUsageWidget::class,
-                RevenueChartWidget::class,
-                OverdueInvoicesWidget::class,
+                SubscriptionStatusWidget::class,   // -5
+                PortfolioStatsWidget::class,       // -4  occupancy, tenancies, deposits, outstanding
+                BillingCycleWidget::class,         // -3  readings / invoices / cash for this month
+                TopDebtorsWidget::class,           // -2  who to phone
+                RoomsMissingReadingsWidget::class, // -1  what blocks the billing run
+                RevenueChartWidget::class,         //  0
+                ReceivablesAgingWidget::class,     //  1
+                RoomStatusWidget::class,           //  2
+                UtilityUsageWidget::class,         //  3
+                UtilityAnomalyWidget::class,       //  4  leaks and misread meters
+                LeaseExpiryWidget::class,          //  5
+                RecentPaymentsWidget::class,       //  6
+                OverdueInvoicesWidget::class,      //  7  invoice-level detail behind TopDebtors
             ])
             ->middleware([
                 EncryptCookies::class,

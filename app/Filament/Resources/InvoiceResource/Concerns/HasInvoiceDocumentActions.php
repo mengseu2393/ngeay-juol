@@ -44,7 +44,11 @@ trait HasInvoiceDocumentActions
         return \Filament\Tables\Actions\ActionGroup::make($children)
             ->label(__('Print / Export'))
             ->icon('heroicon-o-printer')
-            ->color('gray');
+            ->color('gray')
+            // Every ActionGroup defaults to an icon-only trigger (for the outer "..."
+            // menu). Nested inside another group that default sticks, so without
+            // this the row menu showed a bare printer icon with no visible label.
+            ->grouped();
     }
 
     /**
@@ -79,6 +83,7 @@ trait HasInvoiceDocumentActions
         return \Filament\Actions\ActionGroup::make($children)
             ->label(__('Print / Export'))
             ->icon('heroicon-o-printer')
-            ->color('gray');
+            ->color('gray')
+            ->grouped();
     }
 }
