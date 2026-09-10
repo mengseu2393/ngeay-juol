@@ -11,10 +11,11 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Models\UtilityUsage;
 use App\Support\ActiveProperty;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
-use Database\Seeders\RolesAndPermissionsSeeder;
 
 class PropertyUtilityResourceTest extends TestCase
 {
@@ -23,9 +24,9 @@ class PropertyUtilityResourceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->seed(RolesAndPermissionsSeeder::class);
-        \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('landlord'));
+        Filament::setCurrentPanel(Filament::getPanel('landlord'));
     }
 
     protected function tearDown(): void
@@ -124,7 +125,7 @@ class PropertyUtilityResourceTest extends TestCase
                 'units' => [
                     $unit1->id => '120.5',
                     $unit2->id => '', // skip this
-                ]
+                ],
             ]);
 
         $test->assertHasNoTableActionErrors();
@@ -132,12 +133,23 @@ class PropertyUtilityResourceTest extends TestCase
         $this->assertDatabaseHas('utility_usages', [
             'unit_id' => $unit1->id,
             'property_utility_id' => $utility->id,
-            'reading_date' => '2026-07-02',
-            'old_reading' => '120.500',
-            'new_reading' => '120.500',
-            'amount_used' => '0.000',
             'reading_type' => ReadingType::Actual->value,
         ]);
+
+        // reading_date / the three decimal columns are asserted through the model's
+        // casts rather than raw column text. The `date` cast writes '2026-07-02
+        // 00:00:00' and SQLite hands decimals back as bare floats (120.5), so a raw
+        // assertDatabaseHas on '2026-07-02' / '120.500' only ever matched on MySQL —
+        // the values themselves were always correct.
+        $usage = UtilityUsage::withoutGlobalScopes()
+            ->where('unit_id', $unit1->id)
+            ->where('property_utility_id', $utility->id)
+            ->sole();
+
+        $this->assertSame('2026-07-02', $usage->reading_date->toDateString());
+        $this->assertSame('120.500', $usage->old_reading);
+        $this->assertSame('120.500', $usage->new_reading);
+        $this->assertSame('0.000', $usage->amount_used);
 
         $this->assertDatabaseMissing('utility_usages', [
             'unit_id' => $unit2->id,
@@ -203,7 +215,7 @@ class PropertyUtilityResourceTest extends TestCase
                 'reading_date' => '2026-07-02',
                 'units' => [
                     $unit->id => '200.0', // This is technically ignored in submit processing
-                ]
+                ],
             ])
             ->assertHasNoTableActionErrors();
 
@@ -212,7 +224,7 @@ class PropertyUtilityResourceTest extends TestCase
             'id' => $existing->id,
             'amount_used' => '50.000',
         ]);
-        
+
         // No new utility usage record should be created
         $this->assertEquals(1, UtilityUsage::count());
     }
