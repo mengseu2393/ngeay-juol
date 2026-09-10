@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\InvoiceResource\RelationManagers;
 
 use App\Enums\PaymentMethod;
+use App\Filament\Resources\InvoiceResource;
 use App\Filament\Tables\RowActionGroup;
 use App\Models\Payment;
+use App\Support\InvoicePaper;
 use App\Support\Money;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -57,14 +59,59 @@ class PaymentsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('receipt_number')->placeholder('—'),
             ])
             ->headerActions([
+                // The same compact modal as the invoice row, resolved against the
+                // owner record, so both surfaces record a payment identically
+                // (through Invoice::recordPayment) and hide on a settled invoice.
+                InvoiceResource::recordPaymentAction(
+                    'recordPaymentFromRelation',
+                    fn ($record, $livewire) => $livewire->getOwnerRecord(),
+                ),
                 Tables\Actions\CreateAction::make(),
             ])
             ->actions([
                 RowActionGroup::make([
+                    static::receiptActions(),
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * "Print receipt" — the slip handed to a tenant who just paid cash.
+     *
+     * Two sizes only: the 58 mm thermal roll (what a landlord actually prints)
+     * and A5 for a filed paper copy. The route streams inline so the browser's
+     * print dialog is one click away.
+     */
+    protected static function receiptActions(): Tables\Actions\ActionGroup
+    {
+        return Tables\Actions\ActionGroup::make([
+            Tables\Actions\Action::make('receipt_58mm')
+                ->label(__('Receipt').' · '.InvoicePaper::label('58mm'))
+                ->icon('heroicon-o-printer')
+                ->url(fn (Payment $record) => route('payments.receipt', [
+                    'payment' => $record,
+                    'size' => '58mm',
+                    'mode' => 'stream',
+                ]))
+                ->openUrlInNewTab(),
+            Tables\Actions\Action::make('receipt_a5')
+                ->label(__('Receipt').' · '.InvoicePaper::label('a5'))
+                ->icon('heroicon-o-document-arrow-down')
+                ->url(fn (Payment $record) => route('payments.receipt', [
+                    'payment' => $record,
+                    'size' => 'a5',
+                    'mode' => 'stream',
+                ]))
+                ->openUrlInNewTab(),
+        ])
+            ->label(__('Print receipt'))
+            ->icon('heroicon-o-printer')
+            ->color('gray')
+            // Nested inside the row's "..." group, an ActionGroup keeps its
+            // icon-only trigger unless told otherwise (see HasInvoiceDocumentActions).
+            ->grouped();
     }
 }

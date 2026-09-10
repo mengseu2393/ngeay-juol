@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\InvoiceDocumentController;
+use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\TenantPortalController;
 use App\Http\Controllers\UtilityExportController;
 use App\Http\Middleware\SetLocale;
@@ -50,6 +51,13 @@ Route::middleware(['auth', SetLocale::class])->group(function () {
     Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'pdf'])->name('invoices.pdf');
     Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/excel', [InvoiceDocumentController::class, 'excel'])->name('invoices.excel');
     Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/view', [InvoiceDocumentController::class, 'view'])->name('invoices.view');
+
+    // Payment receipt — the slip a landlord hands over after taking cash. Payment
+    // has no landlord_id and therefore no LandlordScope on the binding, so unlike
+    // the invoice routes above this one is guarded entirely inside the controller
+    // (through payment.invoice.landlord_id). The /receipt suffix under a segment
+    // Filament doesn't register keeps it clear of the panel's own routing.
+    Route::get(LandlordPanelProvider::PATH.'/payments/{payment}/receipt', [PaymentReceiptController::class, 'pdf'])->name('payments.receipt');
 
     Route::post('api/properties/{property_id}/utility-usages/export', [UtilityExportController::class, 'export'])->name('exports.utility-usages');
     Route::get('api/exports/{file_id}/download', [UtilityExportController::class, 'download'])->name('exports.download');

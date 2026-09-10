@@ -13,8 +13,10 @@ use App\Models\Invoice;
 use App\Support\ActiveProperty;
 use App\Support\Money;
 use Carbon\Carbon;
+use Closure;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\Alignment;
@@ -288,6 +290,9 @@ class InvoiceResource extends Resource
             ])
             ->actions([
                 RowActionGroup::make([
+                    // First in the menu on purpose: "the tenant just paid me" is the
+                    // most frequent thing a landlord does with an invoice row.
+                    static::recordPaymentAction('recordPayment'),
                     static::tableDocumentActions(),
                     static::managePaymentsAction('managePayments'),
                     Tables\Actions\ViewAction::make(),
@@ -300,6 +305,135 @@ class InvoiceResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * "Record payment" — the one-click version of the daily job.
+     *
+     * Logging "the tenant paid $50" used to mean list → invoice → Payments tab →
+     * Create → a full form; this is a compact modal on the row itself, pre-filled
+     * with the outstanding balance so the common "paid it all in cash" case is
+     * amount-untouched + Enter.
+     *
+     * The write goes through {@see Invoice::recordPayment()} and nothing else:
+     * amount_paid and payment_status are recomputed from the ledger by the
+     * Payment model's own saved hook, so this method must never touch either
+     * (CLAUDE.md, "Data model").
+     *
+     * $invoiceUsing resolves the invoice from the action's context, because the
+     * same action is registered on the invoice table (where it is the row record)
+     * and on the payments relation-manager header (where it is the owner record).
+     * It receives ($record, $livewire).
+     */
+    public static function recordPaymentAction(string $name = 'recordPayment', ?Closure $invoiceUsing = null): Tables\Actions\Action
+    {
+        $invoiceUsing ??= fn ($record, $livewire) => $record;
+
+        return Tables\Actions\Action::make($name)
+            ->label(__('Record payment'))
+            ->icon('heroicon-o-banknotes')
+            ->color('success')
+            ->modalWidth('lg')
+            ->modalSubmitActionLabel(__('Record payment'))
+            // A settled invoice has nothing to collect: Paid and Cancelled both
+            // hide the action rather than accepting a payment that would either
+            // overpay or resurrect a cancelled bill.
+            ->visible(function ($record, $livewire) use ($invoiceUsing): bool {
+                $invoice = $invoiceUsing($record, $livewire);
+
+                return $invoice instanceof Invoice && ! ($invoice->payment_status?->isSettled() ?? false);
+            })
+            ->modalHeading(fn ($record, $livewire) => __('Record payment').' · '.$invoiceUsing($record, $livewire)?->invoice_number)
+            ->modalDescription(function ($record, $livewire) use ($invoiceUsing): string {
+                $invoice = $invoiceUsing($record, $livewire);
+
+                return __('Total').': '.Money::formatForRecord($invoice->amount_due, $invoice)
+                    .' · '.__('Paid').': '.Money::formatForRecord($invoice->amount_paid, $invoice)
+                    .' · '.__('Balance').': '.Money::formatForRecord($invoice->balance, $invoice);
+            })
+            // Defaults are seeded here rather than on each field's ->default():
+            // the action's record is reliably injectable at this level, a field
+            // closure's is not.
+            ->fillForm(function ($record, $livewire) use ($invoiceUsing): array {
+                $invoice = $invoiceUsing($record, $livewire);
+                $currency = Money::forRecord($invoice);
+
+                return [
+                    'amount' => number_format(max(0.0, (float) $invoice->balance), Money::decimals($currency), '.', ''),
+                    'currency' => $currency,
+                    'method' => PaymentMethod::Cash->value,
+                    'paid_at' => now(),
+                ];
+            })
+            // An action's modal form has no ->columns(); the pairs are laid out
+            // with an explicit Grid instead.
+            ->form([
+                Forms\Components\Grid::make(2)->schema([
+                    Forms\Components\TextInput::make('amount')
+                        ->label(__('Amount'))
+                        ->numeric()
+                        ->minValue(0.01)
+                        ->required()
+                        ->prefix(fn (Forms\Get $get) => Money::symbol($get('currency'))),
+                    Forms\Components\Select::make('currency')
+                        ->label(__('Payment currency'))
+                        ->options([
+                            'USD' => 'USD',
+                            'KHR' => 'KHR',
+                        ])
+                        // Live so the amount prefix follows the currency; the amount
+                        // itself is deliberately left alone (it is the landlord's
+                        // number once they've touched it).
+                        ->live()
+                        ->required(),
+                    Forms\Components\Select::make('method')
+                        ->label(__('Method'))
+                        ->options(PaymentMethod::class)
+                        ->required(),
+                    Forms\Components\DateTimePicker::make('paid_at')
+                        ->label(__('Paid at'))
+                        ->required(),
+                    Forms\Components\TextInput::make('transaction_ref')->label(__('Transaction ref')),
+                    Forms\Components\TextInput::make('receipt_number')
+                        ->label(__('Receipt number'))
+                        ->helperText(__('Leave blank to number the receipt automatically.')),
+                    Forms\Components\Textarea::make('note')->label(__('Note'))->columnSpanFull(),
+                ]),
+            ])
+            ->action(function ($record, $livewire, array $data) use ($invoiceUsing): void {
+                $invoice = $invoiceUsing($record, $livewire);
+
+                $payment = $invoice->recordPayment([
+                    'recorded_by_id' => auth()->id(),
+                    'amount' => $data['amount'],
+                    'currency' => $data['currency'] ?? null,
+                    'paid_at' => $data['paid_at'] ?? now(),
+                    'method' => $data['method'] ?? PaymentMethod::Cash,
+                    'transaction_ref' => $data['transaction_ref'] ?? null,
+                    'receipt_number' => $data['receipt_number'] ?? null,
+                    'note' => $data['note'] ?? null,
+                ]);
+
+                // The ledger hook wrote amount_paid/payment_status behind our back
+                // (saveQuietly on another instance), so re-read before reporting.
+                $invoice->refresh();
+
+                Notification::make()
+                    ->title(__('Payment recorded'))
+                    ->body(__('Balance').': '.Money::formatForRecord($invoice->balance, $invoice)
+                        .' · '.$invoice->payment_status->getLabel())
+                    ->success()
+                    ->actions([
+                        NotificationAction::make('printReceipt')
+                            ->label(__('Print receipt'))
+                            ->icon('heroicon-o-printer')
+                            ->url(
+                                route('payments.receipt', ['payment' => $payment, 'size' => '58mm', 'mode' => 'stream']),
+                                shouldOpenInNewTab: true,
+                            ),
+                    ])
+                    ->send();
+            });
     }
 
     /**
