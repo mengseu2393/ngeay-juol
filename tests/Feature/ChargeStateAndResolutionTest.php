@@ -3,11 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\BillingType;
-use App\Enums\InvoiceLineType;
+use App\Enums\RentalStatus;
 use App\Models\BillingRunChargeDecision;
 use App\Models\ChargeDefinition;
 use App\Models\ChargeRule;
 use App\Models\Invoice;
+use App\Models\InvoiceLine;
 use App\Models\Property;
 use App\Models\PropertySetting;
 use App\Models\PropertyUtility;
@@ -16,10 +17,11 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Models\UtilityUsage;
 use App\Models\UtilityWaiver;
+use App\Services\ChargeRuleResolver;
 use App\Services\ExchangeRateService;
 use App\Services\InvoiceBuilderService;
-use App\Services\ChargeRuleResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class ChargeStateAndResolutionTest extends TestCase
@@ -27,16 +29,27 @@ class ChargeStateAndResolutionTest extends TestCase
     use RefreshDatabase;
 
     protected User $landlord;
+
     protected User $tenant;
+
     protected Property $property;
+
     protected PropertySetting $settings;
+
     protected Unit $unit1;
+
     protected Unit $unit2;
+
     protected Rental $rental1;
+
     protected Rental $rental2;
+
     protected PropertyUtility $utility;
+
     protected ChargeDefinition $definition;
+
     protected InvoiceBuilderService $builder;
+
     protected ChargeRuleResolver $resolver;
 
     protected function setUp(): void
@@ -98,7 +111,7 @@ class ChargeStateAndResolutionTest extends TestCase
             'security_deposit' => 100.00,
             'security_deposit_currency' => 'USD',
             'start_date' => now()->toDateString(),
-            'status' => \App\Enums\RentalStatus::Active,
+            'status' => RentalStatus::Active,
         ]);
 
         $this->rental2 = Rental::create([
@@ -110,7 +123,7 @@ class ChargeStateAndResolutionTest extends TestCase
             'security_deposit' => 120.00,
             'security_deposit_currency' => 'USD',
             'start_date' => now()->toDateString(),
-            'status' => \App\Enums\RentalStatus::Active,
+            'status' => RentalStatus::Active,
         ]);
 
         $this->definition = ChargeDefinition::create([
@@ -478,7 +491,7 @@ class ChargeStateAndResolutionTest extends TestCase
         // Uses KHR and override amount
         $this->assertEquals('KHR', $line->currency);
         $this->assertEquals(20500, $line->amount);
-        
+
         // Converted values using snapshot exchange rate 4100.0
         // 20,500 KHR / 4100.0 = 5 USD
         $this->assertEquals(5.00, $line->amount_usd);
@@ -584,5 +597,268 @@ class ChargeStateAndResolutionTest extends TestCase
         $line->refresh();
         $this->assertEquals('free', $line->charge_state);
         $this->assertEquals(0.0, $line->amount);
+    }
+
+    /**
+     * WHY: todo.md flags "Adjusted" (the tenant-facing label for the `custom`
+     * state) as having zero regression coverage. An adjusted charge is the one
+     * hidden state that still prints a non-zero figure, so the leak it can spring
+     * is the opposite of the others: the tenant must see the *override* and never
+     * the un-adjusted price. The original rate stays snapshotted on the line's
+     * `unit_price` (landlords need it for the audit trail), which means any
+     * regression that recomputes `amount` as unit_price x quantity, or that loses
+     * the override between ChargeRuleResolver and InvoiceBuilderService, silently
+     * re-bills the tenant the full amount. Here the un-adjusted charge would be
+     * 3 kWh x $10.00 = $30.00 against a $3.50 override, so the two can never be
+     * confused in the rendered slip.
+     */
+    public function test_adjusted_charge_shows_only_the_adjusted_amount_in_tenant_output(): void
+    {
+        [$definition, $utility] = $this->makeMeteredCharge('Electricity', 10.00);
+
+        ChargeRule::create([
+            'charge_definition_id' => $definition->id,
+            'landlord_id' => $this->landlord->id,
+            'property_id' => $this->property->id,
+            'scope_type' => 'rental',
+            'scope_id' => $this->rental1->id,
+            'state' => 'custom',
+            'amount_override' => 3.50,
+            'currency_override' => 'USD',
+        ]);
+
+        $invoice = $this->invoiceFor([
+            $this->usageFor($utility, quantity: 3),
+        ]);
+
+        $line = $invoice->lines()->sole();
+
+        // Displayed amount is the adjusted one...
+        $this->assertEquals('custom', $line->charge_state);
+        $this->assertEquals(__('Adjusted'), $line->resolvedChargeStateLabel());
+        $this->assertEquals(3.50, $line->amount);
+        $this->assertEquals(3.50, $line->amount_usd);
+        $this->assertTrue($line->shouldAppearOnTenantInvoice());
+
+        // ...while the underlying, un-adjusted price stays on the line.
+        $this->assertEquals(10.00, $line->unit_price);
+        $this->assertEquals(3.0, $line->quantity);
+
+        // The invoice total follows the override, not unit_price x quantity.
+        $this->assertEquals(3.50, $invoice->fresh()->amount_due);
+
+        $this->tenantView($invoice)
+            ->assertSee(__('Adjusted'))
+            ->assertSee('$3.50')
+            ->assertDontSee('$30.00');
+    }
+
+    /**
+     * WHY: todo.md flags "Not applicable" as having zero regression coverage.
+     * `should_create_line = false` is the only thing keeping this charge off the
+     * tenant's invoice, and the suppressed value is deliberately kept alive in
+     * billing_run_charge_decisions so landlords can audit what was not billed.
+     * That split is the risk: if the audit write ever grows into a real invoice
+     * line (or the slip's shouldAppearOnTenantInvoice() filter is dropped), the
+     * tenant is billed for a charge their room does not even have. A second,
+     * normal charge is billed in the same run so the assertions prove suppression
+     * rather than an empty invoice.
+     */
+    public function test_not_applicable_charge_never_reaches_tenant_facing_invoice_output(): void
+    {
+        [$hiddenDefinition, $hiddenUtility] = $this->makeMeteredCharge('Cable TV', 10.00);
+        [, $billedUtility] = $this->makeMeteredCharge('Trash Fee', 7.00);
+
+        ChargeRule::create([
+            'charge_definition_id' => $hiddenDefinition->id,
+            'landlord_id' => $this->landlord->id,
+            'property_id' => $this->property->id,
+            'scope_type' => 'rental',
+            'scope_id' => $this->rental1->id,
+            'state' => 'not_applicable',
+        ]);
+
+        $invoice = $this->invoiceFor([
+            $this->usageFor($hiddenUtility, quantity: 1),
+            $this->usageFor($billedUtility, quantity: 1),
+        ]);
+
+        // Only the normal charge became a line; the invoice total ignores the other.
+        $this->assertCount(1, $invoice->lines);
+        $this->assertStringContainsString('Trash Fee', $invoice->lines->first()->description);
+        $this->assertEquals(7.00, $invoice->fresh()->amount_due);
+
+        // The suppressed value is preserved for the landlord-facing audit trail.
+        $decision = BillingRunChargeDecision::where('property_utility_id', $hiddenUtility->id)->sole();
+        $this->assertEquals('not_applicable', $decision->resolved_state);
+        $this->assertEquals(10.00, $decision->amount);
+
+        // ...and nothing about it reaches the tenant.
+        $this->tenantView($invoice)
+            ->assertSee('$7.00')
+            ->assertDontSee('Cable TV')
+            ->assertDontSee(__('Not applicable'))
+            ->assertDontSee('$10.00');
+    }
+
+    /**
+     * WHY: todo.md flags "Skipped this cycle" as having zero regression coverage.
+     * It is the most dangerous of the hidden states because it is a *per-run*
+     * decision with a landlord-authored reason attached: the reason is internal
+     * ("meter unread", "waiting on the provider") and must never surface on a
+     * tenant document, and the skip must not carry a zero-amount placeholder line
+     * onto the slip either — a $0.00 row for a charge nobody agreed to skip reads
+     * as a billing error to the tenant. This asserts both halves: the reason and
+     * amount survive in billing_run_charge_decisions, and neither the charge nor
+     * its reason renders in the tenant portal.
+     */
+    public function test_skipped_this_cycle_charge_never_reaches_tenant_facing_invoice_output(): void
+    {
+        [$hiddenDefinition, $hiddenUtility] = $this->makeMeteredCharge('Water', 10.00);
+        [, $billedUtility] = $this->makeMeteredCharge('Trash Fee', 7.00);
+
+        ChargeRule::create([
+            'charge_definition_id' => $hiddenDefinition->id,
+            'landlord_id' => $this->landlord->id,
+            'property_id' => $this->property->id,
+            'scope_type' => 'rental',
+            'scope_id' => $this->rental1->id,
+            'state' => 'skipped_this_cycle',
+            'reason' => 'Meter unread this cycle',
+        ]);
+
+        $invoice = $this->invoiceFor([
+            $this->usageFor($hiddenUtility, quantity: 1),
+            $this->usageFor($billedUtility, quantity: 1),
+        ], billingRunId: 'run_skip_001');
+
+        $this->assertCount(1, $invoice->lines);
+        $this->assertStringContainsString('Trash Fee', $invoice->lines->first()->description);
+        $this->assertEquals(7.00, $invoice->fresh()->amount_due);
+
+        // No zero-amount placeholder line was written for the skipped charge.
+        $this->assertDatabaseMissing('invoice_lines', [
+            'invoice_id' => $invoice->id,
+            'charge_state' => 'skipped_this_cycle',
+        ]);
+
+        // Reason + suppressed value survive on the landlord-facing audit record.
+        $decision = BillingRunChargeDecision::where('property_utility_id', $hiddenUtility->id)->sole();
+        $this->assertEquals('run_skip_001', $decision->billing_run_id);
+        $this->assertEquals('skipped_this_cycle', $decision->resolved_state);
+        $this->assertEquals('Meter unread this cycle', $decision->reason);
+        $this->assertEquals(10.00, $decision->amount);
+
+        $this->tenantView($invoice)
+            ->assertSee('$7.00')
+            ->assertDontSee('Water')
+            ->assertDontSee('Meter unread this cycle')
+            ->assertDontSee(__('Skipped this cycle'))
+            ->assertDontSee('$10.00');
+    }
+
+    /**
+     * WHY: InvoiceLine::shouldAppearOnTenantInvoice() is the single predicate every
+     * tenant-facing surface (portal slip, PDF, thermal print) filters on, and the
+     * three tests above can only exercise it for states InvoiceBuilderService
+     * actually persists. Legacy rows and hand-edited lines can still carry a hidden
+     * state with a real amount on them, so this pins the membership of the hidden
+     * set directly: adding a state to the match in resolvedChargeStateLabel()
+     * without adding it here is exactly how a hidden charge leaks back onto a
+     * tenant document.
+     */
+    public function test_hidden_charge_states_are_excluded_from_the_tenant_visible_line_filter(): void
+    {
+        $hidden = ['not_applicable', 'skipped_this_cycle'];
+        $visible = ['normal', 'free', 'waived', 'custom'];
+
+        foreach ($hidden as $state) {
+            $line = new InvoiceLine(['charge_state' => $state, 'amount' => 25.00]);
+            $this->assertFalse(
+                $line->shouldAppearOnTenantInvoice(),
+                "Charge state [{$state}] must stay off tenant-facing output.",
+            );
+        }
+
+        foreach ($visible as $state) {
+            $line = new InvoiceLine(['charge_state' => $state, 'amount' => 25.00]);
+            $this->assertTrue(
+                $line->shouldAppearOnTenantInvoice(),
+                "Charge state [{$state}] must remain visible to the tenant.",
+            );
+        }
+
+        // A pre-charge-rule line with no snapshot still resolves through is_waived.
+        $legacy = new InvoiceLine(['is_waived' => true, 'amount' => 0.0]);
+        $this->assertEquals('waived', $legacy->resolvedChargeState());
+        $this->assertTrue($legacy->shouldAppearOnTenantInvoice());
+    }
+
+    /**
+     * A metered charge definition + its property utility, so each test can bill a
+     * charge whose un-adjusted total (rate x quantity) is distinguishable from any
+     * override or suppression it asserts against.
+     *
+     * @return array{0: ChargeDefinition, 1: PropertyUtility}
+     */
+    private function makeMeteredCharge(string $name, float $rate): array
+    {
+        $definition = ChargeDefinition::create([
+            'property_id' => $this->property->id,
+            'landlord_id' => $this->landlord->id,
+            'name' => $name,
+            'category' => 'utility',
+            'billing_type' => 'metered',
+            'default_amount' => $rate,
+            'default_currency' => 'USD',
+        ]);
+
+        $utility = PropertyUtility::create([
+            'property_id' => $this->property->id,
+            'landlord_id' => $this->landlord->id,
+            'charge_definition_id' => $definition->id,
+            'name' => $name,
+            'billing_type' => BillingType::Metered,
+            'rate' => $rate,
+            'currency' => 'USD',
+            'unit_of_measure' => 'kWh',
+        ]);
+
+        return [$definition, $utility];
+    }
+
+    private function usageFor(PropertyUtility $utility, float $quantity): UtilityUsage
+    {
+        return UtilityUsage::create([
+            'unit_id' => $this->unit1->id,
+            'property_utility_id' => $utility->id,
+            'rental_id' => $this->rental1->id,
+            'recorded_by_id' => $this->landlord->id,
+            'reading_date' => now()->toDateString(),
+            'old_reading' => 0,
+            'new_reading' => $quantity,
+            'amount_used' => $quantity,
+        ]);
+    }
+
+    /** @param  array<int, UtilityUsage>  $usages */
+    private function invoiceFor(array $usages, ?string $billingRunId = null): Invoice
+    {
+        return $this->builder->create(array_filter([
+            'rental' => $this->rental1,
+            'period_start' => now()->toDateString(),
+            'period_end' => now()->addMonth()->subDay()->toDateString(),
+            'include_rent' => false,
+            'usages' => $usages,
+            'billing_run_id' => $billingRunId,
+        ], fn ($value) => $value !== null));
+    }
+
+    /** The real tenant-facing surface: the portal invoice slip, rendered over HTTP. */
+    private function tenantView(Invoice $invoice): TestResponse
+    {
+        return $this->actingAs($this->tenant)
+            ->get(route('portal.invoice', $invoice))
+            ->assertSuccessful();
     }
 }
