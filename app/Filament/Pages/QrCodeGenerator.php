@@ -3,19 +3,23 @@
 namespace App\Filament\Pages;
 
 use App\Enums\UserStatus;
+use App\Models\QrLoginToken;
 use App\Models\User;
+use App\Services\QrLoginTokenService;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
 /**
  * Admin-only page to generate QR codes for landlord quick-login.
  *
- * The admin selects a landlord, enters the plaintext password, and a QR
- * code is rendered client-side. When scanned, the QR opens the login
- * page with the email/username and password pre-filled.
+ * The admin picks a landlord and a single-use, 15-minute login link is minted.
+ * The QR encodes an opaque signed token — never a credential — so generating a
+ * code no longer requires (or exposes) the landlord's password, and a
+ * photographed code is dead the moment it is scanned once.
  */
 class QrCodeGenerator extends Page implements HasForms
 {
@@ -40,6 +44,9 @@ class QrCodeGenerator extends Page implements HasForms
 
     /** The login identifier shown beneath the QR code. */
     public string $landlordLogin = '';
+
+    /** Human-readable expiry of the generated link, shown beneath the QR code. */
+    public string $expiresAt = '';
 
     public static function getNavigationLabel(): string
     {
@@ -73,7 +80,7 @@ class QrCodeGenerator extends Page implements HasForms
         return $form
             ->schema([
                 Forms\Components\Section::make(__('Generate Login QR Code'))
-                    ->description(__('Select a landlord and provide their password. The generated QR code will open the login page with credentials pre-filled.'))
+                    ->description(__('Select a landlord. The generated QR code is a single-use login link that expires in :minutes minutes — no password required.', ['minutes' => QrLoginToken::LIFETIME_MINUTES]))
                     ->icon('heroicon-o-qr-code')
                     ->schema([
                         Forms\Components\Select::make('landlord_id')
@@ -87,26 +94,20 @@ class QrCodeGenerator extends Page implements HasForms
                                     ->orderBy('name')
                                     ->get()
                                     ->mapWithKeys(fn (User $u) => [
-                                        $u->id => $u->name . ($u->email ? " ({$u->email})" : ($u->username ? " ({$u->username})" : '')),
+                                        $u->id => $u->name.($u->email ? " ({$u->email})" : ($u->username ? " ({$u->username})" : '')),
                                     ]);
                             })
                             ->required()
                             ->helperText(__('Choose the landlord account to generate a QR code for.'))
                             ->live(),
-
-                        Forms\Components\TextInput::make('password')
-                            ->label(__('Password'))
-                            ->password()
-                            ->revealable()
-                            ->required()
-                            ->helperText(__('Enter the landlord\'s current plaintext password. This is needed because stored passwords cannot be reversed.')),
-                    ])->columns(2),
+                    ])->columns(1),
             ])
             ->statePath('data');
     }
 
     /**
-     * Generate the QR code URL from the selected landlord and password.
+     * Mint a single-use login token for the selected landlord and expose its
+     * signed URL to the view for QR rendering.
      */
     public function generate(): void
     {
@@ -114,32 +115,29 @@ class QrCodeGenerator extends Page implements HasForms
 
         $landlord = User::findOrFail($state['landlord_id']);
 
-        // Determine which login identifier to use (email first, then username).
+        // Determine which login identifier to display (email first, then username).
         $loginValue = $landlord->email ?: $landlord->username;
 
-        if (! $loginValue) {
-            \Filament\Notifications\Notification::make()
+        if ($landlord->status !== UserStatus::Active) {
+            Notification::make()
                 ->danger()
-                ->title(__('This landlord has no email or username configured.'))
+                ->title(__('This account is not active, so it cannot be signed in.'))
                 ->send();
 
             return;
         }
 
-        $password = $state['password'];
+        $issued = app(QrLoginTokenService::class)->issue($landlord, auth()->user());
 
-        // Build the login URL with pre-fill query parameters.
-        $this->qrUrl = url('/login') . '?' . http_build_query([
-            'qr_login' => $loginValue,
-            'qr_password' => $password,
-        ]);
-
+        $this->qrUrl = $issued['url'];
         $this->landlordName = $landlord->name;
-        $this->landlordLogin = $loginValue;
+        $this->landlordLogin = (string) $loginValue;
+        $this->expiresAt = $issued['token']->expires_at->timezone(config('app.timezone'))->format('Y-m-d H:i');
 
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->success()
             ->title(__('QR code generated successfully'))
+            ->body(__('This link works once and expires in :minutes minutes.', ['minutes' => QrLoginToken::LIFETIME_MINUTES]))
             ->send();
     }
 }

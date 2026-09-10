@@ -1,20 +1,38 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\InvoiceDocumentController;
 use App\Http\Controllers\TenantPortalController;
+use App\Http\Controllers\UtilityExportController;
+use App\Http\Middleware\SetLocale;
+use App\Providers\Filament\LandlordPanelProvider;
+use App\Support\SimpleLandlordMode;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-
-use App\Http\Controllers\Auth\LoginController;
-use App\Providers\Filament\LandlordPanelProvider;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
 Route::get('login', [LoginController::class, 'showLogin'])->name('login');
-Route::post('login', [LoginController::class, 'login']);
+// throttle:login is the limiter defined in FortifyServiceProvider (5/min keyed by
+// username + IP). This app authenticates through its own LoginController rather
+// than Fortify's, so the limiter has to be attached here — Fortify only wires it
+// onto the route it registers itself.
+Route::post('login', [LoginController::class, 'login'])->middleware('throttle:login');
 Route::post('logout', [LoginController::class, 'logout'])->name('logout');
+
+// ---------------------------------------------------------------------------
+// QR quick-login redemption. The QR image carries a single-use, 15-minute,
+// signed token — never a credential. 'signed' rejects tampered links before any
+// DB work; the limiter caps token guessing; the controller fails closed on
+// unknown/expired/used tokens and inactive accounts.
+// ---------------------------------------------------------------------------
+Route::get('qr-login/{token}', [QrLoginController::class, 'redeem'])
+    ->middleware(['signed', 'throttle:qr-login'])
+    ->name('qr-login.redeem');
 
 // ---------------------------------------------------------------------------
 // Invoice documents — PDF (A4 / A5 / thermal receipt) + Excel export. Behind
@@ -25,7 +43,7 @@ Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 // ---------------------------------------------------------------------------
 // SetLocale makes the documents render in the user's chosen language (Khmer when
 // selected) — it otherwise only runs inside the Filament panel, not on web routes.
-Route::middleware(['auth', \App\Http\Middleware\SetLocale::class])->group(function () {
+Route::middleware(['auth', SetLocale::class])->group(function () {
     // Batch "print all" — registered before the {invoice} routes so 'batch'
     // never hits the model binding.
     Route::get(LandlordPanelProvider::PATH.'/invoices/batch/pdf', [InvoiceDocumentController::class, 'batchPdf'])->name('invoices.batch-pdf');
@@ -33,15 +51,15 @@ Route::middleware(['auth', \App\Http\Middleware\SetLocale::class])->group(functi
     Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/excel', [InvoiceDocumentController::class, 'excel'])->name('invoices.excel');
     Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/view', [InvoiceDocumentController::class, 'view'])->name('invoices.view');
 
-    Route::post('api/properties/{property_id}/utility-usages/export', [\App\Http\Controllers\UtilityExportController::class, 'export'])->name('exports.utility-usages');
-    Route::get('api/exports/{file_id}/download', [\App\Http\Controllers\UtilityExportController::class, 'download'])->name('exports.download');
+    Route::post('api/properties/{property_id}/utility-usages/export', [UtilityExportController::class, 'export'])->name('exports.utility-usages');
+    Route::get('api/exports/{file_id}/download', [UtilityExportController::class, 'download'])->name('exports.download');
 
-    Route::post(LandlordPanelProvider::PATH.'/simple-mode/toggle', function (\Illuminate\Http\Request $request) {
+    Route::post(LandlordPanelProvider::PATH.'/simple-mode/toggle', function (Request $request) {
         $user = $request->user();
 
-        abort_unless(\App\Support\SimpleLandlordMode::canUse($user), 403);
+        abort_unless(SimpleLandlordMode::canUse($user), 403);
 
-        $enabled = ! \App\Support\SimpleLandlordMode::enabledFor($user);
+        $enabled = ! SimpleLandlordMode::enabledFor($user);
 
         $user->forceFill([
             'prefers_simple_landlord_mode' => $enabled,
@@ -59,7 +77,7 @@ Route::middleware(['auth', \App\Http\Middleware\SetLocale::class])->group(functi
 // Tenant portal — read-only invoice view. Guarded inline so it
 // never collides with the Filament admin auth (which uses email + blocks tenants).
 // ---------------------------------------------------------------------------
-Route::prefix('portal')->name('portal.')->middleware([\App\Http\Middleware\SetLocale::class])->group(function () {
+Route::prefix('portal')->name('portal.')->middleware([SetLocale::class])->group(function () {
     // Guarded inside the controller (redirects guests to login).
     Route::get('/', [TenantPortalController::class, 'dashboard'])->name('dashboard');
     Route::get('invoices/{invoice}', [TenantPortalController::class, 'invoice'])->name('invoice');

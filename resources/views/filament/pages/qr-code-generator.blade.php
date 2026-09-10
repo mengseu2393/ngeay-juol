@@ -17,7 +17,7 @@
                     {{ __('Login QR Code') }}
                 </x-slot>
                 <x-slot name="description">
-                    {{ __('Scan this QR code to open the login page with credentials pre-filled.') }}
+                    {{ __('Scan this QR code to sign in. The link works once and then expires.') }}
                 </x-slot>
 
                 <div class="flex flex-col items-center gap-6 py-6">
@@ -67,6 +67,9 @@
                         <p class="text-sm text-gray-500 dark:text-gray-400 font-mono">
                             {{ $landlordLogin }}
                         </p>
+                        <p class="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                            {{ __('Single use — expires at :time', ['time' => $expiresAt]) }}
+                        </p>
                     </div>
 
                     {{-- Action Buttons (self-contained Alpine for each) --}}
@@ -98,7 +101,7 @@
                                         '<html><head><title>QR Login</title><style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:system-ui,sans-serif}img{max-width:300px}h2{margin:20px 0 4px;font-size:1.25rem;color:#1e293b}p{margin:0;color:#64748b;font-size:.875rem}.w{margin-top:24px;font-size:.75rem;color:#92400e;max-width:320px;text-align:center}</style></head><body>'
                                         + '<img src=&quot;' + c.toDataURL('image/png') + '&quot;>'
                                         + '<h2>{{ $landlordName }}</h2><p>{{ $landlordLogin }}</p>'
-                                        + '<p class=w>This QR code contains login credentials. Keep it confidential.</p>'
+                                        + '<p class=w>' + {{ Js::from(__('Single-use login link — expires at :time. Keep it confidential.', ['time' => $expiresAt])) }} + '</p>'
                                         + '<scr'+'ipt>window.onload=function(){window.print()}<\/scr'+'ipt>'
                                         + '</body></html>'
                                     );
@@ -127,7 +130,7 @@
                         <svg class="w-4 h-4 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
-                        {{ __('This QR code contains login credentials. Share it only with the intended landlord and keep it confidential.') }}
+                        {{ __('This QR code is a single-use login link that expires at :time. It contains no password, but anyone who scans it before the landlord does will be signed in as them — hand it over directly.', ['time' => $expiresAt]) }}
                     </div>
                 </div>
             </x-filament::section>
