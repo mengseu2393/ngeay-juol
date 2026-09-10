@@ -5,6 +5,8 @@ namespace App\Filament\Resources;
 use App\Enums\PaymentMethod;
 use App\Enums\SubscriptionPaymentStatus;
 use App\Filament\Resources\SubscriptionPaymentResource\Pages;
+use App\Filament\Tables\Actions\ApproveSubscriptionPaymentAction;
+use App\Filament\Tables\Actions\RejectSubscriptionPaymentAction;
 use App\Filament\Tables\RowActionGroup;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
@@ -266,6 +268,14 @@ class SubscriptionPaymentResource extends Resource
             ])
             ->actions([
                 RowActionGroup::make([
+                    // The same actions the Renewals page's approvals table uses.
+                    // Both hide themselves unless the row is still Pending, so a
+                    // settled payment keeps the plain View/Edit/Delete menu — and
+                    // nobody has to approve a payment by editing `status` by hand,
+                    // which skips renew()'s period move, history entry and
+                    // suspension clearing.
+                    ApproveSubscriptionPaymentAction::make(),
+                    RejectSubscriptionPaymentAction::make(),
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),

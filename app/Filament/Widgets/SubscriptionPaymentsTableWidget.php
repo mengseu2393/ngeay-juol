@@ -3,6 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Resources\SubscriptionPaymentResource;
+use App\Filament\Tables\Actions\ApproveSubscriptionPaymentAction;
+use App\Filament\Tables\Actions\RejectSubscriptionPaymentAction;
 use App\Filament\Tables\RowActionGroup;
 use App\Models\SubscriptionPayment;
 use Filament\Tables;
@@ -36,6 +38,11 @@ class SubscriptionPaymentsTableWidget extends TableWidget
             ->recordUrl(fn (SubscriptionPayment $record): string => SubscriptionPaymentResource::getUrl('view', ['record' => $record]))
             ->actions([
                 RowActionGroup::make([
+                    // Both hide themselves on non-pending rows, so a settled payment's
+                    // menu is unchanged. Without these the merged page — the only screen
+                    // that actually lists payments — could not approve one.
+                    ApproveSubscriptionPaymentAction::make(),
+                    RejectSubscriptionPaymentAction::make(),
                     Tables\Actions\Action::make('view')
                         ->label(__('View'))
                         ->icon('heroicon-m-eye')
