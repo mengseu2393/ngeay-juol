@@ -12,7 +12,8 @@ class ListLandlords extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        // Visibility is gated by UserPolicy::create() (create_user + canCreateTenants).
+        // Filament authorizes this against LandlordResource::canCreate(), which is
+        // super-admin-only — support sees the directory read-only.
         return [
             Actions\CreateAction::make()
                 ->label(__('New Landlord')),
