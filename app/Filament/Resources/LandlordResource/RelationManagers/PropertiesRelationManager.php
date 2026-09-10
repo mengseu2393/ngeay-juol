@@ -4,6 +4,8 @@ namespace App\Filament\Resources\LandlordResource\RelationManagers;
 
 use App\Enums\PropertyType;
 use App\Filament\Resources\PropertyResource;
+use App\Services\DefaultPropertyUtilitiesService;
+use App\Support\ActiveProperty;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
@@ -49,7 +51,10 @@ class PropertiesRelationManager extends RelationManager
                         $data['landlord_id'] = $this->getOwnerRecord()->getKey();
 
                         return $data;
-                    }),
+                    })
+                    // Same starter catalog CreateProperty seeds — a property
+                    // stood up from /admin must not start out billing-blind.
+                    ->after(fn ($record) => app(DefaultPropertyUtilitiesService::class)->seed($record)),
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
@@ -72,7 +77,7 @@ class PropertiesRelationManager extends RelationManager
                     // landlord workspace (room generation, scoped resources, …) opens
                     // in context, then redirect into that panel's property view.
                     ->action(function ($record) {
-                        \App\Support\ActiveProperty::set($record->getKey());
+                        ActiveProperty::set($record->getKey());
 
                         return redirect(PropertyResource::getUrl('view', ['record' => $record], panel: 'landlord'));
                     }),

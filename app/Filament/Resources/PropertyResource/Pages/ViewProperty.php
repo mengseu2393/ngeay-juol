@@ -5,7 +5,9 @@ namespace App\Filament\Resources\PropertyResource\Pages;
 use App\Enums\InvoiceStatus;
 use App\Enums\UnitStatus;
 use App\Filament\Pages\MonthlyBilling;
+use App\Filament\Resources\LandlordResource;
 use App\Filament\Resources\PropertyResource;
+use App\Filament\Widgets\PropertySetupChecklistWidget;
 use App\Support\ActiveProperty;
 use App\Support\Money;
 use Filament\Actions;
@@ -30,6 +32,35 @@ class ViewProperty extends ViewRecord
         return [];
     }
 
+    /**
+     * The setup checklist sits above the infolist: a half-configured property is
+     * exactly the one whose "Rooms 0 / Active utilities 0" glance is confusing.
+     * It hides itself once every step is done.
+     */
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PropertySetupChecklistWidget::class,
+        ];
+    }
+
+    public function getHeaderWidgetsColumns(): int|string|array
+    {
+        return 1;
+    }
+
+    /**
+     * This page can show a property that is not the one selected in the sidebar
+     * switcher, so the widget is told which record it is looking at rather than
+     * left to read the active-property context.
+     *
+     * @return array<string, mixed>
+     */
+    public function getWidgetData(): array
+    {
+        return ['propertyId' => $this->getRecord()->getKey()];
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -40,7 +71,7 @@ class ViewProperty extends ViewRecord
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('gray')
                 ->visible(fn ($record) => auth()->user()?->isPlatformStaff() ?? false)
-                ->url(fn ($record) => \App\Filament\Resources\LandlordResource::getUrl('view', ['record' => $record->landlord_id], panel: 'admin')),
+                ->url(fn ($record) => LandlordResource::getUrl('view', ['record' => $record->landlord_id], panel: 'admin')),
             Actions\Action::make('monthlyBilling')
                 ->label(__('Monthly billing'))
                 ->icon('heroicon-o-calendar-days')
@@ -81,7 +112,7 @@ class ViewProperty extends ViewRecord
                                 ->whereIn('payment_status', [
                                     InvoiceStatus::Pending->value,
                                     InvoiceStatus::Partial->value,
-                                    InvoiceStatus::Overdue->value
+                                    InvoiceStatus::Overdue->value,
                                 ])
                                 ->get();
 
