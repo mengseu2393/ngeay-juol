@@ -16,14 +16,17 @@ use App\Models\UtilityMeter;
 use App\Models\UtilityUsage;
 use App\Services\ChargeRuleResolver;
 use App\Services\InvoiceBuilderService;
+use App\Services\LandlordOwnershipGuard;
 use App\Services\MeterReadingResolver;
 use App\Services\ProratingService;
 use App\Services\SubscriptionService;
 use App\Support\ActiveProperty;
 use App\Support\Money;
+use App\Support\SimpleLandlordMode;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Support\Enums\MaxWidth;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -128,7 +131,7 @@ class MonthlyBilling extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return ! \App\Support\SimpleLandlordMode::enabledFor(auth()->user())
+        return ! SimpleLandlordMode::enabledFor(auth()->user())
             && static::canAccess();
     }
 
@@ -138,9 +141,9 @@ class MonthlyBilling extends Page
     }
 
     /** The reading table wants every pixel — don't cap the content column. */
-    public function getMaxContentWidth(): \Filament\Support\Enums\MaxWidth|string|null
+    public function getMaxContentWidth(): MaxWidth|string|null
     {
-        return \Filament\Support\Enums\MaxWidth::Full;
+        return MaxWidth::Full;
     }
 
     public function mount(): void
@@ -163,7 +166,7 @@ class MonthlyBilling extends Page
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Property selection                                                 */
+    /*  Property selection */
     /* ------------------------------------------------------------------ */
 
     public function visibleProperties(): Collection
@@ -243,7 +246,7 @@ class MonthlyBilling extends Page
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Row state                                                          */
+    /*  Row state */
     /* ------------------------------------------------------------------ */
 
     public function billingEnabled(): bool
@@ -453,7 +456,7 @@ class MonthlyBilling extends Page
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Previews & per-row status                                          */
+    /*  Previews & per-row status */
     /* ------------------------------------------------------------------ */
 
     protected function parseNumber(mixed $value): ?float
@@ -649,7 +652,7 @@ class MonthlyBilling extends Page
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Totals & formatting                                                */
+    /*  Totals & formatting */
     /* ------------------------------------------------------------------ */
 
     /** @return array{usd: float, khr: float} */
@@ -730,7 +733,7 @@ class MonthlyBilling extends Page
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Invoice creation                                                   */
+    /*  Invoice creation */
     /* ------------------------------------------------------------------ */
 
     public function createInvoices(): void
@@ -761,6 +764,14 @@ class MonthlyBilling extends Page
 
             return;
         }
+
+        // $rooms is a public Livewire property: the browser can rewrite
+        // rooms.*.rental_id and re-submit. Assert ownership BEFORE the loop, so
+        // the 403 is not swallowed by the per-room catch (\Throwable) below.
+        LandlordOwnershipGuard::assertOwnsAll(
+            Rental::class,
+            $readyIndexes->map(fn ($index) => $this->rooms[$index]['rental_id'] ?? null),
+        );
 
         $this->creatingInvoices = true;
 
@@ -823,7 +834,11 @@ class MonthlyBilling extends Page
     /** Runs inside a transaction; returns null when the period got invoiced concurrently. */
     protected function createInvoiceForRoom(array $room, InvoiceBuilderService $builder, Carbon $issueDate): ?Invoice
     {
+        // withoutGlobalScopes() is required to read the parent row (it is what
+        // supplies landlord_id/property_id), so ownership is asserted here.
         $rental = Rental::withoutGlobalScopes()->with(['unit', 'property', 'tenant'])->findOrFail($room['rental_id']);
+        LandlordOwnershipGuard::assertOwned($rental);
+
         $periodStart = Carbon::parse($room['period_start']);
         $periodEnd = Carbon::parse($room['period_end']);
 

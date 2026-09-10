@@ -11,9 +11,12 @@ use App\Models\Property;
 use App\Models\PropertySetting;
 use App\Models\PropertyUtility;
 use App\Models\Rental;
+use App\Models\UtilityMeter;
 use App\Models\UtilityUsage;
-use App\Services\InvoiceBuilderService;
 use App\Services\ChargeRuleResolver;
+use App\Services\InvoiceBuilderService;
+use App\Services\LandlordOwnershipGuard;
+use App\Services\MeterReadingResolver;
 use App\Services\ProratingService;
 use App\Services\SubscriptionService;
 use App\Services\UtilityBillingService;
@@ -72,6 +75,7 @@ class SimpleBillingInvoice extends Component
         if ($propertyId === null || ! $this->isBillingEnabled($propertyId)) {
             $this->resetWizard();
             $this->step = 'blocked';
+
             return;
         }
 
@@ -176,22 +180,26 @@ class SimpleBillingInvoice extends Component
     {
         if (! $this->propertyId) {
             Notification::make()->warning()->title(__('Select a property from the sidebar to start billing.'))->send();
+
             return;
         }
 
         if (! $this->billingEnabled()) {
             Notification::make()->warning()->title(__('Monthly billing is disabled for this property.'))->send();
+
             return;
         }
 
         if ($this->manualMode) {
             if (count($this->selectedRentalIds) === 0) {
                 Notification::make()->warning()->title(__('Please select at least one room for manual billing.'))->send();
+
                 return;
             }
         } else {
             if ($this->dueRoomCount() === 0) {
                 Notification::make()->warning()->title(__('No rooms are due for billing on this date.'))->send();
+
                 return;
             }
         }
@@ -200,6 +208,7 @@ class SimpleBillingInvoice extends Component
 
         if ($this->rooms === []) {
             Notification::make()->warning()->title($this->manualMode ? __('None of the selected rooms have active rentals.') : __('No rooms are due for billing on this date.'))->send();
+
             return;
         }
 
@@ -336,11 +345,12 @@ class SimpleBillingInvoice extends Component
     public function formatMixedTotal(float $usd, float $khr, float $rate): string
     {
         if ($usd > 0 && $khr > 0) {
-            return Money::format($usd, 'USD') . ' + ' . Money::format($khr, 'KHR');
+            return Money::format($usd, 'USD').' + '.Money::format($khr, 'KHR');
         }
         if ($khr > 0) {
             return Money::format($khr, 'KHR');
         }
+
         return Money::format($usd, 'USD');
     }
 
@@ -581,6 +591,7 @@ class SimpleBillingInvoice extends Component
 
         if ($this->currentRoomIndex >= count($this->rooms) - 1) {
             $this->goToReview();
+
             return;
         }
 
@@ -591,6 +602,7 @@ class SimpleBillingInvoice extends Component
     {
         if (! isset($this->rooms[$roomIndex]['utilities'][$utilityIndex])) {
             $this->nextRoom();
+
             return;
         }
 
@@ -610,6 +622,7 @@ class SimpleBillingInvoice extends Component
 
         if ($nextIndex !== null) {
             $this->dispatch('focus-reading', ref: 'reading-'.$roomIndex.'-'.$nextIndex);
+
             return;
         }
 
@@ -620,11 +633,13 @@ class SimpleBillingInvoice extends Component
     {
         if ($this->reviewFocusIndex !== null) {
             $this->returnToReview();
+
             return;
         }
 
         if ($this->currentRoomIndex <= 0) {
             $this->step = 'start';
+
             return;
         }
 
@@ -682,6 +697,7 @@ class SimpleBillingInvoice extends Component
             $this->step = 'reading';
             $this->reviewFocusIndex = $blockingIndex;
             Notification::make()->warning()->title(__('Please finish or override the highlighted room before review.'))->send();
+
             return;
         }
 
@@ -696,6 +712,7 @@ class SimpleBillingInvoice extends Component
 
         if ($this->firstBlockingRoomIndex() !== null) {
             Notification::make()->warning()->title(__('Complete or skip the blocked rooms before creating invoices.'))->send();
+
             return;
         }
 
@@ -715,11 +732,13 @@ class SimpleBillingInvoice extends Component
 
         if ($this->getAccess() === SubscriptionAccess::ReadOnly) {
             Notification::make()->warning()->title(__('Write actions are disabled until payment is completed.'))->send();
+
             return;
         }
 
         if ($this->rooms === []) {
             Notification::make()->warning()->title(__('No rooms are due for billing on this date.'))->send();
+
             return;
         }
 
@@ -728,8 +747,19 @@ class SimpleBillingInvoice extends Component
             $this->step = 'reading';
             $this->showCreateConfirmation = false;
             Notification::make()->warning()->title(__('Complete or skip the blocked rooms before creating invoices.'))->send();
+
             return;
         }
+
+        // $rooms is a public Livewire property: the browser can rewrite
+        // rooms.*.rental_id and re-submit. Assert ownership BEFORE the loop, so
+        // the 403 is not swallowed by the per-room catch (\Throwable) below.
+        LandlordOwnershipGuard::assertOwnsAll(
+            Rental::class,
+            collect($this->rooms)
+                ->reject(fn ($room) => ($room['skipped'] ?? false) === true)
+                ->map(fn ($room) => $room['rental_id'] ?? null),
+        );
 
         $this->creatingInvoices = true;
         $this->showCreateConfirmation = false;
@@ -745,12 +775,18 @@ class SimpleBillingInvoice extends Component
         foreach ($this->rooms as $index => $room) {
             if (($room['skipped'] ?? false) === true) {
                 $skipped++;
+
                 continue;
             }
 
             try {
                 $invoice = DB::transaction(function () use ($room, $builder, $issueDate) {
+                    // withoutGlobalScopes() is required to read the parent row (it
+                    // is what supplies landlord_id/property_id), so ownership is
+                    // asserted here.
                     $rental = Rental::withoutGlobalScopes()->with(['unit', 'property', 'tenant'])->findOrFail($room['rental_id']);
+                    LandlordOwnershipGuard::assertOwned($rental);
+
                     $periodStart = Carbon::parse($room['period_start']);
                     $periodEnd = Carbon::parse($room['period_end']);
 
@@ -791,10 +827,10 @@ class SimpleBillingInvoice extends Component
                         // Same max(0, new - old) as before, except a meter also
                         // applies its multiplier and unwraps a digit rollover.
                         $meter = isset($utility['meter_id'])
-                            ? \App\Models\UtilityMeter::find($utility['meter_id'])
+                            ? UtilityMeter::find($utility['meter_id'])
                             : null;
                         $amountUsed = $requiresReading
-                            ? app(\App\Services\MeterReadingResolver::class)->consumption($oldReading, (float) $newReading, $meter)
+                            ? app(MeterReadingResolver::class)->consumption($oldReading, (float) $newReading, $meter)
                             : 0.0;
 
                         $usages[] = UtilityUsage::updateOrCreate(
@@ -855,6 +891,7 @@ class SimpleBillingInvoice extends Component
 
                 if ($invoice === null) {
                     $skipped++;
+
                     continue;
                 }
 
@@ -1000,6 +1037,7 @@ class SimpleBillingInvoice extends Component
     {
         if (! $this->propertyId || ! $this->billingEnabled()) {
             $this->rooms = [];
+
             return;
         }
 
@@ -1066,11 +1104,11 @@ class SimpleBillingInvoice extends Component
             // Previous index comes from the room's ACTIVE meter when it has one
             // (its last reading, else its installed_reading); rooms with no meter
             // fall back to the original "latest reading row" lookup.
-            $meterContext = app(\App\Services\MeterReadingResolver::class)
+            $meterContext = app(MeterReadingResolver::class)
                 ->previous((int) $rental->unit_id, (int) $utility->id);
             $latestUsage = $meterContext['usage'];
 
-            $resolver = app(\App\Services\ChargeRuleResolver::class);
+            $resolver = app(ChargeRuleResolver::class);
             $decision = $resolver->resolve([
                 'property_utility_id' => $utility->id,
                 'rental_id' => $rental->id,
@@ -1277,11 +1315,15 @@ class SimpleBillingInvoice extends Component
             return;
         }
 
+        // rooms.*.rental_id is client-writable; never price a foreign rental.
+        LandlordOwnershipGuard::assertOwned($rental);
+
         $periodStart = Carbon::parse($room['period_start']);
         $periodEnd = Carbon::parse($room['period_end']);
 
         if ($periodStart->isAfter($periodEnd)) {
             $room['rent'] = 0.0;
+
             return;
         }
 

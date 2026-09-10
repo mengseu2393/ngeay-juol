@@ -10,6 +10,7 @@ use App\Filament\Resources\InvoiceResource\Concerns\BuildsInvoiceForm;
 use App\Models\Rental;
 use App\Models\UtilityUsage;
 use App\Services\InvoiceBuilderService;
+use App\Services\LandlordOwnershipGuard;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -41,6 +42,12 @@ class CreateInvoice extends CreateRecord
             Notification::make()->title(__('That room has no active tenant to bill.'))->danger()->send();
             $this->halt();
         }
+
+        // rental_id is a Hidden field with no validation rule (the scoped Select
+        // is unit_id, which this writer never reads), so the submitted id is
+        // client-controlled. withoutGlobalScopes() above is needed to derive
+        // landlord_id/property_id — assert ownership before writing anything.
+        LandlordOwnershipGuard::assertOwned($rental);
 
         $periodEnd = Carbon::parse($data['period_end']);
 
