@@ -29,7 +29,24 @@
             if (label && btn.dataset.preparing) label.textContent = btn.dataset.preparing;
 
             try {
-                const res = await fetch(btn.dataset.downloadUrl, { credentials: 'same-origin' });
+                const res = await fetch(btn.dataset.downloadUrl, {
+                    credentials: 'same-origin',
+                    // JSON first so expectsJson() is true: a batch too large to
+                    // render inline answers 202 instead of redirecting to an
+                    // HTML page we would otherwise hand to the share sheet as
+                    // a ".pdf".
+                    headers: { Accept: 'application/json, application/pdf' },
+                });
+
+                // 202 = queued for background rendering. Say so and stop; the
+                // download arrives as a notification with a link. Re-requesting
+                // this URL would dispatch a second job.
+                if (res.status === 202) {
+                    const queued = await res.json().catch(() => ({}));
+                    if (queued.message) window.alert(queued.message);
+                    return;
+                }
+
                 if (! res.ok) throw new Error('HTTP ' + res.status);
 
                 const blob = await res.blob();

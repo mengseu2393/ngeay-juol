@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateBatchInvoicePdfJob;
+use App\Models\Export;
 use App\Models\Invoice;
 use App\Services\InvoiceExcelExport;
 use App\Services\InvoicePdfService;
 use App\Support\InvoicePaper;
+use Filament\Notifications\Notification;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -17,6 +20,22 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class InvoiceDocumentController extends Controller
 {
+    /**
+     * Batches of this many invoices or fewer render inline, in the request, the
+     * way they always have; anything larger is queued.
+     *
+     * Every batch render holds ONE Node + headless-Chrome process (~150-250MB)
+     * for its whole duration, inside a PHP-FPM worker. Ten invoices is about the
+     * largest batch that still finishes in a few seconds, and it covers the
+     * everyday flow this route was built for — "print the two or three invoices
+     * I just created" from the invoice list or Simple Mode. Beyond that we are
+     * into month-end runs for a whole building (the header action allows up to
+     * 200), which is precisely the case that pins a worker for minutes and, with
+     * a few landlords doing it at once, exhausts RAM. Raise this only with a
+     * matching look at worker memory.
+     */
+    public const INLINE_BATCH_LIMIT = 10;
+
     public function view(Invoice $invoice)
     {
         $this->guard($invoice);
@@ -33,12 +52,6 @@ class InvoiceDocumentController extends Controller
     {
         $this->guard($invoice);
 
-        \Illuminate\Support\Facades\Log::info('PDF request locale check', [
-            'app_locale' => app()->getLocale(),
-            'session_locale' => $request->session()->get('locale'),
-            'cookie_locale' => $request->cookie('locale'),
-        ]);
-
         $size = in_array($request->query('size'), InvoicePaper::SIZES, true)
             ? $request->query('size')
             : 'a4';
@@ -50,7 +63,7 @@ class InvoiceDocumentController extends Controller
 
         return response($pdfContent, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => ($mode === 'stream' ? 'inline' : 'attachment') . '; filename="' . $name . '"',
+            'Content-Disposition' => ($mode === 'stream' ? 'inline' : 'attachment').'; filename="'.$name.'"',
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',
@@ -63,6 +76,11 @@ class InvoiceDocumentController extends Controller
      * Invoice's LandlordScope re-filters it, so foreign IDs are silently
      * dropped rather than leaked. Landlord/staff only — tenants have no
      * batch-print use case.
+     *
+     * Small batches stream back inline (unchanged). Above
+     * {@see INLINE_BATCH_LIMIT} the render moves to a queued job and the caller
+     * gets a "preparing" response instead of a PDF; the finished file arrives as
+     * a database notification with a download button.
      */
     public function batchPdf(Request $request)
     {
@@ -85,17 +103,66 @@ class InvoiceDocumentController extends Controller
 
         abort_if($invoices->isEmpty(), 404);
 
-        $pdfContent = app(InvoicePdfService::class)->makeBatch($invoices);
         $mode = $request->query('mode') === 'stream' ? 'inline' : 'attachment';
-        $name = 'invoices-' . now()->format('Ymd-Hi') . '-' . $invoices->count() . '.pdf';
+        $name = 'invoices-'.now()->format('Ymd-Hi').'-'.$invoices->count().'.pdf';
+
+        if ($invoices->count() > self::INLINE_BATCH_LIMIT) {
+            return $this->queueBatchPdf($request, $invoices->pluck('id')->all(), $name);
+        }
+
+        $pdfContent = app(InvoicePdfService::class)->makeBatch($invoices);
 
         return response($pdfContent, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => $mode . '; filename="' . $name . '"',
+            'Content-Disposition' => $mode.'; filename="'.$name.'"',
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',
         ]);
+    }
+
+    /**
+     * Hand a too-large batch to the queue and answer with "we're on it".
+     *
+     * Delivery deliberately reuses the Export plumbing the utility export
+     * already uses — an Export row plus the `exports.download` route, which
+     * enforces owner + `completed` — rather than a second download mechanism.
+     * If no queue worker is running the row simply stays `pending`, the user
+     * keeps seeing "preparing" and `exports.download` 404s "not ready": slow,
+     * but never a silent black hole.
+     */
+    protected function queueBatchPdf(Request $request, array $invoiceIds, string $name)
+    {
+        $export = Export::create([
+            'user_id' => auth()->id(),
+            'file_name' => $name,
+            'status' => 'pending',
+        ]);
+
+        GenerateBatchInvoicePdfJob::dispatch($export, $invoiceIds);
+
+        $body = __(':count invoices are being combined into one PDF. You will get a notification with a download link when it is ready.', [
+            'count' => count($invoiceIds),
+        ]);
+
+        // The render outlives this request, so the notification the job sends is
+        // the channel that actually reaches the landlord; this flash is only the
+        // immediate acknowledgement on the page they land back on.
+        Notification::make()
+            ->title(__('Preparing your invoices'))
+            ->body($body)
+            ->info()
+            ->send();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'queued' => true,
+                'export_id' => $export->getKey(),
+                'message' => $body,
+            ], 202);
+        }
+
+        return redirect()->back(fallback: route('filament.landlord.resources.invoices.index'));
     }
 
     /**

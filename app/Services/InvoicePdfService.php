@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Invoice;
+use App\Support\BrowsershotFactory;
 use App\Support\InvoicePaper;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
@@ -60,20 +61,20 @@ class InvoicePdfService
             // Anchor past </head>: the template's CSS comments mention "<body>",
             // so a bare <body> match would land inside the <style> block.
             if (preg_match('~</head>\s*<body[^>]*>(.*?)</body>~s', $html, $m)) {
-                $pages[] = '<div class="rw-batch-page">' . $m[1] . '</div>';
+                $pages[] = '<div class="rw-batch-page">'.$m[1].'</div>';
             }
         }
 
         // The single-invoice template puts the page padding on <body> (see its
         // comment about dompdf); in a batch that must live on each page div so
         // every invoice starts padded.
-        $html = '<!DOCTYPE html><html lang="' . str_replace('_', '-', app()->getLocale()) . '"><head><meta charset="utf-8">'
-            . '<title>' . __('Invoices') . '</title>'
-            . '<style>' . $style . '
+        $html = '<!DOCTYPE html><html lang="'.str_replace('_', '-', app()->getLocale()).'"><head><meta charset="utf-8">'
+            .'<title>'.__('Invoices').'</title>'
+            .'<style>'.$style.'
                 body { margin: 0 !important; }
                 .rw-batch-page { padding: 44px 52px; page-break-after: always; }
                 .rw-batch-page:last-child { page-break-after: auto; }
-            </style></head><body>' . implode('', $pages) . '</body></html>';
+            </style></head><body>'.implode('', $pages).'</body></html>';
 
         return $this->render($html, $size, function () use ($html, $size) {
             $pdf = Pdf::loadHTML($html);
@@ -83,60 +84,78 @@ class InvoicePdfService
         }, timeout: 120);
     }
 
-    /** Render final HTML to PDF via Browsershot, invoking $fallback on failure. */
-    protected function render(string $html, string $size, callable $fallback, int $timeout = 60): string
-    {
-        $browsershot = Browsershot::html($html)
-            ->showBackground()
-            ->margins(0, 0, 0, 0)
-            ->setNodeModulePath(config('services.browsershot.node_module_path', base_path('node_modules')))
-            ->noSandbox();
-            
-        if ($chromePath = config('services.browsershot.chrome_path')) {
-            $browsershot->setChromePath($chromePath);
-        }
+    /**
+     * Render HTML to PDF bytes through Browsershot, falling back to dompdf on
+     * any Throwable. THE ONE PLACE that half of the pipeline lives.
+     *
+     * `BrowsershotFactory` already owns the ~25 lines of Chrome/Node wiring; the
+     * try / log-warning / dompdf half was still copy-pasted next to every call
+     * of it ({@see render()} here and `ExportUtilityUsagesJob::generatePdf()`),
+     * so a third Browsershot caller (the queued batch print) triggered the
+     * extraction CLAUDE.md asks for. Callers keep only what genuinely differs:
+     * paper geometry ($configure), the dompdf renderer, and the log line.
+     *
+     * The fallback is SILENT BY DESIGN — a warning log line, then a dompdf PDF
+     * that cannot shape Khmer script at all. After touching this, generate a PDF
+     * and grep storage/logs/laravel.log for 'render failed'; a passing test does
+     * not catch the fallback.
+     *
+     * @param  callable(Browsershot): void  $configure  applies margins/paper/orientation/timeout
+     * @param  callable(): string  $fallback  dompdf renderer, returns PDF bytes
+     * @param  array<string, mixed>  $logContext  extra context merged into the warning
+     */
+    public static function renderThroughBrowsershot(
+        string $html,
+        callable $configure,
+        callable $fallback,
+        string $failureMessage,
+        array $logContext = [],
+    ): string {
+        $browsershot = BrowsershotFactory::html($html);
 
-        $browsershot->addChromiumArguments(config('services.browsershot.chromium_arguments', []));
-        $browsershot->addChromiumArguments(['allow-file-access-from-files']);
-
-        if ($nodeBinary = $this->nodeBinary()) {
-            $browsershot->setNodeBinary($nodeBinary);
-        }
-
-        if ($npmBinary = config('services.browsershot.npm_binary')) {
-            $browsershot->setNpmBinary($npmBinary);
-        }
-
-        if ($includePath = config('services.browsershot.include_path')) {
-            $browsershot->setIncludePath($includePath);
-        }
-
-        if ($size === 'a4') {
-            $browsershot->format('A4');
-        } elseif ($size === 'a5') {
-            $browsershot->format('A5');
-        } elseif ($size === '58mm') {
-            $browsershot->paperWidth(58, 'mm')
-                ->paperHeight(220, 'mm');
-        } else {
-            // Thermal receipt: pass exact mm dimensions to Puppeteer
-            $browsershot->paperWidth(80, 'mm')
-                ->paperHeight(220, 'mm');
-        }
-
-        $browsershot->timeout($timeout);
+        $configure($browsershot);
 
         try {
             return $browsershot->pdf();
         } catch (Throwable $exception) {
-            Log::warning('Browsershot invoice PDF render failed; falling back to dompdf.', [
-                'size' => $size,
+            Log::warning($failureMessage, $logContext + [
                 'exception' => $exception::class,
                 'message' => $exception->getMessage(),
             ]);
 
             return $fallback();
         }
+    }
+
+    /** Render final HTML to PDF via Browsershot, invoking $fallback on failure. */
+    protected function render(string $html, string $size, callable $fallback, int $timeout = 60): string
+    {
+        return static::renderThroughBrowsershot(
+            $html,
+            function (Browsershot $browsershot) use ($size, $timeout): void {
+                $browsershot->margins(0, 0, 0, 0);
+
+                // Geometry comes from InvoicePaper, the single source of truth for paper
+                // sizes — don't reintroduce hard-coded mm values here.
+                //
+                // Thermal MUST go through paperSize(). Browsershot has no paperWidth() or
+                // paperHeight() method: its __call forwards unknown methods to the image
+                // manipulations object, so the old paperWidth(58,'mm')->paperHeight(220,'mm')
+                // pair was silently swallowed and every receipt rendered as US Letter.
+                if (InvoicePaper::isThermal($size)) {
+                    $browsershot->paperSize(InvoicePaper::widthMm($size), 220, 'mm');
+                } elseif ($size === 'a5') {
+                    $browsershot->format('A5');
+                } else {
+                    $browsershot->format('A4');
+                }
+
+                $browsershot->timeout($timeout);
+            },
+            $fallback,
+            'Browsershot invoice PDF render failed; falling back to dompdf.',
+            ['size' => $size],
+        );
     }
 
     /** Build the same invoice PDF with dompdf when Chromium is unavailable. */
@@ -153,32 +172,11 @@ class InvoicePdfService
         return $pdf->output();
     }
 
-    protected function nodeBinary(): ?string
-    {
-        $configured = config('services.browsershot.node_binary');
-
-        if (is_string($configured) && $configured !== '') {
-            return $configured;
-        }
-
-        $playwrightNodes = glob((string) getenv('HOME') . '/.cache/ms-playwright-go/*/node') ?: [];
-
-        usort($playwrightNodes, 'strnatcmp');
-
-        foreach (array_reverse($playwrightNodes) as $node) {
-            if (is_executable($node)) {
-                return $node;
-            }
-        }
-
-        return null;
-    }
-
     /** Safe download filename for an invoice document (sanitised invoice number). */
     public static function filename(Invoice $invoice, string $ext): string
     {
         $base = preg_replace('/[^A-Za-z0-9_\-]/', '_', (string) $invoice->invoice_number);
 
-        return $base . '.' . $ext;
+        return $base.'.'.$ext;
     }
 }

@@ -2,21 +2,31 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Jobs\ExportUtilityUsagesJob;
 use App\Models\Export;
 use App\Models\Property;
+use Filament\Notifications\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class UtilityExportController extends Controller
 {
-    public function export(Request $request, int $propertyId): BinaryFileResponse
+    /**
+     * Queue a utility-usage export and answer immediately.
+     *
+     * This used to build the file in-request by calling `$job->handle()`
+     * directly ("Run synchronously"), which for the PDF format meant spawning a
+     * Node + headless-Chrome process (~150-250MB, seconds of wall time) inside a
+     * PHP-FPM worker. The job already ships the finished file as a database
+     * notification with a download button, so the request has nothing left to
+     * wait for. Callers get 202 + the export id instead of a file download.
+     */
+    public function export(Request $request, int $propertyId): JsonResponse
     {
         $property = Property::findOrFail($propertyId);
         $user = auth()->user();
-        
+
         // Simple authorization check: user must own the property or be platform staff
         if (! $user->isPlatformStaff() && $property->landlord_id !== $user->effectiveLandlordId()) {
             abort(403, 'Unauthorized action.');
@@ -32,18 +42,28 @@ class UtilityExportController extends Controller
 
         $export = Export::create([
             'user_id' => auth()->id(),
-            'file_name' => 'utility_export_' . $propertyId . '_' . time() . '.' . $validated['format'],
+            'file_name' => 'utility_export_'.$propertyId.'_'.time().'.'.$validated['format'],
             'status' => 'pending',
         ]);
 
-        // Run synchronously
-        $job = new ExportUtilityUsagesJob($export, $propertyId, $validated);
-        $job->handle();
+        ExportUtilityUsagesJob::dispatch($export, $propertyId, $validated);
 
-        $export->refresh();
-        $fullPath = storage_path('app/' . $export->file_path);
+        $message = __('Your export is being prepared. You will get a notification with a download link when it is ready.');
 
-        return response()->download($fullPath, $export->file_name);
+        // Same acknowledgement shape as the queued batch invoice PDF. If no
+        // worker is running the Export row stays `pending` and download() keeps
+        // answering "not ready" — visible, not silent.
+        Notification::make()
+            ->title(__('Preparing your export'))
+            ->body($message)
+            ->info()
+            ->send();
+
+        return response()->json([
+            'queued' => true,
+            'export_id' => $export->getKey(),
+            'message' => $message,
+        ], 202);
     }
 
     public function download(string $fileId): BinaryFileResponse
@@ -55,13 +75,13 @@ class UtilityExportController extends Controller
             abort(403, 'Unauthorized access to export file.');
         }
 
-        if ($export->status !== 'completed' || !$export->file_path) {
+        if ($export->status !== 'completed' || ! $export->file_path) {
             abort(404, 'Export file is not ready or has failed.');
         }
 
-        $fullPath = storage_path('app/' . $export->file_path);
+        $fullPath = storage_path('app/'.$export->file_path);
 
-        if (!file_exists($fullPath)) {
+        if (! file_exists($fullPath)) {
             abort(404, 'File not found on storage.');
         }
 

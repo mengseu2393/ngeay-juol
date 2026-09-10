@@ -13,7 +13,6 @@ use App\Models\UtilityUsage;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class UtilityExportTest extends TestCase
@@ -21,8 +20,11 @@ class UtilityExportTest extends TestCase
     use RefreshDatabase;
 
     protected User $landlord;
+
     protected Property $property;
+
     protected PropertyUtility $utility;
+
     protected Unit $unit;
 
     protected function setUp(): void
@@ -72,27 +74,31 @@ class UtilityExportTest extends TestCase
         ]);
     }
 
-    public function test_landlord_can_trigger_utility_export_api(): void
+    /**
+     * The endpoint used to call $job->handle() in-request ("Run synchronously"),
+     * which for the pdf format spawned Node + headless Chrome inside a PHP-FPM
+     * worker. It now queues and answers 202; the finished file reaches the user
+     * through the job's database notification and exports.download.
+     */
+    public function test_landlord_export_request_is_queued_not_rendered_in_request(): void
     {
+        Queue::fake();
+
         $response = $this->actingAs($this->landlord)
-            ->post(route('exports.utility-usages', ['property_id' => $this->property->id]), [
+            ->postJson(route('exports.utility-usages', ['property_id' => $this->property->id]), [
                 'time_period' => 'all',
                 'utility_types' => ['all'],
                 'format' => 'csv',
             ]);
 
-        $response->assertStatus(200);
-        $this->assertStringContainsString('attachment; filename=utility_export_', $response->headers->get('Content-Disposition'));
+        $response->assertStatus(202)->assertJson(['queued' => true]);
 
         $this->assertDatabaseHas('exports', [
             'user_id' => $this->landlord->id,
-            'status' => 'completed',
+            'status' => 'pending',
         ]);
 
-        $export = Export::where('user_id', $this->landlord->id)->first();
-        if ($export && $export->file_path) {
-            @unlink(storage_path('app/' . $export->file_path));
-        }
+        Queue::assertPushed(ExportUtilityUsagesJob::class);
     }
 
     public function test_landlord_cannot_trigger_export_for_other_properties(): void
@@ -133,10 +139,10 @@ class UtilityExportTest extends TestCase
         $export->refresh();
         $this->assertEquals('completed', $export->status);
         $this->assertNotNull($export->file_path);
-        
-        $fullPath = storage_path('app/' . $export->file_path);
+
+        $fullPath = storage_path('app/'.$export->file_path);
         $this->assertFileExists($fullPath);
-        
+
         $content = file_get_contents($fullPath);
         $this->assertStringContainsString('Water', $content);
         $this->assertStringContainsString('A1', $content);
@@ -165,7 +171,7 @@ class UtilityExportTest extends TestCase
         $this->assertEquals('completed', $export->status);
         $this->assertNotNull($export->file_path);
 
-        $fullPath = storage_path('app/' . $export->file_path);
+        $fullPath = storage_path('app/'.$export->file_path);
         $this->assertFileExists($fullPath);
 
         // Cleanup
@@ -192,7 +198,7 @@ class UtilityExportTest extends TestCase
         $this->assertEquals('completed', $export->status);
         $this->assertNotNull($export->file_path);
 
-        $fullPath = storage_path('app/' . $export->file_path);
+        $fullPath = storage_path('app/'.$export->file_path);
         $this->assertFileExists($fullPath);
 
         // Cleanup
@@ -203,10 +209,10 @@ class UtilityExportTest extends TestCase
     {
         // Setup file
         $fileName = 'test_download.csv';
-        $filePath = 'exports/' . $fileName;
-        $absolutePath = storage_path('app/' . $filePath);
+        $filePath = 'exports/'.$fileName;
+        $absolutePath = storage_path('app/'.$filePath);
 
-        if (!file_exists(dirname($absolutePath))) {
+        if (! file_exists(dirname($absolutePath))) {
             mkdir(dirname($absolutePath), 0755, true);
         }
         file_put_contents($absolutePath, 'dummy,csv,data');
@@ -222,7 +228,7 @@ class UtilityExportTest extends TestCase
             ->get(route('exports.download', ['file_id' => $export->id]));
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Disposition', 'attachment; filename=' . $fileName);
+        $response->assertHeader('Content-Disposition', 'attachment; filename='.$fileName);
 
         // Cleanup
         unlink($absolutePath);
