@@ -11,6 +11,7 @@ use App\Filament\Resources\MaintenanceRequestResource;
 use App\Filament\Resources\PropertyResource;
 use App\Filament\Resources\PropertyUtilityResource;
 use App\Filament\Resources\RentalResource;
+use App\Filament\Resources\TenantResource;
 use App\Filament\Resources\UnitResource;
 use App\Filament\Resources\UtilityUsageResource;
 use App\Filament\Widgets\BillingCycleWidget;
@@ -185,6 +186,7 @@ class LandlordPanelProvider extends PanelProvider
                 PropertyResource::class,
                 UnitResource::class,
                 RentalResource::class,
+                TenantResource::class,
                 InvoiceResource::class,
                 MaintenanceRequestResource::class,
                 PropertyUtilityResource::class,

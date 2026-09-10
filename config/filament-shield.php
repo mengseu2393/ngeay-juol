@@ -80,6 +80,13 @@ return [
         // Shield-generated `*_activity` ones — see ActivityLogResource.
         'resources' => [
             'ActivityLogResource',
+
+            // Landlord-panel tenant directory over the User model — authorized by the
+            // existing UserPolicy / `*_user` permissions the landlord roles already hold.
+            // Shield keys permissions off the RESOURCE class name, not the model, so
+            // generating for it would mint a dead `*_tenant` set and regenerate
+            // UserPolicy from this resource.
+            'TenantResource',
         ],
     ],
 
