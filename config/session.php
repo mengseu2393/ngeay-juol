@@ -167,9 +167,17 @@ return [
     | to the server if the browser has a HTTPS connection. This will keep
     | the cookie from being sent to you when it can't be done securely.
     |
+    | RentWise defaults this on in production (where APP_URL is HTTPS) and
+    | off everywhere else, so local HTTP development keeps working without
+    | any extra .env entries. Override with SESSION_SECURE_COOKIE when a
+    | production environment is deliberately served over plain HTTP.
+    |
+    | This value also seeds the CookieJar defaults, so it covers the
+    | "remember me" cookie and anything created via the cookie() helper.
+    |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV', 'production') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

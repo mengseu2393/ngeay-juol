@@ -162,7 +162,12 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Public self-registration is deliberately OFF: RentWise is B2B — platform
+        // staff provision landlords, landlords provision tenants. A self-registered
+        // account gets no role and no landlord link, so it can enter neither panel;
+        // leaving GET|POST /register reachable only offered the internet a free
+        // account-creation and user-enumeration surface.
+        // Features::registration(),
         Features::resetPasswords(),
         // Features::emailVerification(),
         Features::updateProfileInformation(),
