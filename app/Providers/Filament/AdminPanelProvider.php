@@ -60,7 +60,9 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->sidebarWidth('17rem')
             ->spa()
-            ->unsavedChangesAlerts()
+            // No ->unsavedChangesAlerts(): Filament guards navigation with a synchronous
+            // window.confirm(), and a Chrome that defers painting that dialog leaves the page
+            // frozen on a prompt nobody can see — indistinguishable from a hung request.
             ->spaUrlExceptions([
                 url('/locale/*'),
                 url('/locale/en'),

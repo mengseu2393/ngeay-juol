@@ -3,10 +3,11 @@
 namespace App\Livewire;
 
 use App\Models\Property;
+use App\Models\User;
 use App\Support\ActiveProperty;
 use Filament\Facades\Filament;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 /**
@@ -37,7 +38,7 @@ class PropertySwitcher extends Component
     /** Whether this user gets a switcher at all (landlords, managers, staff). */
     public function isEligible(): bool
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
 
         if (! $user) {
@@ -50,10 +51,25 @@ class PropertySwitcher extends Component
         return $user->isPlatformStaff() || $user->effectiveLandlordId() !== null;
     }
 
-    /** Properties this user may switch between (already LandlordScope-filtered). */
+    /**
+     * Properties this user may switch between (already LandlordScope-filtered).
+     *
+     * Platform staff are unscoped by LandlordScope, so without the extra filter
+     * below they'd see every landlord's properties in one flat list. Once a
+     * property is active, staff are narrowed to that property's landlord so the
+     * switcher stays inside the landlord they're currently working in.
+     */
     public function properties(): Collection
     {
-        return Property::query()->orderBy('name')->get(['id', 'name']);
+        $query = Property::query();
+
+        $landlordId = ActiveProperty::model()?->landlord_id;
+
+        if ($landlordId !== null) {
+            $query->where('landlord_id', $landlordId);
+        }
+
+        return $query->orderBy('name')->get(['id', 'name']);
     }
 
     public function render()

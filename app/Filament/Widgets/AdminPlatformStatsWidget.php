@@ -18,6 +18,10 @@ class AdminPlatformStatsWidget extends StatsOverviewWidget
     // (-3) and FilamentInfoWidget (-2), which sink to the bottom as a result.
     protected static ?int $sort = -40;
 
+    // Carries the pending-payment count, which landlords (a different actor)
+    // create while staff watch this page — slow refresh rather than none.
+    protected static ?string $pollingInterval = '60s';
+
     public static function canView(): bool
     {
         return auth()->user()?->isPlatformStaff() ?? false;

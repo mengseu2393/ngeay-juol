@@ -27,6 +27,10 @@ class PortfolioStatsWidget extends StatsOverviewWidget
 
     protected static ?int $sort = -4;
 
+    // Standing position — occupancy, deposits, outstanding. Only the landlord's
+    // own writes change it, and those reload the page.
+    protected static ?string $pollingInterval = null;
+
     public function getHeading(): ?string
     {
         return $this->scopeLabel();

@@ -29,6 +29,10 @@ class AdminPlatformUsageWidget extends StatsOverviewWidget
 {
     protected static ?int $sort = -38;
 
+    // Adoption totals across the whole platform: they drift over weeks, and no
+    // staff action waits on the second they change.
+    protected static ?string $pollingInterval = null;
+
     public static function canView(): bool
     {
         return auth()->user()?->isPlatformStaff() ?? false;

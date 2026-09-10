@@ -6,12 +6,12 @@ use App\Enums\BillingType;
 use App\Enums\RentalStatus;
 use App\Filament\Pages\MonthlyBilling;
 use App\Filament\Widgets\Concerns\HasActivePropertyScope;
-use App\Providers\Filament\LandlordPanelProvider;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\PropertyUtility;
 use App\Models\Rental;
 use App\Models\UtilityUsage;
+use App\Providers\Filament\LandlordPanelProvider;
 use App\Support\Money;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -31,6 +31,11 @@ class BillingCycleWidget extends StatsOverviewWidget
     use HasActivePropertyScope;
 
     protected static ?int $sort = -3;
+
+    // Every number here moves only when this landlord bills, reads a meter or
+    // records a payment — tenants cannot pay themselves. Their own action
+    // reloads the page.
+    protected static ?string $pollingInterval = null;
 
     public function getHeading(): ?string
     {

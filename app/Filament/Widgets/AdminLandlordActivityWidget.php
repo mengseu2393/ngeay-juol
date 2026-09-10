@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\RentalStatus;
 use App\Filament\Resources\LandlordResource;
 use App\Filament\Resources\SubscriptionResource;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\SubscriptionService;
@@ -132,7 +133,7 @@ class AdminLandlordActivityWidget extends BaseWidget
                     ->query(fn (Builder $query): Builder => $query->whereDoesntHave('properties')),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\Action::make('view')
                         ->label(__('Open landlord'))
                         ->icon('heroicon-m-user-circle')
@@ -142,7 +143,7 @@ class AdminLandlordActivityWidget extends BaseWidget
                         ->icon('heroicon-m-credit-card')
                         ->visible(fn (User $record): bool => $record->subscription !== null)
                         ->url(fn (User $record): string => SubscriptionResource::getUrl('view', ['record' => $record->subscription])),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 

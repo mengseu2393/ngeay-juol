@@ -7,6 +7,7 @@ use App\Enums\SubscriptionPaymentStatus;
 use App\Filament\Pages\Renewals;
 use App\Filament\Resources\SubscriptionPaymentResource;
 use App\Filament\Resources\SubscriptionResource;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\SubscriptionPayment;
 use App\Services\SubscriptionService;
 use App\Support\Money;
@@ -202,7 +203,7 @@ class AdminPendingPaymentsTableWidget extends TableWidget
                             ->send();
                     }),
 
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\Action::make('view')
                         ->label(__('Open payment'))
                         ->icon('heroicon-m-eye')
@@ -212,7 +213,7 @@ class AdminPendingPaymentsTableWidget extends TableWidget
                         ->icon('heroicon-m-credit-card')
                         ->visible(fn (SubscriptionPayment $record): bool => $record->subscription !== null)
                         ->url(fn (SubscriptionPayment $record): string => SubscriptionResource::getUrl('view', ['record' => $record->subscription])),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 

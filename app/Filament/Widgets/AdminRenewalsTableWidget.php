@@ -7,6 +7,7 @@ use App\Enums\SubscriptionStatus;
 use App\Filament\Pages\Renewals;
 use App\Filament\Resources\LandlordResource;
 use App\Filament\Resources\SubscriptionResource;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Subscription;
 use App\Services\SubscriptionService;
 use App\Support\Money;
@@ -108,7 +109,7 @@ class AdminRenewalsTableWidget extends TableWidget
                     ->query(fn (Builder $query): Builder => $query->whereDate('ends_at', '<', now())),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     // Money already in hand: book it and move the period forward.
                     Tables\Actions\Action::make('renew')
                         ->label(__('Record payment & renew'))
@@ -193,7 +194,7 @@ class AdminRenewalsTableWidget extends TableWidget
                         ->color('gray')
                         ->visible(fn (Subscription $record): bool => $record->landlord !== null)
                         ->url(fn (Subscription $record): string => LandlordResource::getUrl('view', ['record' => $record->landlord])),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 

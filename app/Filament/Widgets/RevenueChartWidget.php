@@ -14,6 +14,10 @@ class RevenueChartWidget extends ChartWidget
 
     protected static ?int $sort = 0;
 
+    // A year of monthly revenue, four aggregate queries deep. Historical data —
+    // repolling it costs the most and gains the least on the dashboard.
+    protected static ?string $pollingInterval = null;
+
     public ?string $filter = null;
 
     public function getHeading(): string

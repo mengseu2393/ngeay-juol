@@ -4,8 +4,8 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Billing;
 use App\Filament\Pages\MonthlyBilling;
-
 use App\Filament\Pages\PropertySettings;
+use App\Filament\Pages\SimpleDashboard;
 use App\Filament\Resources\InvoiceResource;
 use App\Filament\Resources\MaintenanceRequestResource;
 use App\Filament\Resources\PropertyResource;
@@ -17,6 +17,7 @@ use App\Filament\Widgets\BillingCycleWidget;
 use App\Filament\Widgets\LeaseExpiryWidget;
 use App\Filament\Widgets\OverdueInvoicesWidget;
 use App\Filament\Widgets\PortfolioStatsWidget;
+use App\Filament\Widgets\PropertySetupChecklistWidget;
 use App\Filament\Widgets\ReceivablesAgingWidget;
 use App\Filament\Widgets\RecentPaymentsWidget;
 use App\Filament\Widgets\RevenueChartWidget;
@@ -81,7 +82,9 @@ class LandlordPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->sidebarWidth('17rem')
             ->spa()
-            ->unsavedChangesAlerts()
+            // No ->unsavedChangesAlerts(): Filament guards navigation with a synchronous
+            // window.confirm(), and a Chrome that defers painting that dialog leaves the page
+            // frozen on a prompt nobody can see — indistinguishable from a hung request.
             ->spaUrlExceptions([
                 url('/locale/*'),
                 url('/locale/en'),
@@ -121,9 +124,9 @@ class LandlordPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn (): string => Blade::render(
-                    '<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(()=>{})})}</script>' .
-                    '@include(\'filament.components.pwa-install-banner\')' .
-                    '@include(\'components.rw-print-script\')' .
+                    '<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(()=>{})})}</script>'.
+                    '@include(\'filament.components.pwa-install-banner\')'.
+                    '@include(\'components.rw-print-script\')'.
                     '@include(\'components.rw-close-dropdown-on-action\')'
                 ),
             )
@@ -192,13 +195,14 @@ class LandlordPanelProvider extends PanelProvider
                 Billing::class,
                 MonthlyBilling::class,
                 PropertySettings::class,
-                \App\Filament\Pages\SimpleDashboard::class,
+                SimpleDashboard::class,
             ])
             // Dashboard, top to bottom. AccountWidget is deliberately absent: its
             // "Hi, <name>" card occupied the first slot without telling a landlord
             // anything. Ordering runs standing position → this month's work → the
             // lists to act on → the retrospective charts.
             ->widgets([
+                PropertySetupChecklistWidget::class, // -6  what still blocks billing (hides itself when done)
                 SubscriptionStatusWidget::class,   // -5
                 PortfolioStatsWidget::class,       // -4  occupancy, tenancies, deposits, outstanding
                 BillingCycleWidget::class,         // -3  readings / invoices / cash for this month

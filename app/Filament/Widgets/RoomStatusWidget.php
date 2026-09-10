@@ -13,6 +13,10 @@ class RoomStatusWidget extends ChartWidget
 
     protected static ?int $sort = 2;
 
+    // Room statuses change when the landlord moves a tenant in or out, which
+    // happens through a page that reloads anyway.
+    protected static ?string $pollingInterval = null;
+
     protected function getType(): string
     {
         return 'doughnut';

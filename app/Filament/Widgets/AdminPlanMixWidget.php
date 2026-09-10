@@ -30,6 +30,10 @@ class AdminPlanMixWidget extends ChartWidget
 
     protected int|string|array $columnSpan = 1;
 
+    // Plan mix and MRR shift only when a subscription is created or cancelled —
+    // days apart, not seconds. No polling.
+    protected static ?string $pollingInterval = null;
+
     /**
      * The panel's own emerald ramp rather than a rainbow — one plan mix is one
      * measure, so it reads as shades of the brand colour. Ordered light-dark-light

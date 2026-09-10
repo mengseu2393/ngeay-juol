@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Resources\SubscriptionPaymentResource;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\SubscriptionPayment;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -34,7 +35,7 @@ class SubscriptionPaymentsTableWidget extends TableWidget
             ->defaultPaginationPageOption(10)
             ->recordUrl(fn (SubscriptionPayment $record): string => SubscriptionPaymentResource::getUrl('view', ['record' => $record]))
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\Action::make('view')
                         ->label(__('View'))
                         ->icon('heroicon-m-eye')
@@ -46,7 +47,7 @@ class SubscriptionPaymentsTableWidget extends TableWidget
                         ->color('gray')
                         ->url(fn (SubscriptionPayment $record): string => SubscriptionPaymentResource::getUrl('edit', ['record' => $record])),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 

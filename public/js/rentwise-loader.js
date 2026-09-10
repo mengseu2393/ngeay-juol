@@ -49,8 +49,9 @@
     }
 
     /**
-     * @param {{nav?: boolean, delay?: number, timeout?: number}} [options]
+     * @param {{nav?: boolean, delay?: number, timeout?: number, guard?: function(): boolean}} [options]
      *        nav — translucent backdrop over the page you are leaving, instead of an opaque one.
+     *        guard — re-checked at paint time; a false return calls the whole thing off.
      */
     function show(options) {
         var settings = options || {};
@@ -60,6 +61,13 @@
 
         var paint = function () {
             showTimer = null;
+
+            if (settings.guard && ! settings.guard()) {
+                hide();
+
+                return;
+            }
+
             root.classList.add(VISIBLE);
             root.classList.toggle(NAV, nav);
         };
@@ -88,8 +96,19 @@
     }
 
     // ── Livewire SPA navigation (both Filament panels run ->spa()) ──
-    document.addEventListener('livewire:navigate', function () {
-        show({ delay: NAV_DELAY });
+    // `livewire:navigate` is cancelable, and Filament's unsaved-changes alert cancels it to put
+    // its confirmation modal up instead. That listener is registered long after this one, so
+    // `defaultPrevented` is still false while we are running — it only settles once the whole
+    // chain has. NAV_DELAY already buys us that time, so the guard re-reads it at paint: a
+    // cancelled navigation is never followed by `livewire:navigated`, and an overlay raised for
+    // one would sit on top of the very modal the user has to answer, forever.
+    document.addEventListener('livewire:navigate', function (event) {
+        show({
+            delay: NAV_DELAY,
+            guard: function () {
+                return ! event.defaultPrevented;
+            },
+        });
     });
     document.addEventListener('livewire:navigated', hide);
 

@@ -22,6 +22,9 @@ class ReceivablesAgingWidget extends ChartWidget
 
     protected static ?string $maxHeight = '220px';
 
+    // Aging buckets are day-grained; nothing can move between two 5s ticks.
+    protected static ?string $pollingInterval = null;
+
     public function getHeading(): string
     {
         return __('Unpaid by age').' ('.Money::activeSymbol().')';

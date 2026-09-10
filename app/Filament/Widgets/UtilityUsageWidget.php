@@ -13,6 +13,10 @@ class UtilityUsageWidget extends ChartWidget
 
     protected static ?int $sort = 3;
 
+    // Meter readings arrive once a month, entered by this landlord. Polling a
+    // year of usage every 5s buys nothing.
+    protected static ?string $pollingInterval = null;
+
     public ?string $filter = null;
 
     public function getHeading(): string

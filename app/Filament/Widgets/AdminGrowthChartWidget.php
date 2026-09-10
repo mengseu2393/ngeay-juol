@@ -32,6 +32,10 @@ class AdminGrowthChartWidget extends ChartWidget
 
     protected int|string|array $columnSpan = 2;
 
+    // Twelve months of signups and banked revenue: a figure that cannot move
+    // meaningfully inside one page view. Refreshed on navigation instead.
+    protected static ?string $pollingInterval = null;
+
     /** How many months of history the chart covers, including the current one. */
     private const MONTHS = 12;
 
