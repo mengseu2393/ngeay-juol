@@ -19,6 +19,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class SubscriptionResource extends Resource
 {
@@ -47,12 +48,55 @@ class SubscriptionResource extends Resource
         return __('Subscriptions');
     }
 
+    /**
+     * Support reads the subscription directory, super admins change it.
+     *
+     * RolesAndPermissionsSeeder's stated intent is "support: read everything +
+     * manage non-admin users" — but this resource was super-admin-only, so a
+     * support agent could open a landlord and their activity log while the
+     * subscription driving that landlord's access stayed invisible. Read access
+     * here matches the seeder; the write overrides below keep billing changes
+     * with super admins. Mirrors LandlordResource.
+     */
     public static function canAccess(): bool
+    {
+        return auth()->user()?->isPlatformStaff() ?? false;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()?->isPlatformStaff() ?? false;
+    }
+
+    /**
+     * Every mutating row action below is additionally gated on this rather than on
+     * canEdit(): a bare Tables\Actions\Action is NOT authorized by the resource's
+     * can* methods, so opening this resource to support without it would have handed
+     * support renew/suspend/cancel — a wider grant than the read access intended.
+     * Uses ->hidden() rather than ->visible() so it composes with the status-based
+     * ->visible() rules already on renew and reactivate instead of replacing them.
+     */
+    protected static function actorIsSuperAdmin(): bool
     {
         return auth()->user()?->isSuperAdmin() ?? false;
     }
 
-    public static function shouldRegisterNavigation(): bool
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->isSuperAdmin() ?? false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()?->isSuperAdmin() ?? false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()?->isSuperAdmin() ?? false;
+    }
+
+    public static function canDeleteAny(): bool
     {
         return auth()->user()?->isSuperAdmin() ?? false;
     }
@@ -168,6 +212,7 @@ class SubscriptionResource extends Resource
                     Tables\Actions\EditAction::make(),
                     // Renew
                     Tables\Actions\Action::make('renew')
+                        ->hidden(fn () => ! static::actorIsSuperAdmin())
                         ->label(__('Renew'))
                         ->icon('heroicon-o-arrow-path')
                         ->color('success')
@@ -189,6 +234,7 @@ class SubscriptionResource extends Resource
                         ->visible(fn (Subscription $record) => $record->status !== SubscriptionStatus::Suspended),
                     // Extend
                     Tables\Actions\Action::make('extend')
+                        ->hidden(fn () => ! static::actorIsSuperAdmin())
                         ->label(__('Extend'))
                         ->icon('heroicon-o-arrow-right-circle')
                         ->color('info')
@@ -200,6 +246,7 @@ class SubscriptionResource extends Resource
                         ->action(fn (Subscription $record, array $data) => SubscriptionService::extend($record, $data['days'], $data['reason'])),
                     // Shorten
                     Tables\Actions\Action::make('shorten')
+                        ->hidden(fn () => ! static::actorIsSuperAdmin())
                         ->label(__('Shorten'))
                         ->icon('heroicon-o-arrow-left-circle')
                         ->color('warning')
@@ -211,6 +258,7 @@ class SubscriptionResource extends Resource
                         ->action(fn (Subscription $record, array $data) => SubscriptionService::shorten($record, $data['days'], $data['reason'])),
                     // Change plan
                     Tables\Actions\Action::make('changePlan')
+                        ->hidden(fn () => ! static::actorIsSuperAdmin())
                         ->label(__('Change plan'))
                         ->icon('heroicon-o-arrows-right-left')
                         ->color('gray')
@@ -230,6 +278,7 @@ class SubscriptionResource extends Resource
                         }),
                     // Cancel
                     Tables\Actions\Action::make('cancel')
+                        ->hidden(fn () => ! static::actorIsSuperAdmin())
                         ->label(__('Cancel'))
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
@@ -248,6 +297,7 @@ class SubscriptionResource extends Resource
                         ->visible(fn (Subscription $record) => $record->status !== SubscriptionStatus::Cancelled),
                     // Suspend
                     Tables\Actions\Action::make('suspend')
+                        ->hidden(fn () => ! static::actorIsSuperAdmin())
                         ->label(__('Suspend'))
                         ->icon('heroicon-o-pause-circle')
                         ->color('danger')
@@ -259,6 +309,7 @@ class SubscriptionResource extends Resource
                         ->visible(fn (Subscription $record) => $record->status !== SubscriptionStatus::Suspended),
                     // Reactivate
                     Tables\Actions\Action::make('reactivate')
+                        ->hidden(fn () => ! static::actorIsSuperAdmin())
                         ->label(__('Reactivate'))
                         ->icon('heroicon-o-play-circle')
                         ->color('success')

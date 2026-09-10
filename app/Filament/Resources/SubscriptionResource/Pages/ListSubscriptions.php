@@ -62,6 +62,9 @@ class ListSubscriptions extends ListRecords
                 ->extraAttributes(fn (): array => $this->tabAttributes(self::TAB_SUBSCRIPTIONS)),
             Actions\Action::make('recordPayment')
                 ->label(__('Record payment'))
+                // Links into SubscriptionPaymentResource::create, which support may not
+                // use. CreateAction above is authorized by canCreate(); a bare Action is not.
+                ->hidden(fn (): bool => ! SubscriptionPaymentResource::canCreate())
                 ->icon('heroicon-m-plus')
                 ->url(fn (): string => SubscriptionPaymentResource::getUrl('create'))
                 ->extraAttributes(fn (): array => $this->tabAttributes(self::TAB_PAYMENTS)),
