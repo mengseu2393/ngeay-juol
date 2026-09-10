@@ -4,11 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Enums\PropertyType;
 use App\Filament\Resources\PropertyResource\Pages;
-use App\Filament\Resources\PropertyResource\RelationManagers;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Property;
 use App\Support\SimpleLandlordMode;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -49,15 +50,15 @@ class PropertyResource extends Resource
             Forms\Components\Section::make(__('Property'))
                 ->schema([
                     Forms\Components\Select::make('landlord_id')
-                        ->relationship('landlord', 'name')
+                        ->relationship('landlord', 'name', fn ($query) => $query->role('landlord'))
                         ->searchable()
                         ->preload()
                         // Hidden inside a relation manager: the owning landlord is
                         // already fixed by the relationship there.
                         ->visible(fn ($livewire) => auth()->user()?->isPlatformStaff()
-                            && ! $livewire instanceof \Filament\Resources\RelationManagers\RelationManager)
+                            && ! $livewire instanceof RelationManager)
                         ->required(fn ($livewire) => auth()->user()?->isPlatformStaff()
-                            && ! $livewire instanceof \Filament\Resources\RelationManagers\RelationManager),
+                            && ! $livewire instanceof RelationManager),
                     Forms\Components\TextInput::make('name')->required()->maxLength(255),
                     Forms\Components\Select::make('property_type')
                         ->options(PropertyType::class)
@@ -70,9 +71,9 @@ class PropertyResource extends Resource
                 ->schema([
                     Forms\Components\TextInput::make('address_line'),
                     Forms\Components\TextInput::make('street'),
-                    Forms\Components\TextInput::make('village')->label(__('Province / City')),
-                    Forms\Components\TextInput::make('commune')->label(__('Landlord')),
-                    Forms\Components\TextInput::make('district')->label(__('Units')),
+                    Forms\Components\TextInput::make('village')->label(__('Village')),
+                    Forms\Components\TextInput::make('commune')->label(__('Commune')),
+                    Forms\Components\TextInput::make('district')->label(__('District')),
                     Forms\Components\TextInput::make('city')->label(__('Province / City')),
                     Forms\Components\TextInput::make('postal_code'),
                 ])->columns(2),
@@ -104,11 +105,11 @@ class PropertyResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

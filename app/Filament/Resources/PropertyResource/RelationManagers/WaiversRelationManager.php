@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PropertyResource\RelationManagers;
 
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Rental;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -52,11 +53,11 @@ class WaiversRelationManager extends RelationManager
                 Tables\Actions\CreateAction::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 }

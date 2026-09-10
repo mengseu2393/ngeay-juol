@@ -2,14 +2,15 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\PaymentMethod;
 use App\Enums\SubscriptionStatus;
 use App\Filament\Resources\SubscriptionResource\Pages;
 use App\Filament\Resources\SubscriptionResource\RelationManagers;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\SubscriptionService;
-use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Infolists;
@@ -18,7 +19,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
 
 class SubscriptionResource extends Resource
 {
@@ -163,7 +163,7 @@ class SubscriptionResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     // Renew
@@ -177,8 +177,8 @@ class SubscriptionResource extends Resource
                                 ->default(fn (Subscription $record) => $record->price),
                             Forms\Components\Select::make('method')
                                 ->label(__('Payment method'))
-                                ->options(\App\Enums\PaymentMethod::class)
-                                ->default(\App\Enums\PaymentMethod::BankTransfer->value),
+                                ->options(PaymentMethod::class)
+                                ->default(PaymentMethod::BankTransfer->value),
                             Forms\Components\DatePicker::make('paid_at')
                                 ->default(now()),
                             Forms\Components\Textarea::make('note')->rows(2),
@@ -265,7 +265,7 @@ class SubscriptionResource extends Resource
                         ->requiresConfirmation()
                         ->action(fn (Subscription $record) => SubscriptionService::reactivate($record))
                         ->visible(fn (Subscription $record) => $record->status === SubscriptionStatus::Suspended),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

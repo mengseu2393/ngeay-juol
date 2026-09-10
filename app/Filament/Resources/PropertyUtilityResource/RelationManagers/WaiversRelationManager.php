@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PropertyUtilityResource\RelationManagers;
 
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Rental;
 use App\Models\Unit;
 use Filament\Forms;
@@ -75,10 +76,10 @@ class WaiversRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

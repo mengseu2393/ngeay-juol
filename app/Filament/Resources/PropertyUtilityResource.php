@@ -4,11 +4,13 @@ namespace App\Filament\Resources;
 
 use App\Enums\BillingType;
 use App\Enums\ReadingType;
+use App\Enums\RentalStatus;
 use App\Filament\Concerns\ScopesToActiveProperty;
 use App\Filament\Resources\PropertyUtilityResource\Pages;
 use App\Filament\Resources\PropertyUtilityResource\RelationManagers;
-use App\Models\PropertyUtility;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\ChargeRule;
+use App\Models\PropertyUtility;
 use App\Models\Rental;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
@@ -23,6 +25,8 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The per-property utility *catalog* (Electricity, Water, … with their rates and
@@ -121,7 +125,7 @@ class PropertyUtilityResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     static::initializeReadingsAction(),
                     static::resetReadingsAction(),
@@ -129,7 +133,7 @@ class PropertyUtilityResource extends Resource
                     static::addWaiverAction(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -382,7 +386,7 @@ class PropertyUtilityResource extends Resource
                 } elseif ($scope === 'rental') {
                     $query = Rental::whereHas('unit', fn ($q) => $q->where('property_id', $propertyId));
                     if ($occupiedOnly) {
-                        $query->where('status', \App\Enums\RentalStatus::Active->value);
+                        $query->where('status', RentalStatus::Active->value);
                     }
                     $ids = $applyAll ? $query->pluck('id')->all() : ($data['rental_ids'] ?? []);
                     foreach ($ids as $rentalId) {
@@ -499,7 +503,7 @@ class PropertyUtilityResource extends Resource
                     ->get()
                     ->keyBy('id');
 
-                $saved = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $record, $units): int {
+                $saved = DB::transaction(function () use ($data, $record, $units): int {
                     $count = 0;
                     $unitsData = $data['units'] ?? [];
 
@@ -617,7 +621,7 @@ class PropertyUtilityResource extends Resource
                     ->get()
                     ->keyBy('id');
 
-                $saved = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $record, $units): int {
+                $saved = DB::transaction(function () use ($data, $record, $units): int {
                     $count = 0;
                     $latestByUnit = static::latestUsagesByUnit($record, $units->keys()->all());
 
@@ -676,9 +680,9 @@ class PropertyUtilityResource extends Resource
      * ordering billing uses to pick the previous reading (date, then id).
      *
      * @param  array<int, int>  $unitIds
-     * @return \Illuminate\Support\Collection<int, UtilityUsage>
+     * @return Collection<int, UtilityUsage>
      */
-    protected static function latestUsagesByUnit(PropertyUtility $utility, array $unitIds): \Illuminate\Support\Collection
+    protected static function latestUsagesByUnit(PropertyUtility $utility, array $unitIds): Collection
     {
         if ($unitIds === []) {
             return collect();

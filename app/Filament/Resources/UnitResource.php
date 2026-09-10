@@ -4,9 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Enums\BillingType;
 use App\Enums\ReadingType;
+use App\Enums\RentalStatus;
 use App\Enums\UnitStatus;
 use App\Filament\Concerns\ScopesToActiveProperty;
+use App\Filament\Resources\PropertyUtilityResource\RelationManagers\ChargeRulesRelationManager;
 use App\Filament\Resources\UnitResource\Pages;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\PropertyUtility;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
@@ -21,6 +24,9 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class UnitResource extends Resource implements HasShieldPermissions
 {
@@ -151,13 +157,13 @@ class UnitResource extends Resource implements HasShieldPermissions
                 static::generateRoomsAction(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     static::meterReadingsAction(),
                     static::accountAction(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -191,10 +197,10 @@ class UnitResource extends Resource implements HasShieldPermissions
                 Forms\Components\Select::make('status')
                     ->label(__('Outcome'))
                     ->options([
-                        \App\Enums\RentalStatus::Vacated->value => \App\Enums\RentalStatus::Vacated->getLabel(),
-                        \App\Enums\RentalStatus::Expired->value => \App\Enums\RentalStatus::Expired->getLabel(),
+                        RentalStatus::Vacated->value => RentalStatus::Vacated->getLabel(),
+                        RentalStatus::Expired->value => RentalStatus::Expired->getLabel(),
                     ])
-                    ->default(\App\Enums\RentalStatus::Vacated->value)
+                    ->default(RentalStatus::Vacated->value)
                     ->required(),
                 Forms\Components\Toggle::make('free_room')
                     ->label(__('Mark room as available'))
@@ -221,7 +227,7 @@ class UnitResource extends Resource implements HasShieldPermissions
                     ->title(__('Tenancy ended'))
                     ->body(__('Room :room is now :status.', [
                         'room' => $record->room_number,
-                        'status' => \App\Enums\RentalStatus::from((int) $data['status'])->getLabel(),
+                        'status' => RentalStatus::from((int) $data['status'])->getLabel(),
                     ]))
                     ->success()->send();
             });
@@ -319,7 +325,7 @@ class UnitResource extends Resource implements HasShieldPermissions
                 return $schema;
             })
             ->action(function (Unit $record, array $data): void {
-                $date = \Illuminate\Support\Carbon::parse($data['reading_date'] ?? now())->toDateString();
+                $date = Carbon::parse($data['reading_date'] ?? now())->toDateString();
                 $type = (int) ($data['reading_type'] ?? ReadingType::Actual->value);
                 $meters = $data['meters'] ?? [];
 
@@ -333,7 +339,7 @@ class UnitResource extends Resource implements HasShieldPermissions
                 $rentalId = $record->activeRental?->getKey();
 
                 // One transaction so a multi-utility save is all-or-nothing.
-                $saved = \Illuminate\Support\Facades\DB::transaction(function () use ($meters, $allowed, $record, $date, $type, $rentalId): int {
+                $saved = DB::transaction(function () use ($meters, $allowed, $record, $date, $type, $rentalId): int {
                     $count = 0;
                     foreach ($meters as $utilityId => $value) {
                         $utilityId = (int) $utilityId;
@@ -386,7 +392,7 @@ class UnitResource extends Resource implements HasShieldPermissions
     }
 
     /** The property's meter-based, active utilities (Metered / Shared) for a room. */
-    public static function meterUtilitiesFor(Unit $record): \Illuminate\Support\Collection
+    public static function meterUtilitiesFor(Unit $record): Collection
     {
         return PropertyUtility::query()
             ->where('property_id', $record->property_id)
@@ -588,7 +594,9 @@ class UnitResource extends Resource implements HasShieldPermissions
                 }
 
                 Notification::make()
-                    ->title("Generated {$created} room(s)".($accounts ? " with {$accounts} login account(s)" : '').($skipped ? ", skipped {$skipped} existing" : ''))
+                    ->title(__('Generated :count room(s)', ['count' => $created])
+                        .($accounts ? ' '.__('with :count login account(s)', ['count' => $accounts]) : '')
+                        .($skipped ? ', '.__('skipped :count existing', ['count' => $skipped]) : ''))
                     ->success()->send();
             });
     }
@@ -677,7 +685,7 @@ class UnitResource extends Resource implements HasShieldPermissions
             UnitResource\RelationManagers\RentalsRelationManager::class,
             UnitResource\RelationManagers\InvoicesRelationManager::class,
             UnitResource\RelationManagers\UtilityUsageRelationManager::class,
-            \App\Filament\Resources\PropertyUtilityResource\RelationManagers\ChargeRulesRelationManager::class,
+            ChargeRulesRelationManager::class,
         ];
     }
 

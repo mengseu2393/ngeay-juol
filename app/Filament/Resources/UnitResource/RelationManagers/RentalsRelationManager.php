@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\UnitResource\RelationManagers;
 
 use App\Enums\RentalStatus;
+use App\Enums\UnitStatus;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Rental;
 use App\Services\RoomAccountService;
 use App\Services\TenancyService;
@@ -13,6 +15,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 
 /**
  * The room's tenant timeline, managed from the unit's edit page: who rents (or
@@ -53,7 +56,7 @@ class RentalsRelationManager extends RelationManager
                     Forms\Components\TextInput::make('occupant_workplace')->label(__('Workplace'))
                         ->placeholder(__('e.g. company name')),
                     Forms\Components\TextInput::make('occupant_id_card')->label(__('ID card number')),
-                    
+
                     Forms\Components\SpatieMediaLibraryFileUpload::make('id_cards')
                         ->collection('id_cards')
                         ->label(__('ID card photos'))
@@ -63,7 +66,7 @@ class RentalsRelationManager extends RelationManager
                         ->maxFiles(4)
                         ->helperText(__('Front/back of national ID, passport, etc.'))
                         ->columnSpanFull(),
-                    
+
                     Forms\Components\Select::make('status')
                         ->options(RentalStatus::class)
                         ->default(RentalStatus::Active)
@@ -146,7 +149,7 @@ class RentalsRelationManager extends RelationManager
                 ->collapsed()
                 ->schema([
                     Forms\Components\TextInput::make('occupant_address')->label(__('Address'))->columnSpanFull(),
-                    
+
                     Forms\Components\Fieldset::make(__('Emergency contact'))
                         ->schema([
                             Forms\Components\TextInput::make('emergency_contact_name')->label(__('Name')),
@@ -178,9 +181,9 @@ class RentalsRelationManager extends RelationManager
                     Forms\Components\Placeholder::make('primary_occupant_badge')
                         ->label('')
                         ->content(fn (?Rental $record) => $record?->occupant_name
-                            ? new \Illuminate\Support\HtmlString(
+                            ? new HtmlString(
                                 '<span style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.375rem 0.75rem;background:rgb(209 250 229);border-radius:0.375rem;font-weight:600;color:rgb(22 101 52);">★ '
-                                . e(__('Primary Tenant')) . ': ' . e($record->occupant_name) . '</span>'
+                                .e(__('Primary Tenant')).': '.e($record->occupant_name).'</span>'
                             )
                             : __('The primary tenant will be set from the Tenancy section above.'))
                         ->columnSpanFull(),
@@ -209,9 +212,9 @@ class RentalsRelationManager extends RelationManager
                             Forms\Components\Select::make('occupant_gender')
                                 ->label(__('Gender'))
                                 ->options([
-                                    'male'   => __('Male'),
+                                    'male' => __('Male'),
                                     'female' => __('Female'),
-                                    'other'  => __('Other'),
+                                    'other' => __('Other'),
                                 ]),
                             Forms\Components\DatePicker::make('occupant_dob')
                                 ->label(__('Date of birth'))
@@ -234,13 +237,12 @@ class RentalsRelationManager extends RelationManager
 
                         ])
                         ->columns(2)
-                        ->itemLabel(fn (array $state): ?string =>
-                            (! empty($state['occupant_name']) ? $state['occupant_name'] : __('New occupant'))
-                            . ' — '
-                            . match ($state['role'] ?? 'co_tenant') {
+                        ->itemLabel(fn (array $state): ?string => (! empty($state['occupant_name']) ? $state['occupant_name'] : __('New occupant'))
+                            .' — '
+                            .match ($state['role'] ?? 'co_tenant') {
                                 'co_tenant' => __('Co-Tenant'),
                                 'dependent' => __('Dependent'),
-                                default     => '',
+                                default => '',
                             })
                         ->collapsible()
                         ->addActionLabel(__('+ Add occupant'))
@@ -290,23 +292,23 @@ class RentalsRelationManager extends RelationManager
                         // Auto-create the primary occupant record from the rental's occupant fields.
                         if (! empty($data['occupant_name'])) {
                             $rental->occupants()->create([
-                                'role'                           => 'primary',
-                                'user_id'                        => $rental->tenant_id,
-                                'occupant_name'                  => $data['occupant_name'],
-                                'occupant_phone'                 => $data['occupant_phone'] ?? null,
-                                'occupant_id_card'               => $data['occupant_id_card'] ?? null,
-                                'occupant_address'               => $data['occupant_address'] ?? null,
-                                'occupant_gender'                => $data['occupant_gender'] ?? null,
-                                'occupant_dob'                   => $data['occupant_dob'] ?? null,
-                                'occupant_nationality'           => $data['occupant_nationality'] ?? null,
-                                'occupant_workplace'             => $data['occupant_workplace'] ?? null,
-                                'emergency_contact_name'         => $data['emergency_contact_name'] ?? null,
-                                'emergency_contact_phone'        => $data['emergency_contact_phone'] ?? null,
+                                'role' => 'primary',
+                                'user_id' => $rental->tenant_id,
+                                'occupant_name' => $data['occupant_name'],
+                                'occupant_phone' => $data['occupant_phone'] ?? null,
+                                'occupant_id_card' => $data['occupant_id_card'] ?? null,
+                                'occupant_address' => $data['occupant_address'] ?? null,
+                                'occupant_gender' => $data['occupant_gender'] ?? null,
+                                'occupant_dob' => $data['occupant_dob'] ?? null,
+                                'occupant_nationality' => $data['occupant_nationality'] ?? null,
+                                'occupant_workplace' => $data['occupant_workplace'] ?? null,
+                                'emergency_contact_name' => $data['emergency_contact_name'] ?? null,
+                                'emergency_contact_phone' => $data['emergency_contact_phone'] ?? null,
                                 'emergency_contact_relationship' => $data['emergency_contact_relationship'] ?? null,
-                                'guarantor_name'                 => $data['guarantor_name'] ?? null,
-                                'guarantor_phone'                => $data['guarantor_phone'] ?? null,
-                                'guarantor_id_number'            => $data['guarantor_id_number'] ?? null,
-                                'guarantor_address'              => $data['guarantor_address'] ?? null,
+                                'guarantor_name' => $data['guarantor_name'] ?? null,
+                                'guarantor_phone' => $data['guarantor_phone'] ?? null,
+                                'guarantor_id_number' => $data['guarantor_id_number'] ?? null,
+                                'guarantor_address' => $data['guarantor_address'] ?? null,
                             ]);
                         }
 
@@ -316,14 +318,14 @@ class RentalsRelationManager extends RelationManager
                                 continue;
                             }
                             $newOccupant = $rental->occupants()->create([
-                                'role'                 => $occupant['role'] ?? 'co_tenant',
-                                'occupant_name'        => $occupant['occupant_name'],
-                                'occupant_phone'       => $occupant['occupant_phone'] ?? null,
-                                'occupant_id_card'     => $occupant['occupant_id_card'] ?? null,
-                                'occupant_gender'      => $occupant['occupant_gender'] ?? null,
-                                'occupant_dob'         => $occupant['occupant_dob'] ?? null,
+                                'role' => $occupant['role'] ?? 'co_tenant',
+                                'occupant_name' => $occupant['occupant_name'],
+                                'occupant_phone' => $occupant['occupant_phone'] ?? null,
+                                'occupant_id_card' => $occupant['occupant_id_card'] ?? null,
+                                'occupant_gender' => $occupant['occupant_gender'] ?? null,
+                                'occupant_dob' => $occupant['occupant_dob'] ?? null,
                                 'occupant_nationality' => $occupant['occupant_nationality'] ?? null,
-                                'occupant_workplace'   => $occupant['occupant_workplace'] ?? null,
+                                'occupant_workplace' => $occupant['occupant_workplace'] ?? null,
                             ]);
 
                             if (isset($occupant['id_cards'])) {
@@ -335,7 +337,7 @@ class RentalsRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make()
                         ->mutateRecordDataUsing(fn (array $data, Rental $record) => $this->loadAdditionalOccupants($data, $record)),
                     Tables\Actions\Action::make('login')
@@ -359,7 +361,7 @@ class RentalsRelationManager extends RelationManager
                             $this->syncAdditionalOccupants($record, $data['additional_occupants'] ?? []);
                         }),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 
@@ -391,7 +393,7 @@ class RentalsRelationManager extends RelationManager
                 ]);
 
                 if ($data['free_room'] ?? true) {
-                    $this->getOwnerRecord()->update(['status' => \App\Enums\UnitStatus::Available]);
+                    $this->getOwnerRecord()->update(['status' => UnitStatus::Available]);
                 }
 
                 Notification::make()->title(__('Tenancy ended'))->success()->send();
@@ -427,16 +429,16 @@ class RentalsRelationManager extends RelationManager
             ->where('role', '!=', 'primary')
             ->get()
             ->map(fn ($o) => [
-                'id'                   => $o->id,
-                'role'                 => $o->getRawOriginal('role'),
-                'occupant_name'        => $o->occupant_name,
-                'occupant_phone'       => $o->occupant_phone,
-                'occupant_id_card'     => $o->occupant_id_card,
-                'occupant_gender'      => $o->occupant_gender,
-                'occupant_dob'         => $o->occupant_dob?->format('Y-m-d'),
+                'id' => $o->id,
+                'role' => $o->getRawOriginal('role'),
+                'occupant_name' => $o->occupant_name,
+                'occupant_phone' => $o->occupant_phone,
+                'occupant_id_card' => $o->occupant_id_card,
+                'occupant_gender' => $o->occupant_gender,
+                'occupant_dob' => $o->occupant_dob?->format('Y-m-d'),
                 'occupant_nationality' => $o->occupant_nationality,
-                'occupant_workplace'   => $o->occupant_workplace,
-                'id_cards'             => is_array($o->id_cards) ? $o->id_cards : [],
+                'occupant_workplace' => $o->occupant_workplace,
+                'id_cards' => is_array($o->id_cards) ? $o->id_cards : [],
             ])
             ->values()
             ->toArray();
@@ -454,22 +456,22 @@ class RentalsRelationManager extends RelationManager
         $record->occupants()->updateOrCreate(
             ['rental_id' => $record->id, 'role' => 'primary'],
             [
-                'user_id'                        => $record->tenant_id,
-                'occupant_name'                  => $data['occupant_name'],
-                'occupant_phone'                 => $data['occupant_phone'] ?? null,
-                'occupant_id_card'               => $data['occupant_id_card'] ?? null,
-                'occupant_address'               => $data['occupant_address'] ?? null,
-                'occupant_gender'                => $data['occupant_gender'] ?? null,
-                'occupant_dob'                   => $data['occupant_dob'] ?? null,
-                'occupant_nationality'           => $data['occupant_nationality'] ?? null,
-                'occupant_workplace'             => $data['occupant_workplace'] ?? null,
-                'emergency_contact_name'         => $data['emergency_contact_name'] ?? null,
-                'emergency_contact_phone'        => $data['emergency_contact_phone'] ?? null,
+                'user_id' => $record->tenant_id,
+                'occupant_name' => $data['occupant_name'],
+                'occupant_phone' => $data['occupant_phone'] ?? null,
+                'occupant_id_card' => $data['occupant_id_card'] ?? null,
+                'occupant_address' => $data['occupant_address'] ?? null,
+                'occupant_gender' => $data['occupant_gender'] ?? null,
+                'occupant_dob' => $data['occupant_dob'] ?? null,
+                'occupant_nationality' => $data['occupant_nationality'] ?? null,
+                'occupant_workplace' => $data['occupant_workplace'] ?? null,
+                'emergency_contact_name' => $data['emergency_contact_name'] ?? null,
+                'emergency_contact_phone' => $data['emergency_contact_phone'] ?? null,
                 'emergency_contact_relationship' => $data['emergency_contact_relationship'] ?? null,
-                'guarantor_name'                 => $data['guarantor_name'] ?? null,
-                'guarantor_phone'                => $data['guarantor_phone'] ?? null,
-                'guarantor_id_number'            => $data['guarantor_id_number'] ?? null,
-                'guarantor_address'              => $data['guarantor_address'] ?? null,
+                'guarantor_name' => $data['guarantor_name'] ?? null,
+                'guarantor_phone' => $data['guarantor_phone'] ?? null,
+                'guarantor_id_number' => $data['guarantor_id_number'] ?? null,
+                'guarantor_address' => $data['guarantor_address'] ?? null,
             ]
         );
     }
@@ -490,14 +492,14 @@ class RentalsRelationManager extends RelationManager
             }
 
             $fields = [
-                'role'                 => $occupant['role'] ?? 'co_tenant',
-                'occupant_name'        => $occupant['occupant_name'],
-                'occupant_phone'       => $occupant['occupant_phone'] ?? null,
-                'occupant_id_card'     => $occupant['occupant_id_card'] ?? null,
-                'occupant_gender'      => $occupant['occupant_gender'] ?? null,
-                'occupant_dob'         => $occupant['occupant_dob'] ?? null,
+                'role' => $occupant['role'] ?? 'co_tenant',
+                'occupant_name' => $occupant['occupant_name'],
+                'occupant_phone' => $occupant['occupant_phone'] ?? null,
+                'occupant_id_card' => $occupant['occupant_id_card'] ?? null,
+                'occupant_gender' => $occupant['occupant_gender'] ?? null,
+                'occupant_dob' => $occupant['occupant_dob'] ?? null,
                 'occupant_nationality' => $occupant['occupant_nationality'] ?? null,
-                'occupant_workplace'   => $occupant['occupant_workplace'] ?? null,
+                'occupant_workplace' => $occupant['occupant_workplace'] ?? null,
             ];
 
             $id = ! empty($occupant['id']) ? (int) $occupant['id'] : null;

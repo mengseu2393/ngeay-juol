@@ -5,7 +5,10 @@ namespace App\Filament\Resources;
 use App\Enums\PaymentMethod;
 use App\Enums\SubscriptionPaymentStatus;
 use App\Filament\Resources\SubscriptionPaymentResource\Pages;
+use App\Filament\Tables\RowActionGroup;
+use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -63,12 +66,12 @@ class SubscriptionPaymentResource extends Resource
                 ->schema([
                     Forms\Components\Select::make('landlord_id')
                         ->label(__('Landlord'))
-                        ->options(fn () => \App\Models\User::role('landlord')->pluck('name', 'id'))
+                        ->options(fn () => User::role('landlord')->pluck('name', 'id'))
                         ->searchable()
                         ->required()
                         ->live()
                         ->afterStateUpdated(function ($state, Forms\Set $set) {
-                            $sub = \App\Models\Subscription::where('landlord_id', $state)->first();
+                            $sub = Subscription::where('landlord_id', $state)->first();
                             if ($sub) {
                                 $set('subscription_id', $sub->id);
                                 $set('amount', $sub->price); // auto-fill amount
@@ -83,7 +86,7 @@ class SubscriptionPaymentResource extends Resource
                     Forms\Components\TextInput::make('currency')
                         ->required()->maxLength(3)->default('USD'),
                     Forms\Components\Select::make('method')
-                        ->options(\App\Enums\PaymentMethod::class)
+                        ->options(PaymentMethod::class)
                         ->required(),
                     Forms\Components\Select::make('status')
                         ->options(SubscriptionPaymentStatus::class)
@@ -234,12 +237,12 @@ class SubscriptionPaymentResource extends Resource
                     ->options(SubscriptionPaymentStatus::class),
                 Tables\Filters\SelectFilter::make('landlord_id')
                     ->label(__('Landlord'))
-                    ->relationship('landlord', 'name')
+                    ->relationship('landlord', 'name', fn ($query) => $query->role('landlord'))
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('method')
                     ->label(__('Method'))
-                    ->options(\App\Enums\PaymentMethod::class),
+                    ->options(PaymentMethod::class),
                 Tables\Filters\Filter::make('coverage_period')
                     ->label(__('Coverage period'))
                     ->form([
@@ -262,11 +265,11 @@ class SubscriptionPaymentResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

@@ -2,16 +2,17 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\PaymentMethod;
 use App\Enums\SubscriptionAccess;
+use App\Enums\SubscriptionStatus;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Services\SubscriptionService;
+use App\Support\SimpleLandlordMode;
 use Filament\Actions;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Filament\Support\Exceptions\Halt;
 use Illuminate\Support\Facades\Auth;
 
 class Billing extends Page
@@ -53,7 +54,7 @@ class Billing extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return ! \App\Support\SimpleLandlordMode::enabledFor(auth()->user())
+        return ! SimpleLandlordMode::enabledFor(auth()->user())
             && (auth()->user()?->hasAnyRole(['landlord', 'landlord_manager']) ?? false);
     }
 
@@ -75,7 +76,7 @@ class Billing extends Page
             return [];
         }
 
-        if (! $this->subscription || $this->subscription->status === \App\Enums\SubscriptionStatus::Suspended) {
+        if (! $this->subscription || $this->subscription->status === SubscriptionStatus::Suspended) {
             return [];
         }
 
@@ -89,13 +90,13 @@ class Billing extends Page
                         ->required()->numeric()->prefix('$')
                         ->default(fn () => $this->subscription?->price ?? 0),
                     Forms\Components\Select::make('method')
-                        ->options(\App\Enums\PaymentMethod::class)
-                        ->default(\App\Enums\PaymentMethod::BankTransfer->value),
+                        ->options(PaymentMethod::class)
+                        ->default(PaymentMethod::BankTransfer->value),
                     Forms\Components\Textarea::make('note')->rows(2),
                 ])
                 ->action(function (array $data): void {
                     SubscriptionService::renew($this->subscription, $data);
-                    Notification::make()->success()->title('Subscription renewed!')->send();
+                    Notification::make()->success()->title(__('Subscription renewed!'))->send();
                     $this->mount(); // refresh
                 })
                 ->visible(fn () => $this->subscription?->auto_renew || $this->subscription?->ends_at?->isPast()),
@@ -116,7 +117,7 @@ class Billing extends Page
                 ->action(function (array $data): void {
                     $plan = SubscriptionPlan::findOrFail($data['plan_id']);
                     SubscriptionService::changePlan($this->subscription, $plan, immediate: true);
-                    Notification::make()->success()->title('Plan upgraded!')->send();
+                    Notification::make()->success()->title(__('Plan upgraded!'))->send();
                     $this->mount();
                 }),
 
@@ -133,7 +134,7 @@ class Billing extends Page
                 ->action(function (array $data): void {
                     $plan = SubscriptionPlan::findOrFail($data['plan_id']);
                     SubscriptionService::changePlan($this->subscription, $plan, immediate: false);
-                    Notification::make()->success()->title('Plan change scheduled for next period!')->send();
+                    Notification::make()->success()->title(__('Plan change scheduled for next period!'))->send();
                     $this->mount();
                 }),
 
@@ -149,7 +150,7 @@ class Billing extends Page
                 ])
                 ->action(function (array $data): void {
                     SubscriptionService::cancel($this->subscription, $data['reason'] ?? null, immediate: false);
-                    Notification::make()->warning()->title('Subscription will end at the current period end.')->send();
+                    Notification::make()->warning()->title(__('Subscription will end at the current period end.'))->send();
                     $this->mount();
                 }),
         ];

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Enums\PlanBillingModel;
 use App\Enums\PlanInterval;
 use App\Filament\Resources\SubscriptionPlanResource\Pages;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\SubscriptionPlan;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -137,12 +138,12 @@ class SubscriptionPlanResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make()
                         ->visible(fn (SubscriptionPlan $record) => $record->subscriptions()->count() === 0),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MaintenanceRequestResource\RelationManagers;
 
+use App\Filament\Tables\RowActionGroup;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -58,11 +59,11 @@ class MessagesRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 }

@@ -8,9 +8,11 @@ use App\Filament\Concerns\ScopesToActiveProperty;
 use App\Filament\Resources\InvoiceResource\Concerns\HasInvoiceDocumentActions;
 use App\Filament\Resources\InvoiceResource\Pages;
 use App\Filament\Resources\InvoiceResource\RelationManagers;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Invoice;
 use App\Support\ActiveProperty;
 use App\Support\Money;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -124,6 +126,7 @@ class InvoiceResource extends Resource
                                     ->color('gray')
                                     ->modalContent(function (Invoice $record) {
                                         $record->loadMissing(['lines.utilityUsage.propertyUtility', 'rental.unit.property', 'tenant', 'property']);
+
                                         return view('components.invoice-slip-modal', ['invoice' => $record]);
                                     })
                             ),
@@ -240,8 +243,8 @@ class InvoiceResource extends Resource
                             'last_6_months' => __('Last 6 months'),
                             'this_year' => __('This year'),
                             'custom' => collect([
-                                ($data['from'] ?? null) ? __('From').' '.\Carbon\Carbon::parse($data['from'])->toFormattedDateString() : null,
-                                ($data['until'] ?? null) ? __('Until').' '.\Carbon\Carbon::parse($data['until'])->toFormattedDateString() : null,
+                                ($data['from'] ?? null) ? __('From').' '.Carbon::parse($data['from'])->toFormattedDateString() : null,
+                                ($data['until'] ?? null) ? __('Until').' '.Carbon::parse($data['until'])->toFormattedDateString() : null,
                             ])->filter()->implode(' — ') ?: __('Custom'),
                             default => null,
                         };
@@ -278,19 +281,19 @@ class InvoiceResource extends Resource
 
                         return [
                             'data-download-url' => route('invoices.batch-pdf', ['ids' => $ids->implode(',')]),
-                            'data-filename' => 'invoices-' . now()->format('Ymd') . '.pdf',
+                            'data-filename' => 'invoices-'.now()->format('Ymd').'.pdf',
                             'onclick' => 'return rwPrintInvoiceLink(event, this)',
                         ];
                     }),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     static::tableDocumentActions(),
                     static::managePaymentsAction('managePayments'),
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

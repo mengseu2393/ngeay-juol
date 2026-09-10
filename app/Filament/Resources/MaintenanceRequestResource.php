@@ -7,6 +7,7 @@ use App\Enums\MaintenanceStatus;
 use App\Filament\Concerns\ScopesToActiveProperty;
 use App\Filament\Resources\MaintenanceRequestResource\Pages;
 use App\Filament\Resources\MaintenanceRequestResource\RelationManagers\MessagesRelationManager;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\MaintenanceRequest;
 use App\Models\Unit;
 use App\Support\ActiveProperty;
@@ -177,13 +178,13 @@ class MaintenanceRequestResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     static::statusAction(),
                     static::priorityAction(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

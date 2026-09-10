@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\RentalResource\RelationManagers;
 
 use App\Enums\OccupantRole;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\RentalOccupant;
 use Filament\Forms;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
@@ -49,9 +50,9 @@ class OccupantsRelationManager extends RelationManager
                     Forms\Components\Select::make('occupant_gender')
                         ->label(__('Gender'))
                         ->options([
-                            'male'   => __('Male'),
+                            'male' => __('Male'),
                             'female' => __('Female'),
-                            'other'  => __('Other'),
+                            'other' => __('Other'),
                         ])
                         ->placeholder(__('Select gender')),
 
@@ -128,8 +129,8 @@ class OccupantsRelationManager extends RelationManager
                     ->label(__('Role'))
                     ->badge()
                     ->color(fn (OccupantRole $state) => match ($state) {
-                        OccupantRole::Primary   => 'success',
-                        OccupantRole::CoTenant  => 'info',
+                        OccupantRole::Primary => 'success',
+                        OccupantRole::CoTenant => 'info',
                         OccupantRole::Dependent => 'gray',
                     }),
 
@@ -161,7 +162,7 @@ class OccupantsRelationManager extends RelationManager
                             Notification::make()
                                 ->title(__('Room is at capacity'))
                                 ->body(__('This room allows a maximum of :max occupants. Current: :current.', [
-                                    'max'     => $maxOccupants,
+                                    'max' => $maxOccupants,
                                     'current' => $currentCount,
                                 ]))
                                 ->warning()
@@ -172,7 +173,7 @@ class OccupantsRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make()
@@ -196,7 +197,7 @@ class OccupantsRelationManager extends RelationManager
                                 }
                             }
                         }),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 }

@@ -5,7 +5,9 @@ namespace App\Filament\Resources;
 use App\Enums\UserStatus;
 use App\Filament\Forms\LocationFields;
 use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\User;
+use App\Support\ActiveProperty;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -30,8 +32,8 @@ class UserResource extends Resource
         // name) like the utility and other property resources. Users aren't
         // property-scoped, so we only mirror the grouping — never the query —
         // and fall back to Administration when no property is active.
-        return \App\Support\ActiveProperty::id() !== null
-            ? \App\Support\ActiveProperty::NAV_GROUP
+        return ActiveProperty::id() !== null
+            ? ActiveProperty::NAV_GROUP
             : 'Administration';
     }
 
@@ -227,11 +229,11 @@ class UserResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

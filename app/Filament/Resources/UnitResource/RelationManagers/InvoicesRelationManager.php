@@ -2,9 +2,13 @@
 
 namespace App\Filament\Resources\UnitResource\RelationManagers;
 
+use App\Filament\Resources\InvoiceResource;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Support\Money;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -46,7 +50,7 @@ class InvoicesRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('payment_status')->label(__('Status'))->badge(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\Action::make('payments')
                         ->label(__('Payments'))
@@ -58,23 +62,23 @@ class InvoicesRelationManager extends RelationManager
                         ->infolist(fn ($infolist, Invoice $record) => $infolist
                             ->record($record)
                             ->schema([
-                                \Filament\Infolists\Components\RepeatableEntry::make('payments')
+                                RepeatableEntry::make('payments')
                                     ->hiddenLabel()
                                     ->schema([
-                                        \Filament\Infolists\Components\TextEntry::make('paid_at')->dateTime(),
-                                        \Filament\Infolists\Components\TextEntry::make('amount')
+                                        TextEntry::make('paid_at')->dateTime(),
+                                        TextEntry::make('amount')
                                             ->formatStateUsing(fn ($state, Payment $record) => Money::formatForRecord($state, $record)),
-                                        \Filament\Infolists\Components\TextEntry::make('method')->badge(),
-                                        \Filament\Infolists\Components\TextEntry::make('recordedBy.name')->label(__('Recorded by'))->placeholder('—'),
-                                        \Filament\Infolists\Components\TextEntry::make('receipt_number')->placeholder('—'),
+                                        TextEntry::make('method')->badge(),
+                                        TextEntry::make('recordedBy.name')->label(__('Recorded by'))->placeholder('—'),
+                                        TextEntry::make('receipt_number')->placeholder('—'),
                                     ])->columns(5),
                             ])),
                     Tables\Actions\Action::make('open')
                         ->label(__('Open'))
                         ->icon('heroicon-o-arrow-top-right-on-square')
-                        ->url(fn (Invoice $record) => \App\Filament\Resources\InvoiceResource::getUrl('edit', ['record' => $record]))
+                        ->url(fn (Invoice $record) => InvoiceResource::getUrl('edit', ['record' => $record]))
                         ->openUrlInNewTab(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 }

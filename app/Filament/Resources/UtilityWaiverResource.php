@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Concerns\ScopesToActiveProperty;
 use App\Filament\Resources\UtilityWaiverResource\Pages;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\PropertyUtility;
 use App\Models\Rental;
 use App\Models\Unit;
@@ -106,11 +107,11 @@ class UtilityWaiverResource extends Resource
                 Tables\Filters\TernaryFilter::make('waived')->label(__('Waived')),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

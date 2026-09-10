@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\PropertyUtilityResource\RelationManagers;
 
+use App\Filament\Tables\RowActionGroup;
+use App\Models\PropertyUtility;
 use App\Models\Rental;
 use App\Models\Unit;
-use App\Models\ChargeRule;
 use App\Services\ChargeRuleResolver;
+use App\Support\Money;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -22,9 +24,9 @@ class ChargeRulesRelationManager extends RelationManager
     {
         $owner = $this->getOwnerRecord();
         $propertyId = match (true) {
-            $owner instanceof \App\Models\PropertyUtility => $owner->property_id,
-            $owner instanceof \App\Models\Unit => $owner->property_id,
-            $owner instanceof \App\Models\Rental => $owner->property_id,
+            $owner instanceof PropertyUtility => $owner->property_id,
+            $owner instanceof Unit => $owner->property_id,
+            $owner instanceof Rental => $owner->property_id,
             default => null,
         };
 
@@ -35,7 +37,7 @@ class ChargeRulesRelationManager extends RelationManager
         ];
 
         // 1. If owner is PropertyUtility, we select the scope:
-        if ($owner instanceof \App\Models\PropertyUtility) {
+        if ($owner instanceof PropertyUtility) {
             $schema[] = Forms\Components\Hidden::make('property_utility_id')->default($owner->getKey());
 
             $schema[] = Forms\Components\Select::make('scope_type')
@@ -59,8 +61,9 @@ class ChargeRulesRelationManager extends RelationManager
                     if ($type === 'rental') {
                         return Rental::whereHas('unit', fn ($q) => $q->where('property_id', $propertyId))
                             ->with('unit')->get()
-                            ->mapWithKeys(fn ($r) => [$r->id => '#' . $r->id . ' · ' . ($r->unit?->room_number ?? '') . ' (' . ($r->occupant_name ?? '') . ')']);
+                            ->mapWithKeys(fn ($r) => [$r->id => '#'.$r->id.' · '.($r->unit?->room_number ?? '').' ('.($r->occupant_name ?? '').')']);
                     }
+
                     return [$propertyId => __('Whole property')];
                 })
                 ->visible(fn (Forms\Get $get) => in_array($get('scope_type'), ['unit', 'rental']))
@@ -76,7 +79,7 @@ class ChargeRulesRelationManager extends RelationManager
             // User selects which Utility/Charge this rule overrides
             $schema[] = Forms\Components\Select::make('property_utility_id')
                 ->label(__('Utility / Charge'))
-                ->options(fn () => \App\Models\PropertyUtility::where('property_id', $propertyId)->pluck('name', 'id'))
+                ->options(fn () => PropertyUtility::where('property_id', $propertyId)->pluck('name', 'id'))
                 ->searchable()
                 ->required();
         }
@@ -135,7 +138,7 @@ class ChargeRulesRelationManager extends RelationManager
         $columns = [];
 
         // 1. If owner is PropertyUtility, we show the Scope Column
-        if ($owner instanceof \App\Models\PropertyUtility) {
+        if ($owner instanceof PropertyUtility) {
             $columns[] = Tables\Columns\TextColumn::make('scope_type')
                 ->label(__('Scope'))
                 ->formatStateUsing(fn ($state) => match ($state) {
@@ -149,12 +152,14 @@ class ChargeRulesRelationManager extends RelationManager
                 ->label(__('Target'))
                 ->formatStateUsing(function ($state, $record) {
                     if ($record->scope_type === 'unit') {
-                        return Unit::find($state)?->room_number ?? __('Room #') . $state;
+                        return Unit::find($state)?->room_number ?? __('Room #').$state;
                     }
                     if ($record->scope_type === 'rental') {
                         $rental = Rental::find($state);
-                        return $rental ? '#' . $rental->id . ' (' . ($rental->unit?->room_number ?? '') . ')' : __('Rental #') . $state;
+
+                        return $rental ? '#'.$rental->id.' ('.($rental->unit?->room_number ?? '').')' : __('Rental #').$state;
                     }
+
                     return __('Whole property');
                 });
         } else {
@@ -182,8 +187,9 @@ class ChargeRulesRelationManager extends RelationManager
             ->label(__('Override Details'))
             ->state(function ($record) {
                 if ($record->state === 'custom') {
-                    return \App\Support\Money::format($record->amount_override, $record->currency_override);
+                    return Money::format($record->amount_override, $record->currency_override);
                 }
+
                 return '—';
             });
 
@@ -192,6 +198,7 @@ class ChargeRulesRelationManager extends RelationManager
             ->state(function ($record) {
                 $from = $record->effective_from ? $record->effective_from->format('d M Y') : '—';
                 $until = $record->effective_until ? $record->effective_until->format('d M Y') : '∞';
+
                 return "{$from} → {$until}";
             });
 
@@ -204,7 +211,7 @@ class ChargeRulesRelationManager extends RelationManager
             ->headerActions([
                 Tables\Actions\CreateAction::make()
                     ->mutateFormDataUsing(function (array $data) use ($owner) {
-                        if ($owner instanceof \App\Models\PropertyUtility) {
+                        if ($owner instanceof PropertyUtility) {
                             if ($data['scope_type'] === 'property') {
                                 $data['scope_id'] = $owner->property_id;
                             }
@@ -215,14 +222,15 @@ class ChargeRulesRelationManager extends RelationManager
                         }
                         $data['created_by_id'] = auth()->id();
                         $data['landlord_id'] = $owner->resolveLandlordId() ?? $owner->landlord_id ?? null;
+
                         return $data;
                     }),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ]);
     }
 }

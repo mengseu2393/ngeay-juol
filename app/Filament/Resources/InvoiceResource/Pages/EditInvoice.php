@@ -8,7 +8,9 @@ use App\Filament\Resources\InvoiceResource;
 use App\Filament\Resources\InvoiceResource\Concerns\BuildsInvoiceForm;
 use App\Models\Invoice;
 use App\Models\UtilityUsage;
+use App\Services\LandlordOwnershipGuard;
 use App\Services\UtilityBillingService;
+use App\Support\Money;
 use Filament\Actions;
 use Filament\Forms\Form;
 use Filament\Resources\Pages\EditRecord;
@@ -117,11 +119,11 @@ class EditInvoice extends EditRecord
             if ($data['include_rent'] ?? true) {
                 $rent = (float) ($data['monthly_rent'] ?? 0);
                 $rentCurrency = $record->rental?->monthly_rent_currency ?: 'USD';
-                
-                $rentUsd = \App\Support\Money::convert($rent, $rentCurrency, 'USD', $lineRate);
-                $rentKhr = \App\Support\Money::convert($rent, $rentCurrency, 'KHR', $lineRate);
-                $rentUnitPriceUsd = \App\Support\Money::convert($rent, $rentCurrency, 'USD', $lineRate, 4);
-                $rentUnitPriceKhr = \App\Support\Money::convert($rent, $rentCurrency, 'KHR', $lineRate, 4);
+
+                $rentUsd = Money::convert($rent, $rentCurrency, 'USD', $lineRate);
+                $rentKhr = Money::convert($rent, $rentCurrency, 'KHR', $lineRate);
+                $rentUnitPriceUsd = Money::convert($rent, $rentCurrency, 'USD', $lineRate, 4);
+                $rentUnitPriceKhr = Money::convert($rent, $rentCurrency, 'KHR', $lineRate, 4);
 
                 $payload = [
                     'unit_price' => $rent,
@@ -160,6 +162,12 @@ class EditInvoice extends EditRecord
                     continue;
                 }
 
+                // readings.*.utility_usage_id is a Hidden field, so the id is
+                // client-controlled: without this a landlord could overwrite
+                // another landlord's meter readings through their own invoice.
+                LandlordOwnershipGuard::assertOwned($usage);
+                abort_unless((int) $usage->rental_id === (int) $record->rental_id, 403, __('You do not have access to that record.'));
+
                 $requiresReading = (bool) ($row['requires_reading'] ?? true);
                 $hasReading = isset($row['new_reading']) && $row['new_reading'] !== '' && $row['new_reading'] !== null;
                 $old = (float) ($row['old_reading'] ?? $usage->old_reading);
@@ -174,14 +182,14 @@ class EditInvoice extends EditRecord
                 ]);
 
                 $charge = UtilityBillingService::resolveCharge($usage->fresh('propertyUtility'));
-                $utilityCurrency = \App\Support\Money::normalize($charge['currency'] ?? 'USD');
+                $utilityCurrency = Money::normalize($charge['currency'] ?? 'USD');
                 $chargeAmount = (float) $charge['amount'];
                 $chargeRate = (float) $charge['rate'];
 
-                $chargeUsd = \App\Support\Money::convert($chargeAmount, $utilityCurrency, 'USD', $lineRate);
-                $chargeKhr = \App\Support\Money::convert($chargeAmount, $utilityCurrency, 'KHR', $lineRate);
-                $chargeUnitPriceUsd = \App\Support\Money::convert($chargeRate, $utilityCurrency, 'USD', $lineRate, 4);
-                $chargeUnitPriceKhr = \App\Support\Money::convert($chargeRate, $utilityCurrency, 'KHR', $lineRate, 4);
+                $chargeUsd = Money::convert($chargeAmount, $utilityCurrency, 'USD', $lineRate);
+                $chargeKhr = Money::convert($chargeAmount, $utilityCurrency, 'KHR', $lineRate);
+                $chargeUnitPriceUsd = Money::convert($chargeRate, $utilityCurrency, 'USD', $lineRate, 4);
+                $chargeUnitPriceKhr = Money::convert($chargeRate, $utilityCurrency, 'KHR', $lineRate, 4);
 
                 $line = $record->lines()
                     ->where('line_type', InvoiceLineType::Utility)
@@ -210,10 +218,10 @@ class EditInvoice extends EditRecord
                 $adhocCurrency = $data['extra_charge_currency'] ?? 'USD';
                 $desc = $data['extra_charge_description'] ?? __('Extra charge');
 
-                $adhocUsd = \App\Support\Money::convert($amount, $adhocCurrency, 'USD', $lineRate);
-                $adhocKhr = \App\Support\Money::convert($amount, $adhocCurrency, 'KHR', $lineRate);
-                $adhocUnitPriceUsd = \App\Support\Money::convert($amount, $adhocCurrency, 'USD', $lineRate, 4);
-                $adhocUnitPriceKhr = \App\Support\Money::convert($amount, $adhocCurrency, 'KHR', $lineRate, 4);
+                $adhocUsd = Money::convert($amount, $adhocCurrency, 'USD', $lineRate);
+                $adhocKhr = Money::convert($amount, $adhocCurrency, 'KHR', $lineRate);
+                $adhocUnitPriceUsd = Money::convert($amount, $adhocCurrency, 'USD', $lineRate, 4);
+                $adhocUnitPriceKhr = Money::convert($amount, $adhocCurrency, 'KHR', $lineRate, 4);
 
                 $payload = [
                     'description' => $desc,

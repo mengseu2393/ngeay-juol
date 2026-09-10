@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Models\ChargeDefinition;
 use App\Models\ChargeRule;
+use App\Models\PropertyUtility;
+use App\Models\Rental;
+use App\Models\Unit;
 use App\Models\UtilityWaiver;
 use Carbon\Carbon;
 
@@ -82,8 +85,8 @@ class ChargeRuleResolver
         $chargeDefinitionId = $params['charge_definition_id'] ?? null;
         $propertyUtilityId = $params['property_utility_id'] ?? null;
 
-        if ($propertyUtilityId && !$chargeDefinitionId) {
-            $chargeDefinitionId = \App\Models\PropertyUtility::where('id', $propertyUtilityId)->value('charge_definition_id');
+        if ($propertyUtilityId && ! $chargeDefinitionId) {
+            $chargeDefinitionId = PropertyUtility::where('id', $propertyUtilityId)->value('charge_definition_id');
         }
 
         $rentalId = $params['rental_id'] ?? null;
@@ -92,22 +95,22 @@ class ChargeRuleResolver
         $date = isset($params['date']) ? Carbon::parse($params['date'])->toDateString() : now()->toDateString();
 
         // 1. Resolve basic property and unit info if not fully passed
-        if ($rentalId && (!$unitId || !$propertyId)) {
-            $rental = \App\Models\Rental::withoutGlobalScopes()->find($rentalId);
+        if ($rentalId && (! $unitId || ! $propertyId)) {
+            $rental = Rental::withoutGlobalScopes()->find($rentalId);
             if ($rental) {
                 $unitId ??= $rental->unit_id;
                 $propertyId ??= $rental->property_id;
             }
         }
-        if ($unitId && !$propertyId) {
-            $propertyId ??= \App\Models\Unit::withoutGlobalScopes()->whereKey($unitId)->value('property_id');
+        if ($unitId && ! $propertyId) {
+            $propertyId ??= Unit::withoutGlobalScopes()->whereKey($unitId)->value('property_id');
         }
 
         // 2. Fetch default values from ChargeDefinition or PropertyUtility
         $defaultAmount = 0.0;
         $defaultCurrency = 'USD';
         $chargeName = 'Charge';
-        
+
         if ($chargeDefinitionId) {
             $definition = ChargeDefinition::find($chargeDefinitionId);
             if ($definition) {
@@ -116,7 +119,7 @@ class ChargeRuleResolver
                 $chargeName = $definition->name;
             }
         } elseif ($propertyUtilityId) {
-            $utility = \App\Models\PropertyUtility::find($propertyUtilityId);
+            $utility = PropertyUtility::find($propertyUtilityId);
             if ($utility) {
                 $defaultAmount = (float) $utility->rate;
                 $defaultCurrency = $utility->currency ?? 'USD';
@@ -147,13 +150,18 @@ class ChargeRuleResolver
                 $q->orWhere('property_utility_id', $propertyUtilityId);
             }
         })
-        ->where(function ($q) use ($date) {
-            $q->whereNull('effective_from')->orWhere('effective_from', '<=', $date);
-        })
-        ->where(function ($q) use ($date) {
-            $q->whereNull('effective_until')->orWhere('effective_until', '>=', $date);
-        })
-        ->get();
+            // whereDate (not a bare string comparison): the `date` cast writes these
+            // columns through the model's full datetime format, so the stored value
+            // can carry a "00:00:00" suffix. A plain `effective_from <= '2026-10-09'`
+            // then compares lexically on drivers without a real DATE type (SQLite)
+            // and drops the rule on its own first effective day.
+            ->where(function ($q) use ($date) {
+                $q->whereNull('effective_from')->orWhereDate('effective_from', '<=', $date);
+            })
+            ->where(function ($q) use ($date) {
+                $q->whereNull('effective_until')->orWhereDate('effective_until', '>=', $date);
+            })
+            ->get();
 
         // Priority 2: Rental scope
         if ($rentalId) {
@@ -249,7 +257,7 @@ class ChargeRuleResolver
             $resolvedAmount = 0.0;
             $tenantLabel = 'Waived';
             if ($reason) {
-                $tenantLabel .= ': ' . $reason;
+                $tenantLabel .= ': '.$reason;
             }
         } elseif ($state === 'not_applicable') {
             $shouldCreateLine = false;

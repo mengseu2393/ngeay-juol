@@ -4,8 +4,13 @@ namespace App\Filament\Resources;
 
 use App\Enums\RentalStatus;
 use App\Filament\Concerns\ScopesToActiveProperty;
+use App\Filament\Resources\PropertyUtilityResource\RelationManagers\ChargeRulesRelationManager;
 use App\Filament\Resources\RentalResource\Pages;
+use App\Filament\Resources\RentalResource\RelationManagers\OccupantsRelationManager;
+use App\Filament\Resources\UnitResource\RelationManagers\UtilityUsageRelationManager;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\Rental;
+use App\Models\Unit;
 use App\Services\TenancyService;
 use App\Support\ActiveProperty;
 use App\Support\Money;
@@ -61,7 +66,7 @@ class RentalResource extends Resource
                         ->searchable()->preload()->required()
                         ->live()
                         ->afterStateUpdated(function ($state, Forms\Set $set) {
-                            if ($state && $unit = \App\Models\Unit::find($state)) {
+                            if ($state && $unit = Unit::find($state)) {
                                 $set('monthly_rent', $unit->rent_amount);
                                 $set('monthly_rent_currency', $unit->rent_currency ?: 'USD');
                                 $set('security_deposit_currency', $unit->rent_currency ?: 'USD');
@@ -151,7 +156,7 @@ class RentalResource extends Resource
                         ->placeholder(__('e.g. company name')),
                     Forms\Components\TextInput::make('occupant_id_card')->label(__('ID card number')),
                     Forms\Components\TextInput::make('occupant_address')->label(__('Address')),
-                    
+
                     Forms\Components\Fieldset::make(__('Emergency contact'))
                         ->schema([
                             Forms\Components\TextInput::make('emergency_contact_name')->label(__('Name')),
@@ -219,11 +224,11 @@ class RentalResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -235,9 +240,9 @@ class RentalResource extends Resource
     public static function getRelations(): array
     {
         return [
-            \App\Filament\Resources\RentalResource\RelationManagers\OccupantsRelationManager::class,
-            \App\Filament\Resources\UnitResource\RelationManagers\UtilityUsageRelationManager::class,
-            \App\Filament\Resources\PropertyUtilityResource\RelationManagers\ChargeRulesRelationManager::class,
+            OccupantsRelationManager::class,
+            UtilityUsageRelationManager::class,
+            ChargeRulesRelationManager::class,
         ];
     }
 

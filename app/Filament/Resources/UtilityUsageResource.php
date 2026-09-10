@@ -4,8 +4,10 @@ namespace App\Filament\Resources;
 
 use App\Enums\ReadingType;
 use App\Filament\Concerns\ScopesToActiveProperty;
-
 use App\Filament\Resources\UtilityUsageResource\Pages;
+use App\Filament\Tables\RowActionGroup;
+use App\Models\PropertyUtility;
+use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Support\ActiveProperty;
 use App\Support\Money;
@@ -64,9 +66,9 @@ class UtilityUsageResource extends Resource
                     if (! $unitId) {
                         return [];
                     }
-                    $propertyId = \App\Models\Unit::whereKey($unitId)->value('property_id');
+                    $propertyId = Unit::whereKey($unitId)->value('property_id');
 
-                    return \App\Models\PropertyUtility::where('property_id', $propertyId)->pluck('name', 'id');
+                    return PropertyUtility::where('property_id', $propertyId)->pluck('name', 'id');
                 })
                 ->searchable()->required(),
             Forms\Components\Select::make('rental_id')
@@ -149,11 +151,11 @@ class UtilityUsageResource extends Resource
                         ->when($data['until'] ?? null, fn ($q, $d) => $q->whereDate('reading_date', '<=', $d))),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
