@@ -146,7 +146,13 @@ return [
 
     'redis' => [
 
-        'client' => env('REDIS_CLIENT', 'phpredis'),
+        /*
+         * "predis" is the default because predis/predis is a Composer dependency
+         * and therefore present on every machine, while "phpredis" is a C
+         * extension that has to be compiled per host. Set REDIS_CLIENT=phpredis
+         * on servers where the extension is installed -- it is measurably faster.
+         */
+        'client' => env('REDIS_CLIENT', 'predis'),
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
@@ -174,6 +180,26 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
+            'max_retries' => env('REDIS_MAX_RETRIES', 3),
+            'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
+            'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
+            'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
+        ],
+
+        /*
+         * Sessions get their own Redis database so that flushing the queue or
+         * the cache never logs every landlord out. Only used when the session
+         * driver is "redis" AND SESSION_CONNECTION=session is set -- leaving
+         * SESSION_CONNECTION unset would put sessions on the "default"
+         * connection (db 0), shared with the queue. See docs/DEPLOYMENT.md.
+         */
+        'session' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_SESSION_DB', '2'),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
             'backoff_base' => env('REDIS_BACKOFF_BASE', 100),

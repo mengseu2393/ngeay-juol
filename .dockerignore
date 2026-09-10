@@ -1,0 +1,23 @@
+# Anything the image should build itself, or must never be baked in.
+.git
+.github
+.env
+.env.*
+!.env.docker.example
+node_modules
+vendor
+public/build
+public/hot
+storage/app/exports/*
+storage/app/private/*
+storage/app/public/*
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+tests
+phpunit.xml
+graphify-out
+*.md
+!README.md
+docker-compose.override.yml
