@@ -2,10 +2,11 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\LandlordResource\Pages;
-use App\Filament\Resources\LandlordResource\RelationManagers;
 use App\Enums\UserStatus;
 use App\Filament\Forms\LocationFields;
+use App\Filament\Resources\LandlordResource\Pages;
+use App\Filament\Resources\LandlordResource\RelationManagers;
+use App\Filament\Tables\RowActionGroup;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -53,12 +54,24 @@ class LandlordResource extends Resource
         return $form->schema([
             Forms\Components\Section::make(__('Account'))
                 ->schema([
-                    Forms\Components\TextInput::make('name')->required()->maxLength(255),
-                    Forms\Components\TextInput::make('email')->email()->unique(ignoreRecord: true),
-                    Forms\Components\TextInput::make('username')
-                        ->unique(ignoreRecord: true)
+                    Forms\Components\TextInput::make('first_name')
+                        ->label(__('First name'))
+                        ->required()
                         ->maxLength(255)
-                        ->helperText(__('Login name for the landlord.')),
+                        ->afterStateHydrated(function (Forms\Components\TextInput $component, ?User $record) {
+                            if ($record) {
+                                $component->state(explode(' ', (string) $record->name, 2)[0]);
+                            }
+                        }),
+                    Forms\Components\TextInput::make('last_name')
+                        ->label(__('Last name'))
+                        ->maxLength(255)
+                        ->afterStateHydrated(function (Forms\Components\TextInput $component, ?User $record) {
+                            if ($record) {
+                                $component->state(explode(' ', (string) $record->name, 2)[1] ?? '');
+                            }
+                        }),
+                    Forms\Components\TextInput::make('email')->email()->unique(ignoreRecord: true),
                     Forms\Components\TextInput::make('phone_number')->tel(),
                     Forms\Components\TextInput::make('password')
                         ->password()
@@ -66,6 +79,16 @@ class LandlordResource extends Resource
                         ->maxLength(255)
                         ->required(fn (string $operation) => $operation === 'create')
                         ->dehydrated(fn (?string $state) => filled($state)),
+                    Forms\Components\Select::make('gender')
+                        ->options([
+                            'male' => __('Male'),
+                            'female' => __('Female'),
+                            'other' => __('Other'),
+                        ])
+                        ->placeholder(__('Select gender')),
+                    Forms\Components\DatePicker::make('dob')
+                        ->label(__('Date of birth'))
+                        ->maxDate(now()),
                     Forms\Components\Select::make('status')
                         ->options(UserStatus::class)
                         ->default(UserStatus::Active)
@@ -76,14 +99,6 @@ class LandlordResource extends Resource
                 ->schema(LocationFields::make())
                 ->columns(2),
 
-            Forms\Components\Section::make(__('Company & banking'))
-                ->relationship('landlordProfile')
-                ->schema([
-                    Forms\Components\TextInput::make('company_name')->maxLength(255),
-                    Forms\Components\TextInput::make('bank_name')->maxLength(255),
-                    Forms\Components\TextInput::make('bank_account_name')->maxLength(255),
-                    Forms\Components\TextInput::make('bank_account_number')->maxLength(255),
-                ])->columns(2),
         ]);
     }
 
@@ -123,11 +138,11 @@ class LandlordResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+                RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                ])->icon('heroicon-m-ellipsis-vertical')->label(null)->color('gray'),
+                ]),
             ])
             ->defaultSort('name');
     }
@@ -139,20 +154,10 @@ class LandlordResource extends Resource
                 ->schema([
                     Infolists\Components\TextEntry::make('name'),
                     Infolists\Components\TextEntry::make('email')->placeholder('—'),
-                    Infolists\Components\TextEntry::make('username')->placeholder('—'),
                     Infolists\Components\TextEntry::make('phone_number')->label(__('Phone'))->placeholder('—'),
                     Infolists\Components\TextEntry::make('status')->badge(),
                     Infolists\Components\TextEntry::make('properties_count')->label(__('Properties'))->badge(),
                 ])->columns(3),
-
-            Infolists\Components\Section::make(__('Company & banking'))
-                ->schema([
-                    Infolists\Components\TextEntry::make('landlordProfile.company_name')->label(__('Company'))->placeholder('—'),
-                    Infolists\Components\TextEntry::make('landlordProfile.bank_name')->label(__('Bank'))->placeholder('—'),
-                    Infolists\Components\TextEntry::make('landlordProfile.bank_account_name')->label(__('Account name'))->placeholder('—'),
-                    Infolists\Components\TextEntry::make('landlordProfile.bank_account_number')->label(__('Account number'))->placeholder('—'),
-                ])->columns(2)
-                ->visible(fn (User $record) => $record->landlordProfile !== null),
         ]);
     }
 

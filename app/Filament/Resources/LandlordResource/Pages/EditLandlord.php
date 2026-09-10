@@ -17,6 +17,14 @@ class EditLandlord extends EditRecord
         ];
     }
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['name'] = trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? ''));
+        unset($data['first_name'], $data['last_name']);
+
+        return $data;
+    }
+
     protected function afterSave(): void
     {
         if (array_key_exists('status', $this->data)) {

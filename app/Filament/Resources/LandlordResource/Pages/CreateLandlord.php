@@ -12,7 +12,10 @@ class CreateLandlord extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        $data['name'] = trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? ''));
+        unset($data['first_name'], $data['last_name']);
         $data['created_by_id'] = auth()->id();
+
         return $data;
     }
 
