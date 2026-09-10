@@ -5,6 +5,9 @@ namespace App\Filament\Resources;
 use App\Enums\RentalStatus;
 use App\Filament\Concerns\ScopesToActiveProperty;
 use App\Filament\Resources\PropertyUtilityResource\RelationManagers\ChargeRulesRelationManager;
+use App\Filament\Resources\RentalResource\Actions\CompleteMoveIn;
+use App\Filament\Resources\RentalResource\Actions\MoveOut;
+use App\Filament\Resources\RentalResource\Actions\TenantLogin;
 use App\Filament\Resources\RentalResource\Pages;
 use App\Filament\Resources\RentalResource\RelationManagers\OccupantsRelationManager;
 use App\Filament\Resources\UnitResource\RelationManagers\UtilityUsageRelationManager;
@@ -218,6 +221,19 @@ class RentalResource extends Resource
                 Tables\Columns\TextColumn::make('status')->badge(),
                 Tables\Columns\TextColumn::make('start_date')->date(),
                 Tables\Columns\TextColumn::make('end_date')->date(),
+                Tables\Columns\TextColumn::make('move_out_date')
+                    ->label(__('Moved out'))
+                    ->date()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('depositSettlement.refund_amount')
+                    ->label(__('Deposit refund'))
+                    ->placeholder('—')
+                    ->formatStateUsing(fn ($state, Rental $record) => Money::format(
+                        $state,
+                        $record->depositSettlement?->currency ?: $record->security_deposit_currency,
+                    ))
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')->options(RentalStatus::class),
@@ -227,6 +243,9 @@ class RentalResource extends Resource
                 RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
+                    TenantLogin::table(),
+                    CompleteMoveIn::table(),
+                    MoveOut::table(),
                     Tables\Actions\DeleteAction::make(),
                 ]),
             ])

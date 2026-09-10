@@ -2,15 +2,20 @@
 
 namespace App\Models;
 
-use App\Enums\RentalStatus;
+use App\Enums\FirstMonthBillingMode;
 use App\Enums\MoveInReadinessStatus;
+use App\Enums\RentalStatus;
 use App\Enums\UnitStatus;
+use App\Enums\UserStatus;
 use App\Models\Concerns\BelongsToLandlord;
+use App\Services\InvoiceBuilderService;
 use App\Services\TenancyService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
@@ -63,23 +68,29 @@ class Rental extends Model implements HasMedia
         'move_in_override_at',
         'move_in_override_by_id',
         'move_in_promised_payment_date',
+        'move_out_date',
+        'moved_out_at',
+        'moved_out_by_id',
+        'move_out_reason',
     ];
 
     protected function casts(): array
     {
         return [
-            'monthly_rent'       => 'decimal:2',
-            'security_deposit'   => 'decimal:2',
-            'signed_at'          => 'datetime',
-            'status'             => RentalStatus::class,
-            'start_date'         => 'date',
-            'end_date'           => 'date',
-            'next_invoice_date'  => 'date',
-            'occupant_dob'       => 'date',
-            'move_in_status'     => MoveInReadinessStatus::class,
-            'moved_in_at'        => 'datetime',
+            'monthly_rent' => 'decimal:2',
+            'security_deposit' => 'decimal:2',
+            'signed_at' => 'datetime',
+            'status' => RentalStatus::class,
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'next_invoice_date' => 'date',
+            'occupant_dob' => 'date',
+            'move_in_status' => MoveInReadinessStatus::class,
+            'moved_in_at' => 'datetime',
             'move_in_override_at' => 'datetime',
             'move_in_promised_payment_date' => 'date',
+            'move_out_date' => 'date',
+            'moved_out_at' => 'datetime',
         ];
     }
 
@@ -94,6 +105,11 @@ class Rental extends Model implements HasMedia
     public function isActive(): bool
     {
         return $this->status === RentalStatus::Active;
+    }
+
+    public function hasMovedOut(): bool
+    {
+        return $this->status === RentalStatus::Vacated || $this->moved_out_at !== null;
     }
 
     protected static function booted(): void
@@ -135,12 +151,12 @@ class Rental extends Model implements HasMedia
                 $rental->occupyUnit();
 
                 // Auto-create first invoice if enabled in Property Settings
-                $setting = \App\Models\PropertySetting::where('property_id', $rental->property_id)->first();
+                $setting = PropertySetting::where('property_id', $rental->property_id)->first();
                 if ($setting && $setting->create_invoice_on_move_in && (! $hasRequirements || $rental->move_in_status === MoveInReadinessStatus::Active)) {
-                    $exists = \App\Models\Invoice::where('rental_id', $rental->id)->exists();
+                    $exists = Invoice::where('rental_id', $rental->id)->exists();
                     if (! $exists) {
-                        $periodStart = \Illuminate\Support\Carbon::parse($rental->start_date);
-                        if ($setting->first_month_billing_mode === \App\Enums\FirstMonthBillingMode::FullMonth) {
+                        $periodStart = Carbon::parse($rental->start_date);
+                        if ($setting->first_month_billing_mode === FirstMonthBillingMode::FullMonth) {
                             $periodEnd = $periodStart->copy()->addMonth()->subDay();
                         } else {
                             $periodEnd = $periodStart->copy()->endOfMonth();
@@ -152,7 +168,7 @@ class Rental extends Model implements HasMedia
                             $dueDate->addMonth();
                         }
 
-                        app(\App\Services\InvoiceBuilderService::class)->create([
+                        app(InvoiceBuilderService::class)->create([
                             'rental' => $rental,
                             'period_start' => $periodStart,
                             'period_end' => $periodEnd,
@@ -185,8 +201,8 @@ class Rental extends Model implements HasMedia
             // Update associated tenant's user status based on rental status.
             if ($rental->wasChanged('status') && $rental->tenant_id) {
                 $userStatus = $rental->status === RentalStatus::Active
-                    ? \App\Enums\UserStatus::Active
-                    : \App\Enums\UserStatus::Inactive;
+                    ? UserStatus::Active
+                    : UserStatus::Inactive;
 
                 // Ensure we don't deactivate the shared room account if it's used as the tenant.
                 // The shared room account is kept active for the next occupant.
@@ -220,6 +236,24 @@ class Rental extends Model implements HasMedia
             $unit->status = UnitStatus::Occupied;
             $unit->save();
         }
+    }
+
+    /**
+     * Hand this tenancy's room back once the tenancy no longer holds it — the
+     * move-out counterpart of {@see occupyUnit()}.
+     *
+     * Deliberately explicit rather than automatic on a status change: the
+     * saved() hook above leaves "does ending a tenancy free the room?" to the
+     * caller, because the end-tenancy modal has its own "Mark room as
+     * available" toggle. MoveOutService always means yes.
+     */
+    public function releaseUnit(): void
+    {
+        if (! $this->unit_id) {
+            return;
+        }
+
+        static::freeUnitIfVacant((int) $this->unit_id, $this->getKey());
     }
 
     /**
@@ -294,6 +328,17 @@ class Rental extends Model implements HasMedia
         return $this->hasMany(RentalMoveInRequirement::class);
     }
 
+    public function movedOutBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'moved_out_by_id');
+    }
+
+    /** The end-of-tenancy security-deposit account (one per tenancy). */
+    public function depositSettlement(): HasOne
+    {
+        return $this->hasOne(DepositSettlement::class);
+    }
+
     // ---------------------------------------------------------------------
     // Occupants (multi-tenant per room)
     // ---------------------------------------------------------------------
@@ -305,7 +350,7 @@ class Rental extends Model implements HasMedia
     }
 
     /** The primary (responsible) occupant for this rental. */
-    public function primaryOccupant(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function primaryOccupant(): HasOne
     {
         return $this->hasOne(RentalOccupant::class)->where('role', 'primary');
     }
