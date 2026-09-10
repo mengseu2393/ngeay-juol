@@ -58,7 +58,9 @@ class MaintenanceRequest extends Model implements HasMedia
                 return;
             }
 
-            $oldStatus = MaintenanceStatus::tryFrom((int) $request->getOriginal('status'));
+            // getRawOriginal, not getOriginal: getOriginal() runs the enum cast and
+            // returns a MaintenanceStatus instance, which (int) then fatals on.
+            $oldStatus = MaintenanceStatus::tryFrom((int) $request->getRawOriginal('status'));
             $newStatus = $request->status instanceof MaintenanceStatus
                 ? $request->status
                 : MaintenanceStatus::from((int) $request->status);
