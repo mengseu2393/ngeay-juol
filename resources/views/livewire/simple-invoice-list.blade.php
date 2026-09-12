@@ -66,7 +66,7 @@
     <div
         x-cloak
         x-show="payOpen"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0"
+        class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-4"
         @keydown.escape.window="payOpen = false"
     >
         <div class="rw-sm-modal w-full max-w-sm" @click.outside="payOpen = false">
@@ -127,6 +127,33 @@
         </div>
     </div>
 
+    {{-- ── View-details modal (server-rendered: the invoice slip needs its full
+         line-item/tenant/property relations, so this opens over a Livewire
+         round-trip rather than instantly client-side like the pay modal) ── --}}
+    @if($viewingInvoice)
+        <div
+            x-data
+            x-init="$nextTick(() => {})"
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            @keydown.escape.window="$wire.closeView()"
+        >
+            <div class="relative w-full max-w-4xl mt-6" @click.outside="$wire.closeView()">
+                <button
+                    type="button"
+                    wire:click="closeView"
+                    class="rw-sm-modal-close-btn"
+                    id="invoice-view-close-btn"
+                    aria-label="{{ __('Close') }}"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                    </svg>
+                </button>
+                @include('components.invoice-slip-modal', ['invoice' => $viewingInvoice])
+            </div>
+        </div>
+    @endif
+
     {{-- ── Invoice cards ── --}}
     @forelse($invoices as $invoice)
         @php
@@ -178,10 +205,12 @@
 
             {{-- Actions --}}
             <div class="mt-4 flex flex-wrap sm:flex-nowrap gap-2">
-                <a href="{{ route('invoices.view', ['invoice' => $invoice->id]) }}"
-                   class="rw-sm-btn-ghost flex-1 text-center"
-                   id="invoice-view-{{ $invoice->id }}"
-                >{{ __('View details') }}</a>
+                <button
+                    type="button"
+                    wire:click="viewInvoice({{ $invoice->id }})"
+                    class="rw-sm-btn-ghost flex-1 text-center"
+                    id="invoice-view-{{ $invoice->id }}"
+                >{{ __('View details') }}</button>
 
                 <button
                     type="button"
@@ -223,7 +252,7 @@
     {{-- Pagination --}}
     @if($invoices->hasPages())
         <div class="pt-2">
-            {{ $invoices->links() }}
+            {{ $invoices->links('components.rw-simple-pagination') }}
         </div>
     @endif
 </div>

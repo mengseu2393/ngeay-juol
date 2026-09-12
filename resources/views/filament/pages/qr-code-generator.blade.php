@@ -20,7 +20,7 @@
                     {{ __('Scan this QR code to sign in. The link works once and then expires.') }}
                 </x-slot>
 
-                <div class="flex flex-col items-center gap-6 py-6">
+                <div class="mx-auto flex w-full max-w-sm flex-col items-center gap-6 py-6 text-center">
                     {{-- QR Code Canvas with Alpine --}}
                     <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 inline-block"
                          x-data="{

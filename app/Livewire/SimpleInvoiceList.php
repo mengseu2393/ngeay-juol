@@ -29,13 +29,29 @@ class SimpleInvoiceList extends Component
     public ?int $payingInvoiceId = null;
 
     public string $payAmount = '';
+
     public int $payMethod = 1; // PaymentMethod::Cash = 1
+
     public string $payNote = '';
 
     public bool $paySuccess = false;
+
     public ?string $paySuccessMessage = null;
 
+    /** ID of the invoice currently shown in the view-details modal */
+    public ?int $viewingInvoiceId = null;
+
     protected $queryString = ['filter', 'search'];
+
+    public function viewInvoice(int $invoiceId): void
+    {
+        $this->viewingInvoiceId = $invoiceId;
+    }
+
+    public function closeView(): void
+    {
+        $this->viewingInvoiceId = null;
+    }
 
     public function updatingFilter(): void
     {
@@ -90,6 +106,7 @@ class SimpleInvoiceList extends Component
 
         if (! $invoice) {
             $this->addError('payAmount', __('Invoice not found.'));
+
             return;
         }
 
@@ -118,7 +135,9 @@ class SimpleInvoiceList extends Component
 
     private function loadInvoice(?int $id): ?Invoice
     {
-        if (! $id) return null;
+        if (! $id) {
+            return null;
+        }
 
         return Invoice::query()
             ->with(['lines.utilityUsage.propertyUtility', 'rental.unit.property', 'tenant', 'property'])
@@ -145,7 +164,7 @@ class SimpleInvoiceList extends Component
             ]),
             'paid' => $query->where('payment_status', InvoiceStatus::Paid->value),
             'month' => $query->whereYear('period_start', now()->year)
-                             ->whereMonth('period_start', now()->month),
+                ->whereMonth('period_start', now()->month),
             default => null,
         };
 
@@ -154,8 +173,8 @@ class SimpleInvoiceList extends Component
             $s = '%'.trim($this->search).'%';
             $query->where(function ($q) use ($s) {
                 $q->whereHas('rental.unit', fn ($uq) => $uq->where('room_number', 'like', $s))
-                  ->orWhereHas('tenant', fn ($tq) => $tq->where('name', 'like', $s))
-                  ->orWhereHas('rental', fn ($rq) => $rq->where('occupant_name', 'like', $s));
+                    ->orWhereHas('tenant', fn ($tq) => $tq->where('name', 'like', $s))
+                    ->orWhereHas('rental', fn ($rq) => $rq->where('occupant_name', 'like', $s));
             });
         }
 
@@ -181,6 +200,7 @@ class SimpleInvoiceList extends Component
             'invoices' => $invoices,
             'paymentMethods' => $paymentMethods,
             'batchIds' => $batchIds,
+            'viewingInvoice' => $this->loadInvoice($this->viewingInvoiceId),
         ]);
     }
 }

@@ -310,6 +310,21 @@
 .fi.dark .fi-modal-window {
     background-color: rgb(var(--gray-900));
 }
+
+/* Filament's modal wrapper vertically centers via a
+   grid-rows-[1fr_auto_1fr] track, which only works when the modal is
+   shorter than the viewport. On mobile, tall modal content (e.g. the
+   invoice preview) makes the two flanking 1fr rows collapse to ~0 and
+   the browser's initial scroll position lands past the modal's top,
+   so it looks stuck at the bottom of the screen. Below the sm
+   breakpoint (where Filament still applies this grid), switch to a
+   plain top-aligned block so the modal always opens from its top edge. */
+@media (max-width: 640px) {
+    .fi-modal .grid-rows-\[1fr_auto_1fr\] {
+        display: block !important;
+        padding: 1rem 1rem 2rem !important;
+    }
+}
 .fi-dropdown-list-item:hover {
     background-color: rgb(var(--primary-50));
 }
@@ -1247,7 +1262,7 @@ body:has(.rw-monthly-billing-root) {
 .rw-sm-action-card,
 .rw-sm-panel,
 .rw-sm-screen-header {
-    animation: rw-mb-rise 260ms var(--rw-ease) both;
+    animation: rw-mb-rise 260ms var(--rw-ease) backwards;
 }
 
 /* ── Panel padding: give screen content room to breathe instead of sitting flush against the card edge ── */
@@ -1512,6 +1527,93 @@ body:has(.rw-monthly-billing-root) {
     border-color: rgb(var(--primary-600));
 }
 
+/* ── Pagination (components.rw-simple-pagination) ──
+   Laravel's stock tailwind.blade.php pagination view leans on `dark:`
+   utility variants Filament's precompiled CSS never generated, so on
+   simple mode's dark screens it rendered as unstyled light boxes. */
+.rw-sm-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+.rw-sm-pagination-summary {
+    font-size: 0.8125rem;
+    color: rgb(var(--gray-500));
+}
+.fi.dark .rw-sm-pagination-summary {
+    color: rgb(var(--gray-400));
+}
+.rw-sm-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+.rw-sm-pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 0.625rem;
+    border-radius: var(--rw-radius-control);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    background: rgb(var(--gray-100));
+    color: rgb(var(--gray-600));
+    border: 1px solid rgb(var(--gray-200));
+    cursor: pointer;
+    transition: background-color var(--rw-dur) var(--rw-ease),
+                color var(--rw-dur) var(--rw-ease);
+}
+.rw-sm-pagination-btn:hover {
+    background: rgb(var(--gray-200));
+    color: rgb(var(--gray-900));
+}
+.fi.dark .rw-sm-pagination-btn {
+    background: rgb(var(--gray-800));
+    color: rgb(var(--gray-300));
+    border-color: rgb(var(--gray-700));
+}
+.fi.dark .rw-sm-pagination-btn:hover {
+    background: rgb(var(--gray-700));
+    color: rgb(var(--gray-50));
+}
+.rw-sm-pagination-active {
+    background: rgb(var(--primary-600));
+    color: #fff;
+    border-color: rgb(var(--primary-600));
+    cursor: default;
+}
+.rw-sm-pagination-active:hover {
+    background: rgb(var(--primary-600));
+    color: #fff;
+}
+.rw-sm-pagination-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.rw-sm-pagination-disabled:hover {
+    background: rgb(var(--gray-100));
+    color: rgb(var(--gray-600));
+}
+.fi.dark .rw-sm-pagination-disabled:hover {
+    background: rgb(var(--gray-800));
+    color: rgb(var(--gray-300));
+}
+.rw-sm-pagination-dots {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.25rem;
+    color: rgb(var(--gray-400));
+    font-size: 0.8125rem;
+}
+
 /* ── Search input ── */
 .rw-sm-search-input {
     width: 100%;
@@ -1763,6 +1865,40 @@ select.rw-sm-input {
 }
 .fi.dark .rw-sm-modal-balance {
     color: rgb(var(--gray-300));
+}
+
+/* ── Small round close button, floated over a modal's top-right corner
+   (e.g. the simple-mode invoice view popup) ── */
+.rw-sm-modal-close-btn {
+    position: absolute;
+    top: -0.75rem;
+    right: -0.75rem;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    background: rgb(255 255 255);
+    color: rgb(var(--gray-600));
+    box-shadow: var(--rw-shadow-lg);
+    border: 1px solid rgb(var(--gray-200));
+    cursor: pointer;
+    transition: background-color .15s, color .15s;
+}
+.rw-sm-modal-close-btn:hover {
+    background: rgb(var(--gray-50));
+    color: rgb(var(--gray-900));
+}
+.fi.dark .rw-sm-modal-close-btn {
+    background: rgb(var(--gray-800));
+    color: rgb(var(--gray-300));
+    border-color: rgb(var(--gray-700));
+}
+.fi.dark .rw-sm-modal-close-btn:hover {
+    background: rgb(var(--gray-700));
+    color: rgb(var(--gray-50));
 }
 
 /* ── Room row (picker) ── */
@@ -2045,7 +2181,7 @@ select.rw-sm-input {
 .rw-mb-toolbar,
 .rw-mb-table-wrap,
 .rw-mb-sticky-bar {
-    animation: rw-mb-rise 260ms var(--rw-ease) both;
+    animation: rw-mb-rise 260ms var(--rw-ease) backwards;
 }
 @keyframes rw-mb-rise {
     from { opacity: 0; transform: translateY(6px); }
@@ -2635,6 +2771,19 @@ select.rw-sm-input {
     background: rgba(var(--gray-950), 0.7);
     padding: 1rem;
     backdrop-filter: blur(4px);
+    /* A flex-centered item with no scroll container clips whatever
+       overflows above the fold when it's taller than the viewport —
+       there's nowhere to scroll to reach it, so on a short mobile
+       screen (e.g. the record-payment confirm dialog) the card reads
+       as pinned to the bottom with its top cut off. Let the backdrop
+       itself scroll so tall content is always reachable. */
+    overflow-y: auto;
+}
+@media (max-width: 640px) {
+    .rw-mb-modal-backdrop {
+        align-items: flex-start;
+        padding-block: 1.5rem;
+    }
 }
 .rw-mb-modal {
     width: 100%;
@@ -2647,7 +2796,7 @@ select.rw-sm-input {
     display: flex;
     flex-direction: column;
     gap: 1.15rem;
-    animation: rw-mb-rise 180ms var(--rw-ease) both;
+    animation: rw-mb-rise 180ms var(--rw-ease) backwards;
 }
 /* On a near-black backdrop a gray-900 card and a black drop shadow both
    disappear — the dialog has to be lifted above the surface it floats on,

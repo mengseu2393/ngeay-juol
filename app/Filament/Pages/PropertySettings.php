@@ -6,11 +6,13 @@ use App\Enums\BillingType;
 use App\Enums\FirstMonthBillingMode;
 use App\Models\PropertySetting;
 use App\Models\PropertyUtility;
-use App\Support\ActiveProperty;
-use App\Support\Money;
 use App\Services\ExchangeRateService;
+use App\Services\MoveInRuleService;
 use App\Services\OpeningReadingService;
 use App\Services\SubscriptionService;
+use App\Support\ActiveProperty;
+use App\Support\Money;
+use App\Support\SimpleLandlordMode;
 use Carbon\Carbon;
 use Filament\Actions;
 use Filament\Forms;
@@ -60,14 +62,14 @@ class PropertySettings extends Page implements HasForms
         $name = ActiveProperty::name();
 
         return $name
-            ? __('Property Settings') . ' — ' . $name
+            ? __('Property Settings').' — '.$name
             : __('Property Settings');
     }
 
     /** Only visible / reachable once a property is selected. */
     public static function shouldRegisterNavigation(): bool
     {
-        return ! \App\Support\SimpleLandlordMode::enabledFor(auth()->user())
+        return ! SimpleLandlordMode::enabledFor(auth()->user())
             && ActiveProperty::id() !== null;
     }
 
@@ -83,14 +85,14 @@ class PropertySettings extends Page implements HasForms
         $this->setting = PropertySetting::firstOrCreate(
             ['property_id' => ActiveProperty::id()],
             [
-                'currency'                    => 'USD',
-                'due_day_of_month'            => 7,
-                'first_month_billing_mode'    => FirstMonthBillingMode::FullMonth->value,
-                'proration_cutoff_day'        => 15,
+                'currency' => 'USD',
+                'due_day_of_month' => 7,
+                'first_month_billing_mode' => FirstMonthBillingMode::FullMonth->value,
+                'proration_cutoff_day' => 15,
                 'require_first_month_upfront' => false,
-                'upfront_deposit_months'      => 0,
-                'monthly_billing_enabled'     => false,
-                'invoice_due_days'            => 7,
+                'upfront_deposit_months' => 0,
+                'monthly_billing_enabled' => false,
+                'invoice_due_days' => 7,
             ],
         );
 
@@ -406,16 +408,6 @@ class PropertySettings extends Page implements HasForms
                             ->required(),
                     ])->columns(2),
 
-                Forms\Components\Section::make(__('Lease'))
-                    ->icon('heroicon-o-document-text')
-                    ->schema([
-                        Forms\Components\TextInput::make('default_lease_months')
-                            ->numeric()->label(__('Default lease (months)')),
-                        Forms\Components\TextInput::make('deposit_policy')
-                            ->label(__('Deposit policy'))
-                            ->placeholder(__('e.g. 1 month')),
-                    ])->columns(2),
-
                 Forms\Components\Section::make(__('Contacts & property info'))
                     ->icon('heroicon-o-user-circle')
                     ->schema([
@@ -519,7 +511,7 @@ class PropertySettings extends Page implements HasForms
         $previousPreset = $this->setting->move_in_preset;
         $this->setting->update($state);
         if (($state['move_in_preset'] ?? null) && $state['move_in_preset'] !== 'custom' && $state['move_in_preset'] !== $previousPreset) {
-            app(\App\Services\MoveInRuleService::class)->configurePreset(
+            app(MoveInRuleService::class)->configurePreset(
                 $this->setting->property_id,
                 $state['move_in_preset'],
                 $state['currency'] ?? $this->setting->currency,
