@@ -1,7 +1,8 @@
 <x-filament-panels::page>
     @if($fromSimpleMode)
-        {{-- Simple Mode: no manual save button — changes save automatically
-             shortly after the landlord stops typing/toggling a field. --}}
+        {{-- Simple Mode: changes still save automatically shortly after the
+             landlord stops typing/toggling a field, but a manual Save button
+             stays available too — for an immediate save or just reassurance. --}}
         <div
             x-data="{
                 timer: null,
@@ -15,6 +16,12 @@
             class="space-y-6"
         >
             {{ $this->form }}
+
+            <div class="flex justify-end">
+                <x-filament::button wire:click="save" size="lg" icon="heroicon-m-check">
+                    {{ __('Save changes') }}
+                </x-filament::button>
+            </div>
         </div>
     @else
         <form wire:submit="save" class="space-y-6">

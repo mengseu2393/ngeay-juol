@@ -1445,5 +1445,10 @@
     "Manage utility rates": "គ្រប់គ្រងអត្រាសេវាកម្ម",
     "Back to Simple Mode": "ត្រឡប់ទៅរបៀបសាមញ្ញ",
     "per :unit": "ក្នុងមួយ :unit",
-    "Loading…": "កំពុងផ្ទុក…"
+    "Loading…": "កំពុងផ្ទុក…",
+    "Forbidden": "គ្មានសិទ្ធិចូលប្រើ",
+    "You don't have permission to view this page.": "អ្នកមិនមានសិទ្ធិមើលទំព័រនេះទេ។",
+    "Contact your administrator if you think this is a mistake.": "សូមទាក់ទងអ្នកគ្រប់គ្រង ប្រសិនបើអ្នកគិតថានេះជាកំហុស។",
+    "Go back": "ត្រឡប់ក្រោយ",
+    "Back to home": "ត្រឡប់ទៅទំព័រដើម"
 }
