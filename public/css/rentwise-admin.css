@@ -2107,6 +2107,144 @@ select.rw-sm-input {
     display: none !important;
 }
 
+/* Filament's page <section> still reserves its own py-8 top/bottom padding
+   and gap-y-8 flex gap even with .fi-header hidden above — without this the
+   simple dashboard has a large empty band before the property switcher. */
+.fi-page:has(.rw-simple) > section {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    gap: 0.5rem !important;
+}
+
+/* ── Simple Mode: persistent bottom tab-bar navigation ──
+   Partial: resources/views/components/rw-simple-bottom-nav.blade.php
+   Width-matched to `.rw-simple--billing` (the modifier simple-dashboard.blade.php
+   actually applies) so the bar lines up with the content column above it instead
+   of spanning the full viewport on wider screens. z-index sits above ordinary
+   page content but below Filament's dropdown/modal layer (`.fi-dropdown-panel`,
+   `.fi-modal-window` use z-index: 60; `.rw-mb-modal-backdrop` uses 50) so any
+   modal/dropdown still draws over the nav. */
+.rw-simple-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 45;
+    display: flex;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 56rem;
+    background-color: #fff;
+    border-top: 1px solid rgba(var(--gray-200), 0.7);
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+.fi.dark .rw-simple-bottom-nav {
+    background-color: rgb(var(--gray-900));
+    border-top-color: rgba(var(--gray-800), 0.7);
+}
+@media (min-width: 1024px) {
+    .rw-simple-bottom-nav {
+        max-width: 64rem;
+    }
+}
+
+.rw-simple-bottom-nav-item {
+    flex: 1 1 0%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    min-height: 44px;
+    padding: 0.5rem 0.25rem 0.375rem;
+    border: 0;
+    background: transparent;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: rgb(var(--gray-400));
+    cursor: pointer;
+}
+.fi.dark .rw-simple-bottom-nav-item {
+    color: rgb(var(--gray-500));
+}
+
+.rw-simple-bottom-nav-item.is-active {
+    color: rgb(var(--primary-600));
+}
+.fi.dark .rw-simple-bottom-nav-item.is-active {
+    color: rgb(var(--primary-400));
+}
+
+/* Content sits above the fixed bar; applied by the integration pass to the
+   existing `.rw-simple` wrapping <div> (not added here). */
+.rw-simple--with-bottom-nav {
+    padding-bottom: 5rem !important;
+}
+
+/* The bottom tab bar replaces the sidebar as primary navigation on this page —
+   hide the (now redundant) off-canvas sidebar, its mobile close-overlay, and
+   the topbar's hamburger toggle entirely rather than leaving them reachable.
+   Property switching moves into the page header instead (see
+   simple-dashboard.blade.php's @livewire('property-switcher') in the header). */
+.fi-layout:has(.rw-simple--with-bottom-nav) .fi-main-sidebar,
+.fi-layout:has(.rw-simple--with-bottom-nav) .fi-sidebar-close-overlay,
+.fi-layout:has(.rw-simple--with-bottom-nav) .fi-topbar-open-sidebar-btn {
+    display: none !important;
+}
+
+/* Simple Mode's invoice-view modal reuses the shared invoice-slip-modal
+   component (also used by the desktop admin view and tenant portal) but only
+   wants the Close (×) button — Print/PDF/View-details stay on the other two
+   surfaces, so the component's own toolbar is hidden here rather than removed
+   from the shared component. */
+.rw-sm-hide-invoice-toolbar .rw-invoice-toolbar {
+    display: none !important;
+}
+
+/* Compact property switcher embedded in Simple Mode's topbar (TOPBAR_START,
+   see LandlordPanelProvider) — same .rw-switcher component the sidebar uses
+   elsewhere, restyled to fit the 4rem-tall topbar row instead of a full
+   sidebar column. */
+.rw-sm-topbar-switcher {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 16rem;
+}
+.rw-sm-topbar-switcher .rw-switcher {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    border-radius: 0;
+}
+.fi.dark .rw-sm-topbar-switcher .rw-switcher {
+    background: none;
+    border-color: transparent;
+}
+.rw-sm-topbar-switcher .rw-switcher__label {
+    display: none;
+}
+.rw-sm-topbar-switcher .rw-switcher__select {
+    padding: 0.375rem 1.75rem 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+}
+.rw-sm-topbar-switcher .rw-switcher__cta {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+}
+.rw-sm-topbar-switcher .rw-switcher__notice {
+    font-size: 0.75rem;
+}
+@media (max-width: 480px) {
+    .rw-sm-topbar-switcher {
+        max-width: 9rem;
+    }
+    .rw-sm-topbar-switcher .rw-switcher__cta span {
+        display: none;
+    }
+}
+
 /* ============================================================
  | MONTHLY BILLING — v3 UI
  | Namespaced under `.rw-mb` (page wrapper class).

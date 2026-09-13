@@ -28,6 +28,13 @@ class SimpleLandlordMode
             return false;
         }
 
+        // Simple Mode's own screens link out to full pages on purpose (Property
+        // Settings, Utility Rates, Monthly Billing, ...) — ?from=simple marks
+        // that as a deliberate one-task exit, not a stray link to bounce back.
+        if ($request->query('from') === 'simple') {
+            return false;
+        }
+
         $panel = LandlordPanelProvider::PATH;
 
         return ($request->is($panel) || $request->is($panel.'/*'))

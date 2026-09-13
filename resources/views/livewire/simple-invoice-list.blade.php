@@ -149,7 +149,13 @@
                         <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
                     </svg>
                 </button>
-                @include('components.invoice-slip-modal', ['invoice' => $viewingInvoice])
+                {{-- rw-sm-hide-invoice-toolbar: Simple Mode only shows the invoice
+                     slip itself — Print/PDF/View-details live on desktop and the
+                     tenant portal via this same shared component, so the toolbar
+                     is hidden here with CSS rather than removed from the component. --}}
+                <div class="rw-sm-hide-invoice-toolbar">
+                    @include('components.invoice-slip-modal', ['invoice' => $viewingInvoice])
+                </div>
             </div>
         </div>
     @endif

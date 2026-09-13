@@ -45,11 +45,6 @@ class SimpleDashboard extends Page
         // No-op — property context resolved at render time from ActiveProperty
     }
 
-    public function getPropertyName(): ?string
-    {
-        return ActiveProperty::name();
-    }
-
     public function getPropertyId(): ?int
     {
         return ActiveProperty::id();

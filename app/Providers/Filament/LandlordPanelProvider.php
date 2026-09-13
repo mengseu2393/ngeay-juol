@@ -143,6 +143,18 @@ class LandlordPanelProvider extends PanelProvider
                 PanelsRenderHook::SIDEBAR_NAV_START,
                 fn (): string => Blade::render('@livewire(\'property-switcher\')'),
             )
+            // Simple Mode hides the sidebar entirely (see rentwise-admin.css'
+            // .fi-layout:has(.rw-simple--with-bottom-nav) rule), so the property
+            // switcher moves into the topbar there instead — this hook is
+            // unscoped (Filament's own TOPBAR_START call site doesn't pass a
+            // scope, so a scoped hook here would never render) and checks the
+            // route itself.
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_START,
+                fn (): string => request()->routeIs('filament.landlord.pages.simple')
+                    ? Blade::render('<div class="rw-sm-topbar-switcher">@livewire(\'property-switcher\')</div>')
+                    : '',
+            )
             ->navigationGroups([
                 'PropertyContext' => NavigationGroup::make()
                     ->label(fn () => ActiveProperty::name() ?? __('This property')),

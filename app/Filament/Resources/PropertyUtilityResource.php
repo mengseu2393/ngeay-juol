@@ -110,15 +110,32 @@ class PropertyUtilityResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
-                    ->formatStateUsing(fn ($state) => static::utilityLabel((string) $state))
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('billing_type')->badge(),
-                Tables\Columns\TextColumn::make('rate')
-                    ->formatStateUsing(fn ($state, PropertyUtility $record) => Money::formatForRecord($state, $record)),
-                Tables\Columns\TextColumn::make('unit_of_measure')->label(__('Unit')),
-                Tables\Columns\TextColumn::make('provider')->placeholder('—')->toggleable(),
-                Tables\Columns\IconColumn::make('is_active')->boolean(),
+                // Split/Stack collapses to a card layout below `md` (see
+                // InvoiceResource's table for the same pattern) instead of a
+                // cramped horizontally-scrolling table on mobile.
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('name')
+                            ->weight('bold')
+                            ->formatStateUsing(fn ($state) => static::utilityLabel((string) $state))
+                            ->searchable(),
+                        Tables\Columns\TextColumn::make('billing_type')->badge(),
+                    ])->space(1),
+
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('rate')
+                            ->formatStateUsing(fn ($state, PropertyUtility $record) => Money::formatForRecord($state, $record)),
+                        Tables\Columns\TextColumn::make('unit_of_measure')
+                            ->label(__('Unit'))
+                            ->prefix(fn () => __('Unit').': ')
+                            ->color('gray'),
+                    ])->space(1),
+
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('provider')->placeholder('—')->toggleable(),
+                        Tables\Columns\IconColumn::make('is_active')->boolean(),
+                    ])->space(1)->alignment('end'),
+                ])->from('md'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active'),

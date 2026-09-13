@@ -4,18 +4,22 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
-use App\Enums\RentalStatus;
-use App\Enums\UnitStatus;
 use App\Enums\PlanBillingModel;
 use App\Enums\PlanInterval;
+use App\Enums\RentalStatus;
 use App\Enums\SubscriptionStatus;
+use App\Enums\UnitStatus;
+use App\Enums\UserStatus;
+use App\Livewire\SimpleAddTenant;
+use App\Livewire\SimpleEndTenancy;
+use App\Livewire\SimpleInvoiceList;
 use App\Models\Invoice;
 use App\Models\Property;
 use App\Models\Rental;
-use App\Models\Unit;
-use App\Models\User;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
+use App\Models\Unit;
+use App\Models\User;
 use App\Support\ActiveProperty;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -86,6 +90,24 @@ class SimpleModeTest extends TestCase
         $this->actingAs($landlord)
             ->get('/app/properties')
             ->assertRedirect(route('filament.landlord.pages.simple'));
+    }
+
+    /**
+     * Simple Mode's own Settings/Utility screens link out to full pages
+     * (Property Settings, Utility Rates, Monthly Billing, ...) on purpose.
+     * Without this bypass, a landlord with the preference enabled would tap
+     * one of those links and immediately get bounced right back to
+     * /app/simple by this same middleware, making every "escape hatch" link
+     * a dead end.
+     */
+    public function test_from_simple_query_param_bypasses_the_simple_mode_redirect(): void
+    {
+        $landlord = $this->makeLandlord();
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+
+        $this->actingAs($landlord)
+            ->get('/app/properties?from=simple')
+            ->assertSuccessful();
     }
 
     public function test_simple_mode_menu_action_enables_preference(): void
@@ -169,7 +191,7 @@ class SimpleModeTest extends TestCase
         ActiveProperty::set($property->id);
 
         Livewire::actingAs($landlord)
-            ->test(\App\Livewire\SimpleInvoiceList::class, ['filter' => 'all'])
+            ->test(SimpleInvoiceList::class, ['filter' => 'all'])
             ->assertSee($invoice->invoice_number)
             ->assertDontSee($otherInvoice->invoice_number);
     }
@@ -184,7 +206,7 @@ class SimpleModeTest extends TestCase
         ActiveProperty::set($property->id);
 
         $component = Livewire::actingAs($landlord)
-            ->test(\App\Livewire\SimpleInvoiceList::class)
+            ->test(SimpleInvoiceList::class)
             ->call('startPay', $invoice->id)
             ->set('payAmount', '250.00')
             ->set('payMethod', PaymentMethod::Cash->value)
@@ -214,7 +236,7 @@ class SimpleModeTest extends TestCase
         // The Livewire component must use recordPayment() which goes via the ledger.
         // We verify by checking a Payment row exists rather than checking the direct column.
         Livewire::actingAs($landlord)
-            ->test(\App\Livewire\SimpleInvoiceList::class)
+            ->test(SimpleInvoiceList::class)
             ->call('startPay', $invoice->id)
             ->set('payAmount', '500.00')
             ->set('payMethod', PaymentMethod::Cash->value)
@@ -236,7 +258,7 @@ class SimpleModeTest extends TestCase
         ActiveProperty::set($property->id);
 
         Livewire::actingAs($landlord)
-            ->test(\App\Livewire\SimpleAddTenant::class)
+            ->test(SimpleAddTenant::class)
             ->call('pickRoom', $unit->id)
             ->set('occupantName', 'Sok Dara')
             ->set('occupantPhone', '012345678')
@@ -260,7 +282,7 @@ class SimpleModeTest extends TestCase
         ActiveProperty::set($property->id);
 
         Livewire::actingAs($landlord)
-            ->test(\App\Livewire\SimpleAddTenant::class)
+            ->test(SimpleAddTenant::class)
             ->call('pickRoom', $unit->id)
             ->set('occupantName', 'Another Tenant')
             ->set('startDate', now()->toDateString())
@@ -279,7 +301,7 @@ class SimpleModeTest extends TestCase
         ActiveProperty::set($property->id);
 
         Livewire::actingAs($landlord)
-            ->test(\App\Livewire\SimpleEndTenancy::class)
+            ->test(SimpleEndTenancy::class)
             ->call('pickRoom', $unit->id)
             ->set('endDate', now()->toDateString())
             ->set('status', (string) RentalStatus::Vacated->value)
@@ -365,10 +387,10 @@ class SimpleModeTest extends TestCase
     private function makeLandlord(): User
     {
         $landlord = User::factory()->create([
-            'name' => 'Test Landlord ' . uniqid(),
-            'email' => 'landlord-simple-mode-' . uniqid() . '@example.com',
+            'name' => 'Test Landlord '.uniqid(),
+            'email' => 'landlord-simple-mode-'.uniqid().'@example.com',
         ]);
-        $landlord->forceFill(['status' => \App\Enums\UserStatus::Active])->save();
+        $landlord->forceFill(['status' => UserStatus::Active])->save();
         $landlord->assignRole('landlord');
 
         $plan = SubscriptionPlan::firstOrCreate([
@@ -404,10 +426,10 @@ class SimpleModeTest extends TestCase
     private function makeTenant(): User
     {
         $tenant = User::factory()->create([
-            'name' => 'Test Tenant ' . uniqid(),
-            'email' => 'tenant-' . uniqid() . '@example.com',
+            'name' => 'Test Tenant '.uniqid(),
+            'email' => 'tenant-'.uniqid().'@example.com',
         ]);
-        $tenant->forceFill(['status' => \App\Enums\UserStatus::Active])->save();
+        $tenant->forceFill(['status' => UserStatus::Active])->save();
         $tenant->assignRole('tenant');
 
         return $tenant;
