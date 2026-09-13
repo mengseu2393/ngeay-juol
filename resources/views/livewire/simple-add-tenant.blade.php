@@ -112,7 +112,7 @@
                 <label class="rw-sm-label" for="at-id-photos">{{ __('ID card photos') }}</label>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ __('Front/back of national ID, passport, etc.') }}</p>
 
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap justify-center gap-2">
                     @foreach($idCardPhotos as $index => $photo)
                         <div class="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                             <img src="{{ $photo->temporaryUrl() }}" class="h-full w-full object-cover" alt="{{ __('ID card photo') }}">
