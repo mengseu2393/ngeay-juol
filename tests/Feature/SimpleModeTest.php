@@ -14,6 +14,7 @@ use App\Filament\Resources\RentalResource\Pages\CreateRental;
 use App\Livewire\SimpleAddTenant;
 use App\Livewire\SimpleEndTenancy;
 use App\Livewire\SimpleInvoiceList;
+use App\Livewire\SimpleInvoiceView;
 use App\Models\Invoice;
 use App\Models\Property;
 use App\Models\Rental;
@@ -402,6 +403,64 @@ class SimpleModeTest extends TestCase
 
         $this->assertDatabaseHas('payments', ['invoice_id' => $invoice->id]);
         $this->assertEquals(InvoiceStatus::Paid, $invoice->fresh()->payment_status);
+    }
+
+    // ── Simple invoice view popup ────────────────────────────────────────────
+
+    public function test_view_invoice_sets_the_viewing_id_and_close_view_clears_it(): void
+    {
+        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleInvoiceList::class)
+            ->call('viewInvoice', $invoice->id)
+            ->assertSet('viewingInvoiceId', $invoice->id)
+            ->call('closeView')
+            ->assertSet('viewingInvoiceId', null);
+    }
+
+    public function test_invoice_view_closed_event_clears_the_parents_viewing_id(): void
+    {
+        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleInvoiceList::class)
+            ->call('viewInvoice', $invoice->id)
+            ->assertSet('viewingInvoiceId', $invoice->id)
+            ->dispatch('invoice-view-closed')
+            ->assertSet('viewingInvoiceId', null);
+    }
+
+    public function test_simple_invoice_view_renders_the_scoped_invoice(): void
+    {
+        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleInvoiceView::class, ['invoiceId' => $invoice->id])
+            ->assertSee($invoice->invoice_number);
+    }
+
+    public function test_simple_invoice_view_404s_for_an_invoice_outside_the_active_property(): void
+    {
+        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
+
+        $otherProperty = Property::create(['landlord_id' => $landlord->id, 'name' => 'Other property']);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($otherProperty->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleInvoiceView::class, ['invoiceId' => $invoice->id])
+            ->assertStatus(404);
     }
 
     // ── Simple add tenant ──────────────────────────────────────────────────────

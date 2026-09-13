@@ -303,6 +303,42 @@ class SimpleTenantListTest extends TestCase
             ->assertSet('endingRentalId', null);
     }
 
+    /**
+     * Regression: opening Edit/End-tenancy from inside the "view tenant"
+     * popup used to leave viewingRentalId set, so both fixed-overlay popups
+     * stayed in the DOM at the same z-index — the later-rendered "view"
+     * popup then stacked on top and visually hid the edit/end-tenancy popup.
+     */
+    public function test_editing_tenant_closes_the_view_popup_to_avoid_stacked_overlays(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::test(SimpleTenantList::class)
+            ->call('viewTenant', $rental->id)
+            ->assertSet('viewingRentalId', $rental->id)
+            ->call('editTenant', $rental->id)
+            ->assertSet('editingRentalId', $rental->id)
+            ->assertSet('viewingRentalId', null);
+    }
+
+    public function test_ending_tenancy_closes_the_view_popup_to_avoid_stacked_overlays(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::test(SimpleTenantList::class)
+            ->call('viewTenant', $rental->id)
+            ->assertSet('viewingRentalId', $rental->id)
+            ->call('endTenancy', $rental->id)
+            ->assertSet('endingRentalId', $rental->id)
+            ->assertSet('viewingRentalId', null);
+    }
+
     private function landlordSetup(bool $createRental = true): array
     {
         $landlord = $this->makeLandlord();

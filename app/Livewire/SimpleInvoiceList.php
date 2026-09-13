@@ -43,6 +43,8 @@ class SimpleInvoiceList extends Component
 
     protected $queryString = ['filter', 'search'];
 
+    protected $listeners = ['invoice-view-closed' => 'closeView'];
+
     public function viewInvoice(int $invoiceId): void
     {
         $this->viewingInvoiceId = $invoiceId;
@@ -183,14 +185,15 @@ class SimpleInvoiceList extends Component
 
     public function render()
     {
-        $invoices = $this->filteredQuery()
+        $baseQuery = $this->filteredQuery()->orderByDesc('issue_date');
+
+        $invoices = (clone $baseQuery)
             ->with(['rental.unit', 'tenant'])
-            ->orderByDesc('issue_date')
             ->paginate(15);
 
         // Everything the current filter matches (not just this page) — feeds the
         // "Print all" batch-PDF button. Same cap as the batch route.
-        $batchIds = $this->filteredQuery()->orderByDesc('issue_date')->limit(200)->pluck('id');
+        $batchIds = (clone $baseQuery)->limit(200)->pluck('id');
 
         $paymentMethods = collect(PaymentMethod::cases())
             ->mapWithKeys(fn ($m) => [$m->value => $m->getLabel()])
@@ -200,7 +203,6 @@ class SimpleInvoiceList extends Component
             'invoices' => $invoices,
             'paymentMethods' => $paymentMethods,
             'batchIds' => $batchIds,
-            'viewingInvoice' => $this->loadInvoice($this->viewingInvoiceId),
         ]);
     }
 }

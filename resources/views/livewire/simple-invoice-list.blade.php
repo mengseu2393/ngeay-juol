@@ -66,7 +66,7 @@
     <div
         x-cloak
         x-show="payOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-4"
+        class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-4"
         @keydown.escape.window="payOpen = false"
     >
         <div class="rw-sm-modal w-full max-w-sm" @click.outside="payOpen = false">
@@ -127,35 +127,11 @@
         </div>
     </div>
 
-    {{-- ── View-details modal (server-rendered: the invoice slip needs its full
-         line-item/tenant/property relations, so this opens over a Livewire
-         round-trip rather than instantly client-side like the pay modal) ── --}}
-    @if($viewingInvoice)
-        <div
-            x-data
-            x-init="$nextTick(() => {})"
-            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
-            @keydown.escape.window="$wire.closeView()"
-        >
-            <div class="relative w-full max-w-4xl mt-6" @click.outside="$wire.closeView()">
-                {{-- rw-sm-hide-invoice-toolbar: Simple Mode only shows the invoice
-                     slip itself — Print/PDF/View-details live on desktop and the
-                     tenant portal via this same shared component, so the toolbar
-                     is hidden here with CSS rather than removed from the component. --}}
-                <div class="rw-sm-hide-invoice-toolbar">
-                    @include('components.invoice-slip-modal', ['invoice' => $viewingInvoice])
-                </div>
-
-                <button
-                    type="button"
-                    wire:click="closeView"
-                    class="rw-sm-btn-secondary w-full mt-3"
-                    id="invoice-view-cancel-btn"
-                >
-                    {{ __('Cancel') }}
-                </button>
-            </div>
-        </div>
+    {{-- ── View-details modal — isolated in its own Livewire component
+         (SimpleInvoiceView) so opening it doesn't force this whole invoice
+         list through a re-render/requery ── --}}
+    @if($viewingInvoiceId)
+        @livewire(\App\Livewire\SimpleInvoiceView::class, ['invoiceId' => $viewingInvoiceId], key('simple-invoice-view-'.$viewingInvoiceId))
     @endif
 
     {{-- ── Invoice cards ── --}}
@@ -173,7 +149,7 @@
             $balance = (float) $invoice->balance;
         @endphp
 
-        <div class="rw-sm-invoice-card" id="invoice-card-{{ $invoice->id }}">
+        <div wire:key="invoice-card-{{ $invoice->id }}" class="rw-sm-invoice-card" id="invoice-card-{{ $invoice->id }}">
             {{-- Top row: room + status --}}
             <div class="flex items-start justify-between gap-2">
                 <div>

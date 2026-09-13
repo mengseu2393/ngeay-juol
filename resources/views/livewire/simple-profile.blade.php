@@ -19,7 +19,11 @@
 
             <label for="profile-avatar" class="rw-sm-btn-secondary cursor-pointer text-sm">
                 {{ __('Choose photo') }}
-                <input type="file" id="profile-avatar" wire:model="avatarPhoto" accept="image/*" capture="user" class="hidden">
+                {{-- No `capture` attribute: that forces the camera open directly on
+                     mobile, skipping the OS picker's "Photo Library" option
+                     entirely. Leaving it off lets the native sheet offer both
+                     "Take Photo" and "Choose Photo". --}}
+                <input type="file" id="profile-avatar" wire:model="avatarPhoto" accept="image/*" class="hidden">
             </label>
 
             <div wire:loading wire:target="avatarPhoto" class="text-xs text-gray-500 dark:text-gray-400">

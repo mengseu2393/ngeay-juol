@@ -52,6 +52,24 @@
 }
 
 /* ----------------------------------------------------------------------------
+ | Mobile overscroll bounce — kill the white flash
+ | On iOS/Android, dragging past the top of the page (or a fixed-overlay
+ | modal, since fixed elements ride along during the rubber-band bounce)
+ | reveals whatever is painted behind the document — <html>'s own background,
+ | which defaults to plain white if unset. `.fi-body` already paints a
+ | themed background but that's the <body> element; <html> itself needs the
+ | same colour, and overscroll-behavior-y stops the bounce outright on
+ | browsers that honour it (Safari 16+, Chrome).
+ | -------------------------------------------------------------------------- */
+html {
+    background-color: rgb(var(--gray-50));
+    overscroll-behavior-y: none;
+}
+html.fi.dark {
+    background-color: rgb(var(--gray-950));
+}
+
+/* ----------------------------------------------------------------------------
  | App background — subtle depth
  | -------------------------------------------------------------------------- */
 .fi-body {
@@ -1865,6 +1883,49 @@ select.rw-sm-input {
 }
 .fi.dark .rw-sm-modal-balance {
     color: rgb(var(--gray-300));
+}
+
+/* ── Simple Mode's `fixed inset-0` modal overlays (add-tenant, end-tenancy,
+   invoice view, ...): without this, dragging inside the modal on iOS/Android
+   scroll-chains to the page behind it, triggering the same rubber-band
+   bounce (and white-flash-at-top) as scrolling the page directly. ── */
+.rw-sm-modal-overlay {
+    overscroll-behavior-y: contain;
+    /* These overlays sit as later siblings inside a `space-y-4` container
+       (search bar, filters, ... then the popup). Tailwind's space-y utility
+       (`.space-y-4 > :not([hidden]) ~ :not([hidden])`) auto-adds
+       margin-top: 1rem to every non-first sibling regardless of its own
+       positioning, so a `fixed inset-0` overlay gets pushed 1rem below the
+       true viewport top — leaving a gap that reveals the page behind it as
+       a thin band above the modal. `!important` is required to beat that
+       selector's higher specificity. */
+    margin-top: 0 !important;
+    animation: rw-sm-modal-backdrop-in 0.18s ease-out;
+}
+
+/* Direct child is always each popup's own white card wrapper (`.relative
+   w-full max-w-* mt-6`) — animate it here rather than adding a new class to
+   every popup's markup. Livewire/Alpine unmount these instantly on close, so
+   only the entrance is animated; there's no graceful exit without added JS. */
+.rw-sm-modal-overlay > div {
+    animation: rw-sm-modal-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rw-sm-modal-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes rw-sm-modal-panel-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rw-sm-modal-overlay,
+    .rw-sm-modal-overlay > div {
+        animation: none;
+    }
 }
 
 /* ── Small round close button, floated over a modal's top-right corner

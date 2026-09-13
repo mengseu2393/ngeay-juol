@@ -85,6 +85,10 @@ class SimpleTenantList extends Component
             return;
         }
 
+        // Opened from inside the "view tenant" popup — close it first so the
+        // two fixed-overlay popups don't stack (same z-index, later DOM node
+        // wins, leaving the edit popup rendered behind the view popup).
+        $this->viewingRentalId = null;
         $this->editingRentalId = $rentalId;
     }
 
@@ -99,6 +103,9 @@ class SimpleTenantList extends Component
             return;
         }
 
+        // Same reasoning as editTenant() above — close the view popup so it
+        // doesn't stack on top of this one.
+        $this->viewingRentalId = null;
         $this->endingRentalId = $rentalId;
     }
 
