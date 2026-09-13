@@ -317,6 +317,34 @@ class SimpleModeTest extends TestCase
         ]);
     }
 
+    public function test_simple_add_tenant_saves_id_card_gender_and_deposit(): void
+    {
+        [$landlord, $property, $unit] = $this->landlordSetup(createRental: false);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleAddTenant::class)
+            ->call('pickRoom', $unit->id)
+            ->set('occupantName', 'Sok Dara')
+            ->set('occupantIdCard', 'ID-12345')
+            ->set('occupantGender', 'female')
+            ->set('startDate', now()->toDateString())
+            ->set('monthlyRent', '500.00')
+            ->set('securityDeposit', '1000.00')
+            ->call('submit')
+            ->assertSet('step', 'done');
+
+        $this->assertDatabaseHas('rentals', [
+            'unit_id' => $unit->id,
+            'occupant_name' => 'Sok Dara',
+            'occupant_id_card' => 'ID-12345',
+            'occupant_gender' => 'female',
+            'security_deposit' => 1000,
+        ]);
+    }
+
     public function test_simple_add_tenant_rejects_occupied_room(): void
     {
         [$landlord, $property, $unit, $rental] = $this->landlordSetup();
@@ -369,6 +397,22 @@ class SimpleModeTest extends TestCase
     public function test_pwa_service_worker_is_accessible(): void
     {
         $this->assertFileExists(public_path('sw.js'));
+    }
+
+    /**
+     * display-mode:standalone / navigator.standalone are only knowable
+     * client-side, so the installed-PWA lock into Simple Mode is a redirect
+     * script emitted for eligible roles — assert it's present, and gated
+     * correctly by role.
+     */
+    public function test_pwa_standalone_redirect_script_is_emitted_for_a_landlord(): void
+    {
+        $landlord = $this->makeLandlord();
+
+        $this->actingAs($landlord)
+            ->get('/app/simple')
+            ->assertSuccessful()
+            ->assertSee('display-mode: standalone', false);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

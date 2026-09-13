@@ -1457,5 +1457,6 @@
     "Copy": "ចម្លង",
     "Copied!": "បានចម្លង!",
     "New password — copy it now, it will not be shown again.": "ពាក្យសម្ងាត់ថ្មី — សូមចម្លងវាឥឡូវនេះ វានឹងមិនត្រូវបានបង្ហាញម្តងទៀតទេ។",
-    "This replaces the current password — the tenant will need the new one to sign in. Continue?": "នេះនឹងជំនួសពាក្យសម្ងាត់បច្ចុប្បន្ន — អ្នកជួលនឹងត្រូវការពាក្យសម្ងាត់ថ្មីដើម្បីចូល។ បន្តទេ?"
+    "This replaces the current password — the tenant will need the new one to sign in. Continue?": "នេះនឹងជំនួសពាក្យសម្ងាត់បច្ចុប្បន្ន — អ្នកជួលនឹងត្រូវការពាក្យសម្ងាត់ថ្មីដើម្បីចូល។ បន្តទេ?",
+    "More fields (date of birth, guarantor, address, etc.) are available in": "កន្លែងបញ្ចូលទិន្នន័យបន្ថែម (ថ្ងៃខែឆ្នាំកំណើត, អ្នកធានា, អាសយដ្ឋាន ។ល។) មាននៅក្នុង"
 }

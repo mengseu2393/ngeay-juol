@@ -8,14 +8,14 @@ use App\Models\Rental;
 use App\Models\Unit;
 use App\Services\RoomAccountService;
 use App\Support\ActiveProperty;
-use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 /**
  * Simple add-tenant flow for mobile/PWA.
  * Step 1: pick vacant room → Step 2: enter tenant info → Step 3: confirm result.
- * Required fields only. Advanced fields are deferred to Full Mode.
- * Uses existing rental/tenancy rules and RoomAccountService.
+ * Covers the fields a landlord fills in on move-in day (name, phone, ID card,
+ * gender, deposit); guarantor/occupant-address and other rarer fields stay
+ * deferred to Full Mode. Uses existing rental/tenancy rules and RoomAccountService.
  */
 class SimpleAddTenant extends Component
 {
@@ -23,10 +23,20 @@ class SimpleAddTenant extends Component
     public string $step = 'pick';
 
     public ?int $unitId = null;
+
     public string $occupantName = '';
+
     public string $occupantPhone = '';
+
+    public string $occupantIdCard = '';
+
+    public string $occupantGender = '';
+
     public string $startDate = '';
+
     public string $monthlyRent = '';
+
+    public string $securityDeposit = '';
 
     /** Result from creation */
     public ?array $result = null;
@@ -59,7 +69,10 @@ class SimpleAddTenant extends Component
         $this->unitId = null;
         $this->occupantName = '';
         $this->occupantPhone = '';
+        $this->occupantIdCard = '';
+        $this->occupantGender = '';
         $this->monthlyRent = '';
+        $this->securityDeposit = '';
         $this->result = null;
     }
 
@@ -68,8 +81,11 @@ class SimpleAddTenant extends Component
         $this->validate([
             'occupantName' => 'required|string|max:255',
             'occupantPhone' => 'nullable|string|max:50',
+            'occupantIdCard' => 'nullable|string|max:255',
+            'occupantGender' => 'nullable|in:male,female,other',
             'startDate' => 'required|date',
             'monthlyRent' => 'required|numeric|min:0',
+            'securityDeposit' => 'nullable|numeric|min:0',
             'unitId' => 'required|integer',
         ]);
 
@@ -77,6 +93,7 @@ class SimpleAddTenant extends Component
 
         if (! $unit) {
             $this->addError('unitId', __('Room not found or not available.'));
+
             return;
         }
 
@@ -88,6 +105,7 @@ class SimpleAddTenant extends Component
 
         if ($hasActive) {
             $this->addError('unitId', __('This room already has an active tenancy.'));
+
             return;
         }
 
@@ -96,9 +114,11 @@ class SimpleAddTenant extends Component
             'unit_id' => $unit->id,
             'occupant_name' => trim($this->occupantName),
             'occupant_phone' => trim($this->occupantPhone) ?: null,
+            'occupant_id_card' => trim($this->occupantIdCard) ?: null,
+            'occupant_gender' => $this->occupantGender ?: null,
             'monthly_rent' => (float) $this->monthlyRent,
             'monthly_rent_currency' => $unit->rent_currency ?: 'USD',
-            'security_deposit' => 0,
+            'security_deposit' => $this->securityDeposit !== '' ? (float) $this->securityDeposit : 0,
             'security_deposit_currency' => $unit->rent_currency ?: 'USD',
             'status' => RentalStatus::Active,
             'start_date' => $this->startDate,
@@ -121,14 +141,19 @@ class SimpleAddTenant extends Component
 
     public function reset_form(): void
     {
-        $this->reset(['unitId', 'occupantName', 'occupantPhone', 'startDate', 'monthlyRent', 'result']);
+        $this->reset([
+            'unitId', 'occupantName', 'occupantPhone', 'occupantIdCard', 'occupantGender',
+            'startDate', 'monthlyRent', 'securityDeposit', 'result',
+        ]);
         $this->startDate = now()->toDateString();
         $this->step = 'pick';
     }
 
     private function loadUnit(?int $id): ?Unit
     {
-        if (! $id) return null;
+        if (! $id) {
+            return null;
+        }
         $propertyId = ActiveProperty::id();
 
         return Unit::query()

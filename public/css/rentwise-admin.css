@@ -3499,3 +3499,15 @@ select.rw-sm-input {
 .fi.dark .dark\:hover\:bg-gray-800\/10:hover { background-color: rgba(var(--gray-800), 0.1); }
 .fi.dark .dark\:hover\:bg-slate-700:hover { background-color: rgb(var(--gray-700)); }
 .fi.dark .dark\:hover\:border-gray-700:hover { border-color: rgb(var(--gray-700)); }
+
+/* Running as the installed PWA is hard-locked to Simple Mode (see
+   LandlordPanelProvider's HEAD_END redirect script) — hide every "Switch to
+   full mode" exit so there's nothing to tap. Matches by the shared toggle
+   route's action URL, so this covers both the user-menu item (a <form> per
+   Filament's dropdown.list.item) and the Settings-hub button in
+   simple-settings.blade.php, which post to the same route. */
+@media (display-mode: standalone) {
+    form[action*="simple-mode/toggle"] {
+        display: none !important;
+    }
+}

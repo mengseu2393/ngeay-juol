@@ -63,16 +63,43 @@
                 @error('occupantPhone') <p class="rw-sm-error">{{ $message }}</p> @enderror
             </div>
 
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="rw-sm-label" for="at-id-card">{{ __('ID card') }}</label>
+                    <input type="text" id="at-id-card" wire:model="occupantIdCard" class="rw-sm-input" placeholder="{{ __('ID card number') }}">
+                    @error('occupantIdCard') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="rw-sm-label" for="at-gender">{{ __('Gender') }}</label>
+                    <select id="at-gender" wire:model="occupantGender" class="rw-sm-input">
+                        <option value="">{{ __('Select gender') }}</option>
+                        <option value="male">{{ __('Male') }}</option>
+                        <option value="female">{{ __('Female') }}</option>
+                        <option value="other">{{ __('Other') }}</option>
+                    </select>
+                    @error('occupantGender') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                </div>
+            </div>
+
             <div>
                 <label class="rw-sm-label" for="at-start">{{ __('Start date') }} <span class="text-red-500">*</span></label>
                 <input type="date" id="at-start" wire:model="startDate" class="rw-sm-input">
                 @error('startDate') <p class="rw-sm-error">{{ $message }}</p> @enderror
             </div>
 
-            <div>
-                <label class="rw-sm-label" for="at-rent">{{ __('Monthly rent') }} <span class="text-red-500">*</span></label>
-                <input type="number" id="at-rent" wire:model="monthlyRent" class="rw-sm-input" step="0.01" min="0" placeholder="0.00">
-                @error('monthlyRent') <p class="rw-sm-error">{{ $message }}</p> @enderror
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="rw-sm-label" for="at-rent">{{ __('Monthly rent') }} <span class="text-red-500">*</span></label>
+                    <input type="number" id="at-rent" wire:model="monthlyRent" class="rw-sm-input" step="0.01" min="0" placeholder="0.00">
+                    @error('monthlyRent') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="rw-sm-label" for="at-deposit">{{ __('Security deposit') }}</label>
+                    <input type="number" id="at-deposit" wire:model="securityDeposit" class="rw-sm-input" step="0.01" min="0" placeholder="0.00">
+                    @error('securityDeposit') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                </div>
             </div>
 
             @error('unitId')
@@ -84,7 +111,7 @@
             </button>
 
             <p class="text-xs text-center text-gray-400 dark:text-gray-500">
-                {{ __('Advanced fields (ID card, guarantor, etc.) are available in') }}
+                {{ __('More fields (date of birth, guarantor, address, etc.) are available in') }}
                 <a href="{{ \App\Filament\Resources\RentalResource::getUrl('create', panel: 'landlord') }}" class="underline text-primary-600 dark:text-primary-400">{{ __('Full Mode') }}</a>.
             </p>
         </div>
