@@ -47,79 +47,32 @@
         </a>
     </div>
 
-    {{-- ── Language ── --}}
-    <div class="rw-sm-panel rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <p class="rw-sm-property-label text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400 mb-3">{{ __('Language') }}</p>
-        <div class="space-y-3">
-            @if(app()->getLocale() !== 'en')
-                <a
-                    href="{{ route('locale.switch', 'en') }}"
-                    class="flex items-center justify-between gap-3"
-                    id="simple-settings-lang-en"
-                >
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802"/></svg>
-                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('English') }}</span>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-                </a>
-            @endif
-            @if(app()->getLocale() !== 'km')
-                <a
-                    href="{{ route('locale.switch', 'km') }}"
-                    class="flex items-center justify-between gap-3"
-                    id="simple-settings-lang-km"
-                >
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802"/></svg>
-                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('ខ្មែរ') }}</span>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-                </a>
-            @endif
-        </div>
-    </div>
-
-    {{-- ── Switch to full mode ── --}}
-    {{-- This partial only ever renders while already inside Simple Mode, so the label is always "Switch to full mode" (no conditional needed here). --}}
-    <div class="rw-sm-panel rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <form method="POST" action="{{ route('landlord.simple-mode.toggle') }}">
-            @csrf
-            <div class="flex gap-3">
-                <button type="submit" class="rw-sm-btn-secondary flex-1 gap-2" id="simple-settings-switch-full-mode">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
-                    <span>{{ __('Switch to full mode') }}</span>
-                </button>
-            </div>
-        </form>
-    </div>
-
     {{-- ── More ── --}}
     <div class="rw-sm-panel rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <p class="rw-sm-property-label text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400 mb-3">{{ __('More') }}</p>
-        <div class="space-y-3">
-            <a href="{{ \App\Filament\Resources\PropertyResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3" id="simple-settings-more-properties">
+        <p class="rw-sm-property-label text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400 mb-1">{{ __('More') }}</p>
+        <div class="divide-y divide-gray-100 dark:divide-gray-800">
+            <a href="{{ \App\Filament\Resources\PropertyResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3 py-3.5 px-1 -mx-1 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-white/5" id="simple-settings-more-properties">
                 <div class="flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3.75h9v16.5h-9V3.75zm9 6.75h6v9.75h-6M8.25 6.75h.008v.008H8.25V6.75zm0 3h.008v.008H8.25v-.008zm0 3h.008v.008H8.25v-.008zm0 3h.008v.008H8.25v-.008z"/></svg>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Properties') }}</span>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
             </a>
-            <a href="{{ \App\Filament\Resources\RentalResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3" id="simple-settings-more-rentals">
+            <a href="{{ \App\Filament\Resources\RentalResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3 py-3.5 px-1 -mx-1 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-white/5" id="simple-settings-more-rentals">
                 <div class="flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Tenancies / Rentals') }}</span>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
             </a>
-            <a href="{{ \App\Filament\Resources\MaintenanceRequestResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3" id="simple-settings-more-maintenance">
+            <a href="{{ \App\Filament\Resources\MaintenanceRequestResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3 py-3.5 px-1 -mx-1 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-white/5" id="simple-settings-more-maintenance">
                 <div class="flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.276a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/></svg>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Maintenance Requests') }}</span>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
             </a>
-            <a href="{{ \App\Filament\Resources\PropertyUtilityResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3" id="simple-settings-more-utility-rates">
+            <a href="{{ \App\Filament\Resources\PropertyUtilityResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3 py-3.5 px-1 -mx-1 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-white/5" id="simple-settings-more-utility-rates">
                 <div class="flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Utility Rates') }}</span>

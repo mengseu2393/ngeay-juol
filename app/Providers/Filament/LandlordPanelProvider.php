@@ -143,7 +143,8 @@ class LandlordPanelProvider extends PanelProvider
                     '<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(()=>{})})}</script>'.
                     '@include(\'filament.components.pwa-install-banner\')'.
                     '@include(\'components.rw-print-script\')'.
-                    '@include(\'components.rw-close-dropdown-on-action\')'
+                    '@include(\'components.rw-close-dropdown-on-action\')'.
+                    '@include(\'components.rw-session-expired-redirect\')'
                 ),
             )
             ->renderHook(

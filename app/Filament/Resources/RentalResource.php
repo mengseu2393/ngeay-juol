@@ -204,23 +204,67 @@ class RentalResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // See PropertyResource::table()'s matching comment — the Livewire
+        // component's own $fromSimpleMode state survives row-action
+        // round-trips, unlike re-reading request()->query('from') here.
+        $livewire = $table->getLivewire();
+        $fromSimpleMode = property_exists($livewire, 'fromSimpleMode') && $livewire->fromSimpleMode;
+
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('unit.room_number')->label(__('Unit'))->sortable(),
-                Tables\Columns\TextColumn::make('occupant_name')->label(__('Occupant'))->placeholder('—')->searchable(),
-                Tables\Columns\TextColumn::make('occupants_count')
-                    ->label(__('Occupants'))
-                    ->counts('occupants')
-                    ->badge()
-                    ->color(fn ($state) => $state > 1 ? 'info' : 'gray')
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('occupant_id_card')->label(__('ID card'))->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('tenant.username')->label(__('Login'))->placeholder('—')->toggleable(),
-                Tables\Columns\TextColumn::make('monthly_rent')
-                    ->formatStateUsing(fn ($state, Rental $record) => Money::formatForRecord($state, $record)),
-                Tables\Columns\TextColumn::make('status')->badge(),
-                Tables\Columns\TextColumn::make('start_date')->date(),
-                Tables\Columns\TextColumn::make('end_date')->date(),
+                // Split/Stack collapses to a card layout below `md` (see
+                // PropertyResource/PropertyUtilityResource's table for the
+                // same pattern), and stays forced into a card at any width
+                // when reached from Simple Mode (?from=simple) — see
+                // .rw-force-card-split in rentwise-admin.css.
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('unit.room_number')->label(__('Unit'))->weight('bold')->size('lg')->sortable(),
+                        Tables\Columns\TextColumn::make('occupant_name')->label(__('Occupant'))->placeholder('—')->searchable(),
+                        Tables\Columns\TextColumn::make('status')->badge(),
+                        Tables\Columns\TextColumn::make('occupant_id_card')
+                            ->label(__('ID card'))
+                            ->icon('heroicon-m-identification')
+                            ->color('gray')
+                            ->placeholder('—')
+                            ->visible(fn (Rental $record) => filled($record->occupant_id_card))
+                            ->toggleable(isToggledHiddenByDefault: true),
+                    ])->space(2),
+
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('monthly_rent')
+                            ->icon('heroicon-m-banknotes')
+                            ->color('gray')
+                            ->formatStateUsing(fn ($state, Rental $record) => Money::formatForRecord($state, $record)),
+                        Tables\Columns\TextColumn::make('start_date')
+                            ->icon('heroicon-m-calendar')
+                            ->color('gray')
+                            ->date(),
+                        Tables\Columns\TextColumn::make('tenant.username')
+                            ->label(__('Login'))
+                            ->icon('heroicon-m-user')
+                            ->color('gray')
+                            ->placeholder('—')
+                            ->toggleable(),
+                        Tables\Columns\TextColumn::make('occupants_count')
+                            ->label(__('Occupants'))
+                            ->icon('heroicon-m-users')
+                            ->counts('occupants')
+                            ->color(fn ($state) => $state > 1 ? 'info' : 'gray')
+                            ->visible(fn ($state) => $state > 1)
+                            ->toggleable(),
+                    ])->space(2),
+                ])
+                    ->from('md')
+                    ->extraAttributes(fn () => $fromSimpleMode
+                        ? ['class' => 'rw-force-card-split']
+                        : []),
+
+                // Rarely-needed columns — folded out of the card by default
+                // (isToggledHiddenByDefault), still reachable via the
+                // column-picker button, and never rendered as loose
+                // unstyled rows below the card in Simple Mode.
+                Tables\Columns\TextColumn::make('end_date')->date()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('move_out_date')
                     ->label(__('Moved out'))
                     ->date()

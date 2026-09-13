@@ -55,6 +55,7 @@
     <footer class="py-6 text-center text-xs text-slate-400">{{ __('ngeay juol') }} · {{ __('Tenant portal') }}</footer>
 
     @include('filament.components.pwa-install-banner')
+    @include('components.rw-session-expired-redirect')
 
     <!-- PWA: Service Worker registration -->
     <script>
