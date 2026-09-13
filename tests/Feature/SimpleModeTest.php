@@ -23,6 +23,8 @@ use App\Models\User;
 use App\Support\ActiveProperty;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -358,6 +360,61 @@ class SimpleModeTest extends TestCase
 
         $rental = Rental::where('unit_id', $unit->id)->firstOrFail();
         $this->assertSame('1995-06-15', $rental->occupant_dob->toDateString());
+    }
+
+    public function test_simple_add_tenant_attaches_id_card_photos_to_the_rental(): void
+    {
+        Storage::fake('public');
+        [$landlord, $property, $unit] = $this->landlordSetup(createRental: false);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        $front = UploadedFile::fake()->image('id-front.jpg');
+        $back = UploadedFile::fake()->image('id-back.jpg');
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleAddTenant::class)
+            ->call('pickRoom', $unit->id)
+            ->set('occupantName', 'Sok Dara')
+            ->set('startDate', now()->toDateString())
+            ->set('monthlyRent', '500.00')
+            ->set('idCardPhotos', [$front, $back])
+            ->call('submit')
+            ->assertSet('step', 'done');
+
+        $rental = Rental::where('unit_id', $unit->id)->firstOrFail();
+
+        // Same collection RentalResource's desktop form uses, so this shows up
+        // on the Full Mode view page too — see SimpleAddTenant's class docblock.
+        $this->assertCount(2, $rental->getMedia('id_cards'));
+    }
+
+    public function test_simple_add_tenant_rejects_more_than_two_id_card_photos(): void
+    {
+        Storage::fake('public');
+        [$landlord, $property, $unit] = $this->landlordSetup(createRental: false);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        $photos = [
+            UploadedFile::fake()->image('a.jpg'),
+            UploadedFile::fake()->image('b.jpg'),
+            UploadedFile::fake()->image('c.jpg'),
+        ];
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleAddTenant::class)
+            ->call('pickRoom', $unit->id)
+            ->set('occupantName', 'Sok Dara')
+            ->set('startDate', now()->toDateString())
+            ->set('monthlyRent', '500.00')
+            ->set('idCardPhotos', $photos)
+            ->call('submit')
+            ->assertHasErrors(['idCardPhotos']);
+
+        $this->assertDatabaseMissing('rentals', ['occupant_name' => 'Sok Dara']);
     }
 
     public function test_simple_add_tenant_saves_id_card_gender_and_deposit(): void

@@ -1461,5 +1461,9 @@
     "More fields (date of birth, guarantor, address, etc.) are available in": "កន្លែងបញ្ចូលទិន្នន័យបន្ថែម (ថ្ងៃខែឆ្នាំកំណើត, អ្នកធានា, អាសយដ្ឋាន ។ល។) មាននៅក្នុង",
     "e.g. Khmer, Vietnamese": "ឧ. ខ្មែរ, វៀតណាម",
     "e.g. company name": "ឧ. ឈ្មោះក្រុមហ៊ុន",
-    "Guarantor details and an ID card photo are available in": "ព័ត៌មានអ្នកធានា និងរូបថតអត្តសញ្ញាណប័ណ្ណ មាននៅក្នុង"
+    "Guarantor details and an ID card photo are available in": "ព័ត៌មានអ្នកធានា និងរូបថតអត្តសញ្ញាណប័ណ្ណ មាននៅក្នុង",
+    "ID card photo": "រូបថតអត្តសញ្ញាណប័ណ្ណ",
+    "Add photo": "បន្ថែមរូបថត",
+    "Uploading…": "កំពុងបញ្ចូល…",
+    "Guarantor details are available in": "ព័ត៌មានអ្នកធានា មាននៅក្នុង"
 }

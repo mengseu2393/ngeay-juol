@@ -108,6 +108,52 @@
                 @error('occupantAddress') <p class="rw-sm-error">{{ $message }}</p> @enderror
             </div>
 
+            <div>
+                <label class="rw-sm-label" for="at-id-photos">{{ __('ID card photos') }}</label>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ __('Front/back of national ID, passport, etc.') }}</p>
+
+                <div class="flex flex-wrap gap-2">
+                    @foreach($idCardPhotos as $index => $photo)
+                        <div class="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                            <img src="{{ $photo->temporaryUrl() }}" class="h-full w-full object-cover" alt="{{ __('ID card photo') }}">
+                            <button
+                                type="button"
+                                wire:click="removeIdCardPhoto({{ $index }})"
+                                class="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white"
+                                id="at-id-photo-remove-{{ $index }}"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3" aria-hidden="true">
+                                    <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                                </svg>
+                            </button>
+                        </div>
+                    @endforeach
+
+                    @if(count($idCardPhotos) < 2)
+                        <label for="at-id-photos" class="flex h-20 w-20 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/></svg>
+                            <span class="text-[0.65rem]">{{ __('Add photo') }}</span>
+                        </label>
+                        <input
+                            type="file"
+                            id="at-id-photos"
+                            wire:model="idCardPhotos"
+                            accept="image/*"
+                            capture="environment"
+                            multiple
+                            class="hidden"
+                        >
+                    @endif
+                </div>
+
+                <div wire:loading wire:target="idCardPhotos" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    {{ __('Uploading…') }}
+                </div>
+
+                @error('idCardPhotos') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                @error('idCardPhotos.*') <p class="rw-sm-error">{{ $message }}</p> @enderror
+            </div>
+
             <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
                 <p class="rw-sm-label mb-2">{{ __('Emergency contact') }}</p>
                 <div class="space-y-3">
@@ -160,7 +206,7 @@
             </button>
 
             <p class="text-xs text-center text-gray-400 dark:text-gray-500">
-                {{ __('Guarantor details and an ID card photo are available in') }}
+                {{ __('Guarantor details are available in') }}
                 <a href="{{ \App\Filament\Resources\RentalResource::getUrl('create', panel: 'landlord') }}" class="underline text-primary-600 dark:text-primary-400">{{ __('Full Mode') }}</a>.
             </p>
         </div>

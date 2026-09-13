@@ -9,17 +9,24 @@ use App\Models\Unit;
 use App\Services\RoomAccountService;
 use App\Support\ActiveProperty;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 /**
  * Simple add-tenant flow for mobile/PWA.
  * Step 1: pick vacant room → Step 2: enter tenant info → Step 3: confirm result.
  * Covers the occupant/tenancy fields a landlord fills in on move-in day (name,
  * phone, ID card, gender, DOB, nationality, workplace, address, emergency
- * contact, deposit). Guarantor details and an ID card photo upload stay
- * deferred to Full Mode. Uses existing rental/tenancy rules and RoomAccountService.
+ * contact, deposit) plus ID card photos, attached to the Rental's own
+ * `id_cards` media collection — the same one RentalResource's desktop form
+ * uses, so a photo taken here shows up on the desktop Full Mode view too.
+ * Guarantor details stay deferred to Full Mode. Uses existing rental/tenancy
+ * rules and RoomAccountService.
  */
 class SimpleAddTenant extends Component
 {
+    use WithFileUploads;
+
     /** current wizard step: 'pick' | 'details' | 'done' */
     public string $step = 'pick';
 
@@ -52,6 +59,9 @@ class SimpleAddTenant extends Component
     public string $monthlyRent = '';
 
     public string $securityDeposit = '';
+
+    /** @var array<int, TemporaryUploadedFile> */
+    public array $idCardPhotos = [];
 
     /** Result from creation */
     public ?array $result = null;
@@ -95,7 +105,14 @@ class SimpleAddTenant extends Component
         $this->emergencyContactRelationship = '';
         $this->monthlyRent = '';
         $this->securityDeposit = '';
+        $this->idCardPhotos = [];
         $this->result = null;
+    }
+
+    public function removeIdCardPhoto(int $index): void
+    {
+        unset($this->idCardPhotos[$index]);
+        $this->idCardPhotos = array_values($this->idCardPhotos);
     }
 
     public function submit(): void
@@ -116,6 +133,8 @@ class SimpleAddTenant extends Component
             'monthlyRent' => 'required|numeric|min:0',
             'securityDeposit' => 'nullable|numeric|min:0',
             'unitId' => 'required|integer',
+            'idCardPhotos' => 'nullable|array|max:2',
+            'idCardPhotos.*' => 'image|max:5120', // 5MB — front/back of an ID card
         ]);
 
         $unit = $this->loadUnit($this->unitId);
@@ -164,6 +183,12 @@ class SimpleAddTenant extends Component
         // Create/reset tenant login account (which sets tenant_id and saves the rental)
         $accountResult = app(RoomAccountService::class)->createForRental($rental);
 
+        foreach ($this->idCardPhotos as $photo) {
+            $rental->addMedia($photo->getRealPath())
+                ->usingFileName($photo->getClientOriginalName())
+                ->toMediaCollection('id_cards');
+        }
+
         $this->result = [
             'room_number' => $unit->room_number,
             'occupant_name' => $rental->occupant_name,
@@ -181,7 +206,7 @@ class SimpleAddTenant extends Component
             'unitId', 'occupantName', 'occupantPhone', 'occupantIdCard', 'occupantGender',
             'occupantDob', 'occupantNationality', 'occupantWorkplace', 'occupantAddress',
             'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelationship',
-            'startDate', 'monthlyRent', 'securityDeposit', 'result',
+            'startDate', 'monthlyRent', 'securityDeposit', 'idCardPhotos', 'result',
         ]);
         $this->startDate = now()->toDateString();
         $this->step = 'pick';
