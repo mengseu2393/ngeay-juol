@@ -90,15 +90,41 @@ class PropertyResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('landlord.name')
-                    ->label(__('Landlord'))
-                    ->visible(fn () => auth()->user()?->isPlatformStaff())
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('property_type')->badge(),
-                Tables\Columns\TextColumn::make('city')->searchable()->toggleable(),
-                Tables\Columns\TextColumn::make('units_count')->counts('units')->label(__('Units'))->badge(),
-                Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+                // Split/Stack collapses to a card layout below `md` (see
+                // InvoiceResource/PropertyUtilityResource's table for the same
+                // pattern), and stays forced into a card at any width when
+                // reached from Simple Mode (?from=simple) — see
+                // .rw-force-card-split in rentwise-admin.css.
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('name')->weight('bold')->searchable()->sortable(),
+                        Tables\Columns\TextColumn::make('property_type')->badge(),
+                    ])->space(2),
+
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('landlord.name')
+                            ->label(__('Landlord'))
+                            ->icon('heroicon-m-user')
+                            ->visible(fn () => auth()->user()?->isPlatformStaff())
+                            ->searchable(),
+                        Tables\Columns\TextColumn::make('city')
+                            ->icon('heroicon-m-map-pin')
+                            ->color('gray')
+                            ->placeholder('—')
+                            ->searchable()
+                            ->toggleable(),
+                        Tables\Columns\TextColumn::make('units_count')
+                            ->counts('units')
+                            ->label(__('Units'))
+                            ->icon('heroicon-m-home')
+                            ->color('gray')
+                            ->formatStateUsing(fn ($state) => trans_choice(':count room|:count rooms', $state, ['count' => $state])),
+                    ])->space(2),
+                ])
+                    ->from('md')
+                    ->extraAttributes(fn () => request()->query('from') === 'simple'
+                        ? ['class' => 'rw-force-card-split']
+                        : []),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('property_type')->options(PropertyType::class),

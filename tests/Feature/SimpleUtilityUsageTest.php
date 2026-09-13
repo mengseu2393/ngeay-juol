@@ -9,6 +9,7 @@ use App\Enums\ReadingType;
 use App\Enums\RentalStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
+use App\Filament\Resources\PropertyUtilityResource;
 use App\Livewire\SimpleUtilityUsage;
 use App\Models\Property;
 use App\Models\PropertyUtility;
@@ -41,6 +42,40 @@ class SimpleUtilityUsageTest extends TestCase
 
         $this->seed(RolesAndPermissionsSeeder::class);
         ActiveProperty::clear();
+    }
+
+    public function test_unit_id_query_param_deep_links_straight_into_that_rooms_reading_form(): void
+    {
+        [$landlord, $property, $unit, $utility] = $this->propertySetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::withQueryParams(['unit_id' => $unit->id])
+            ->test(SimpleUtilityUsage::class)
+            ->assertSet('recordingUnitId', $unit->id)
+            ->assertSee(PropertyUtilityResource::utilityLabel($utility->name));
+    }
+
+    public function test_unit_id_query_param_for_a_foreign_unit_does_not_open_the_form(): void
+    {
+        [$landlord, $property, $unit, $utility] = $this->propertySetup();
+
+        $otherProperty = Property::create(['landlord_id' => $landlord->id, 'name' => 'Other property']);
+        $otherUnit = Unit::create([
+            'property_id' => $otherProperty->id,
+            'landlord_id' => $landlord->id,
+            'room_number' => '999',
+            'room_type' => 'Standard',
+            'rent_amount' => 300,
+        ]);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::withQueryParams(['unit_id' => $otherUnit->id])
+            ->test(SimpleUtilityUsage::class)
+            ->assertSet('recordingUnitId', null);
     }
 
     public function test_component_scopes_rooms_to_active_property(): void

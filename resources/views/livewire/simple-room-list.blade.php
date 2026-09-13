@@ -294,6 +294,17 @@
                         class="rw-sm-btn-ghost text-sm"
                         id="room-set-utility-reading-{{ $room->id }}"
                     >{{ __('Set utility reading') }}</button>
+
+                    {{-- Deep-links to the Utility tab, straight into this room's
+                         reading form — same shortcut pattern as Add/End tenancy
+                         below. Distinct from the button above: that one is this
+                         screen's own baseline-only "initial setup" flow (see
+                         SimpleUtilityUsage's class docblock), this one goes to
+                         the dedicated Utility tab's real consumption math. --}}
+                    <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'utility', 'unit_id' => $room->id]) }}"
+                       class="rw-sm-btn-ghost text-sm"
+                       id="room-goto-utility-{{ $room->id }}"
+                    >{{ __('Set Utility') }}</a>
                 @endif
 
                 @if($room->status === \App\Enums\UnitStatus::Available)

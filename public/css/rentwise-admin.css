@@ -2147,6 +2147,13 @@ select.rw-sm-input {
     box-shadow: none !important;
 }
 
+/* The row-actions kebab menu defaults to justify-start below `md` (it sits
+   left-aligned, flush under the content on a forced mobile card) — pin it to
+   the card's right edge instead, matching where a "..." menu is expected. */
+.fi-ta-record:has(.rw-force-card-split) .fi-ta-actions {
+    justify-content: flex-end !important;
+}
+
 /* ── Simple Mode: persistent bottom tab-bar navigation ──
    Partial: resources/views/components/rw-simple-bottom-nav.blade.php
    Width-matched to `.rw-simple--billing` (the modifier simple-dashboard.blade.php

@@ -33,6 +33,17 @@ class SimpleUtilityUsage extends Component
 
     public bool $readingSuccess = false;
 
+    /** Deep-linked here from a room card's "Set Utility" button — same
+     *  ?unit_id= shortcut pattern SimpleAddTenant/SimpleEndTenancy use. */
+    public function mount(): void
+    {
+        $unitId = (int) request()->query('unit_id');
+
+        if ($unitId) {
+            $this->openUtilityReading($unitId);
+        }
+    }
+
     public function updatingSearch(): void
     {
         // no pagination to reset
