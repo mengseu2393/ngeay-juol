@@ -106,6 +106,8 @@
         <button
             type="button"
             wire:click="openUtilityReading({{ $room->id }})"
+            wire:loading.attr="disabled"
+            wire:target="openUtilityReading({{ $room->id }})"
             class="rw-sm-room-row w-full text-left"
             id="utility-usage-room-{{ $room->id }}"
         >
@@ -113,12 +115,25 @@
                 <div>
                     <p class="rw-sm-room-number">{{ $room->room_number }}</p>
                 </div>
-                <span class="rw-sm-badge {{ $pendingCount > 0 ? 'rw-sm-badge-warning' : 'rw-sm-badge-gray' }} shrink-0">
+                <span
+                    wire:loading.remove
+                    wire:target="openUtilityReading({{ $room->id }})"
+                    class="rw-sm-badge {{ $pendingCount > 0 ? 'rw-sm-badge-warning' : 'rw-sm-badge-gray' }} shrink-0"
+                >
                     @if($pendingCount > 0)
                         {{ __(':count utility reading(s) due', ['count' => $pendingCount]) }}
                     @else
                         {{ __('No metered utilities') }}
                     @endif
+                </span>
+                <span
+                    wire:loading.flex
+                    wire:target="openUtilityReading({{ $room->id }})"
+                    class="rw-sm-badge rw-sm-badge-gray shrink-0 items-center gap-1.5"
+                    style="display: none;"
+                >
+                    <svg class="h-3.5 w-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    {{ __('Loading…') }}
                 </span>
             </div>
         </button>

@@ -214,9 +214,15 @@
                 <button
                     type="button"
                     wire:click="viewInvoice({{ $invoice->id }})"
-                    class="rw-sm-btn-ghost flex-1 text-center"
+                    wire:loading.attr="disabled"
+                    wire:target="viewInvoice({{ $invoice->id }})"
+                    class="rw-sm-btn-ghost flex-1 text-center flex items-center justify-center gap-1.5"
                     id="invoice-view-{{ $invoice->id }}"
-                >{{ __('View details') }}</button>
+                >
+                    <svg wire:loading wire:target="viewInvoice({{ $invoice->id }})" class="h-4 w-4 shrink-0 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    <span wire:loading.remove wire:target="viewInvoice({{ $invoice->id }})">{{ __('View details') }}</span>
+                    <span wire:loading wire:target="viewInvoice({{ $invoice->id }})">{{ __('Loading…') }}</span>
+                </button>
 
                 <button
                     type="button"
@@ -224,13 +230,14 @@
                     data-stream-url="{{ route('invoices.pdf', ['invoice' => $invoice->id, 'size' => '58mm', 'mode' => 'stream']) }}"
                     data-download-url="{{ route('invoices.pdf', ['invoice' => $invoice->id, 'size' => '58mm']) }}"
                     data-filename="{{ \App\Services\InvoicePdfService::filename($invoice, 'pdf') }}"
+                    data-preparing="{{ __('Preparing…') }}"
                     class="rw-sm-btn-ghost flex-1 text-center flex items-center justify-center gap-1"
                     id="invoice-print-58mm-{{ $invoice->id }}"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4 shrink-0" aria-hidden="true">
                         <path fill-rule="evenodd" d="M5 2.75C5 1.784 5.784 1 6.75 1h6.5c.966 0 1.75.784 1.75 1.75v1.5A1.75 1.75 0 0 1 16.75 6H18a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-.25v1.25a1.75 1.75 0 0 1-1.75 1.75h-8.5A1.75 1.75 0 0 1 4 17.25V16H3.75A2 2 0 0 1 1.75 14V8a2 2 0 0 1 2-2h1.25A1.75 1.75 0 0 1 6.75 4.25v-1.5ZM6.5 4.25c0-.138.112-.25.25-.25h6.5c.138 0 .25.112.25.25v1.5c0 .138-.112.25-.25.25h-6.5a.25.25 0 0 1-.25-.25v-1.5ZM5.5 17.25c0-.138.112-.25.25-.25h8.5c.138 0 .25.112.25.25v-3.5c0-.138-.112-.25-.25-.25h-8.5c-.138 0-.25.112-.25.25v3.5Z" clip-rule="evenodd" />
                     </svg>
-                    <span>{{ __('Print 58mm') }}</span>
+                    <span data-label>{{ __('Print 58mm') }}</span>
                 </button>
 
                 @if($balance > 0.009)
