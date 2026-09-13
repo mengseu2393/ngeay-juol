@@ -2,10 +2,12 @@
 
 namespace App\Livewire;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\RentalStatus;
 use App\Models\Rental;
 use App\Services\RoomAccountService;
 use App\Support\ActiveProperty;
+use App\Support\Money;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -27,6 +29,20 @@ class SimpleTenantList extends Component
     public ?string $newUsername = null;
 
     public ?string $newPassword = null;
+
+    /** Whether the "Add tenant" popup is open */
+    public bool $showAddTenant = false;
+
+    /** ID of the rental being edited in the "Edit tenant" popup */
+    public ?int $editingRentalId = null;
+
+    /** ID of the rental whose "End tenancy" popup is open */
+    public ?int $endingRentalId = null;
+
+    protected $listeners = [
+        'tenant-updated' => 'handleTenantUpdated',
+        'tenancy-ended' => 'handleTenancyEnded',
+    ];
 
     public function updatingSearch(): void
     {
@@ -53,6 +69,55 @@ class SimpleTenantList extends Component
         $this->newPassword = null;
     }
 
+    public function openAddTenant(): void
+    {
+        $this->showAddTenant = true;
+    }
+
+    public function closeAddTenant(): void
+    {
+        $this->showAddTenant = false;
+    }
+
+    public function editTenant(int $rentalId): void
+    {
+        if (! $this->scopedRental($rentalId)) {
+            return;
+        }
+
+        $this->editingRentalId = $rentalId;
+    }
+
+    public function closeEditTenant(): void
+    {
+        $this->editingRentalId = null;
+    }
+
+    public function endTenancy(int $rentalId): void
+    {
+        if (! $this->scopedRental($rentalId)) {
+            return;
+        }
+
+        $this->endingRentalId = $rentalId;
+    }
+
+    public function closeEndTenancy(): void
+    {
+        $this->endingRentalId = null;
+    }
+
+    public function handleTenantUpdated(): void
+    {
+        $this->editingRentalId = null;
+    }
+
+    public function handleTenancyEnded(): void
+    {
+        $this->endingRentalId = null;
+        $this->viewingRentalId = null;
+    }
+
     /**
      * Passwords are hashed at rest and can never be retrieved once set — this
      * mints a fresh one (or a first one, if the tenancy is still on its unit's
@@ -73,7 +138,7 @@ class SimpleTenantList extends Component
     }
 
     /** The rental, scoped to the active property — null if missing/foreign. */
-    private function scopedRental(?int $rentalId): ?Rental
+    public function scopedRental(?int $rentalId): ?Rental
     {
         if (! $rentalId) {
             return null;
@@ -92,7 +157,11 @@ class SimpleTenantList extends Component
 
         $tenants = $propertyId
             ? Rental::query()
-                ->with(['unit', 'tenant'])
+                ->with(['unit', 'tenant', 'invoices' => fn ($q) => $q->whereIn('payment_status', [
+                    InvoiceStatus::Pending->value,
+                    InvoiceStatus::Partial->value,
+                    InvoiceStatus::Overdue->value,
+                ])])
                 ->whereHas('unit', fn ($q) => $q->where('property_id', $propertyId))
                 ->where('status', RentalStatus::Active->value)
                 ->when($this->search !== '', function ($q) {
@@ -113,5 +182,33 @@ class SimpleTenantList extends Component
             'tenants' => $tenants,
             'viewingRental' => $this->scopedRental($this->viewingRentalId),
         ]);
+    }
+
+    /**
+     * Sum of every unpaid/partial/overdue invoice's balance for this tenancy,
+     * formatted for display — mirrors PropertyResource::infolist()'s
+     * "Outstanding" entry (USD + KHR twins, since a property can bill in
+     * either currency invoice-to-invoice).
+     */
+    public static function totalDueFor(Rental $rental): string
+    {
+        $usdTotal = 0.0;
+        $khrTotal = 0.0;
+
+        foreach ($rental->invoices as $invoice) {
+            $usdTotal += $invoice->balance_usd;
+            $khrTotal += $invoice->balance_khr;
+        }
+
+        if ($usdTotal <= 0 && $khrTotal <= 0) {
+            return Money::format(0, 'USD');
+        }
+
+        $parts = array_filter([
+            $usdTotal > 0 ? Money::format($usdTotal, 'USD') : null,
+            $khrTotal > 0 ? Money::format($khrTotal, 'KHR') : null,
+        ]);
+
+        return implode(' / ', $parts);
     }
 }

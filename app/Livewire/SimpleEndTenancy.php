@@ -20,18 +20,21 @@ class SimpleEndTenancy extends Component
     public string $step = 'pick';
 
     public ?int $unitId = null;
+
     public string $endDate = '';
+
     public string $status = '';
+
     public bool $freeRoom = true;
 
     public ?array $result = null;
 
-    public function mount(): void
+    public function mount(?int $unitId = null): void
     {
         $this->endDate = now()->toDateString();
         $this->status = RentalStatus::Vacated->value;
 
-        $unitId = (int) request()->query('unit_id');
+        $unitId = $unitId ?? (int) request()->query('unit_id');
         $unit = $unitId ? $this->loadUnit($unitId) : null;
 
         if ($unit && $unit->status === UnitStatus::Occupied) {
@@ -67,6 +70,7 @@ class SimpleEndTenancy extends Component
 
         if (! $unit) {
             $this->addError('unitId', __('Room not found.'));
+
             return;
         }
 
@@ -77,6 +81,7 @@ class SimpleEndTenancy extends Component
 
         if (! $rental) {
             $this->addError('unitId', __('This room has no active tenancy.'));
+
             return;
         }
 
@@ -99,6 +104,8 @@ class SimpleEndTenancy extends Component
         ];
 
         $this->step = 'done';
+
+        $this->dispatch('tenancy-ended');
     }
 
     public function reset_form(): void
@@ -112,7 +119,9 @@ class SimpleEndTenancy extends Component
 
     private function loadUnit(?int $id): ?Unit
     {
-        if (! $id) return null;
+        if (! $id) {
+            return null;
+        }
         $propertyId = ActiveProperty::id();
 
         return Unit::query()

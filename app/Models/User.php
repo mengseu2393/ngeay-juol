@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\RentalStatus;
 use App\Enums\UserStatus;
+use App\Services\SubscriptionService;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\HasName;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,7 +24,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements FilamentUser, HasMedia, HasName
+class User extends Authenticatable implements FilamentUser, HasAvatar, HasMedia, HasName
 {
     use HasFactory;
     use HasRoles;
@@ -94,6 +97,11 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
     {
         $this->addMediaCollection('id_cards')->onlyKeepLatest(2);
         $this->addMediaCollection('avatar')->singleFile();
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->getFirstMediaUrl('avatar') ?: null;
     }
 
     // ---------------------------------------------------------------------
@@ -170,7 +178,7 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
                         ->from('units')
                         ->where('account_user_id', $this->getKey());
                 })
-                ->where('status', \App\Enums\RentalStatus::Active->value)
+                ->where('status', RentalStatus::Active->value)
                 ->pluck('id')
                 ->all();
 
@@ -255,7 +263,7 @@ class User extends Authenticatable implements FilamentUser, HasMedia, HasName
 
     /**
      * The landlord's single subscription. HasOne rather than HasMany: uniqueness
-     * per landlord is enforced in {@see \App\Services\SubscriptionService::assign()}
+     * per landlord is enforced in {@see SubscriptionService::assign()}
      * because MariaDB/MySQL 5.x cannot express a partial unique index.
      */
     public function subscription(): HasOne

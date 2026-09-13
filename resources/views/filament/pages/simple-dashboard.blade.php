@@ -126,6 +126,17 @@
                 </div>
             </div>
 
+            {{-- ── Profile screen ── --}}
+            <div x-show="screen === 'profile'" x-cloak>
+                <div class="rw-sm-screen-header">
+                    <button @click="setScreen('settings')" class="rw-sm-back-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+                    </button>
+                    <h2 class="rw-sm-screen-title">{{ __('Profile') }}</h2>
+                </div>
+                @livewire('simple-profile', key('simple-profile'))
+            </div>
+
             {{-- ── Settings screen ── --}}
             <div x-show="screen === 'settings'" x-cloak>
                 <div class="rw-sm-screen-header">

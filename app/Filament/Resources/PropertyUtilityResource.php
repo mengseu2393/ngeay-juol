@@ -108,6 +108,17 @@ class PropertyUtilityResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // request()->query('from') is only present on the request that loaded
+        // this page — a row action (View, Edit, ...) round-trips through
+        // Livewire's own /livewire/update endpoint, which carries none of the
+        // original URL's query string, so re-checking request() inside a
+        // column closure silently drops the class the moment any action runs.
+        // The page's own $fromSimpleMode property (set once in its mount())
+        // is real Livewire component STATE and survives every subsequent
+        // request, so read it from there instead.
+        $livewire = $table->getLivewire();
+        $fromSimpleMode = property_exists($livewire, 'fromSimpleMode') && $livewire->fromSimpleMode;
+
         return $table
             ->columns([
                 // Split/Stack collapses to a card layout below `md` (see
@@ -126,24 +137,33 @@ class PropertyUtilityResource extends Resource
                             ->formatStateUsing(fn ($state) => static::utilityLabel((string) $state))
                             ->searchable(),
                         Tables\Columns\TextColumn::make('billing_type')->badge(),
-                    ])->space(1),
+                    ])->space(2),
 
                     Tables\Columns\Layout\Stack::make([
                         Tables\Columns\TextColumn::make('rate')
+                            ->icon('heroicon-m-banknotes')
                             ->formatStateUsing(fn ($state, PropertyUtility $record) => Money::formatForRecord($state, $record)),
                         Tables\Columns\TextColumn::make('unit_of_measure')
                             ->label(__('Unit'))
+                            ->icon('heroicon-m-calculator')
                             ->prefix(fn () => __('Unit').': ')
                             ->color('gray'),
-                    ])->space(1),
+                    ])->space(2),
 
                     Tables\Columns\Layout\Stack::make([
-                        Tables\Columns\TextColumn::make('provider')->placeholder('—')->toggleable(),
-                        Tables\Columns\IconColumn::make('is_active')->boolean(),
-                    ])->space(1)->alignment('end'),
+                        Tables\Columns\TextColumn::make('provider')
+                            ->icon('heroicon-m-building-office-2')
+                            ->placeholder('—')
+                            ->toggleable(),
+                        Tables\Columns\TextColumn::make('is_active')
+                            ->label(__('Status'))
+                            ->badge()
+                            ->formatStateUsing(fn ($state) => $state ? __('Active') : __('Inactive'))
+                            ->color(fn ($state) => $state ? 'success' : 'gray'),
+                    ])->space(2)->alignment('end'),
                 ])
                     ->from('md')
-                    ->extraAttributes(fn () => request()->query('from') === 'simple'
+                    ->extraAttributes(fn () => $fromSimpleMode
                         ? ['class' => 'rw-force-card-split']
                         : []),
             ])

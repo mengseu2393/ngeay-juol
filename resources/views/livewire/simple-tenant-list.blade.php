@@ -1,5 +1,13 @@
 <div class="space-y-4">
 
+    {{-- ── Add tenant button ── --}}
+    <div class="flex justify-end">
+        <button type="button" wire:click="openAddTenant" class="rw-sm-create-invoice-btn" id="tenant-open-add-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            <span>{{ __('Add tenant') }}</span>
+        </button>
+    </div>
+
     {{-- ── Search ── --}}
     <div class="relative">
         <input
@@ -11,6 +19,86 @@
         >
         <svg class="rw-sm-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/></svg>
     </div>
+
+    {{-- ── Add tenant popup ── --}}
+    @if($showAddTenant)
+        <div
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            @keydown.escape.window="$wire.closeAddTenant()"
+        >
+            <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeAddTenant()">
+                <button
+                    type="button"
+                    wire:click="closeAddTenant"
+                    class="rw-sm-modal-close-btn"
+                    id="tenant-add-close-btn"
+                    aria-label="{{ __('Close') }}"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                    </svg>
+                </button>
+                <div class="rw-sm-modal w-full">
+                    @livewire('simple-add-tenant', key('simple-add-tenant-popup'))
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ── Edit tenant popup ── --}}
+    @if($editingRentalId)
+        <div
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            @keydown.escape.window="$wire.closeEditTenant()"
+        >
+            <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeEditTenant()">
+                <button
+                    type="button"
+                    wire:click="closeEditTenant"
+                    class="rw-sm-modal-close-btn"
+                    id="tenant-edit-close-btn"
+                    aria-label="{{ __('Close') }}"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                    </svg>
+                </button>
+                <div class="rw-sm-modal w-full">
+                    @livewire(\App\Livewire\SimpleEditTenant::class, ['rentalId' => $editingRentalId], key('simple-edit-tenant-'.$editingRentalId))
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ── End tenancy popup ── --}}
+    @if($endingRentalId)
+        @php
+            $endingUnitId = $this->scopedRental($endingRentalId)?->unit_id;
+        @endphp
+        <div
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            @keydown.escape.window="$wire.closeEndTenancy()"
+        >
+            <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeEndTenancy()">
+                <button
+                    type="button"
+                    wire:click="closeEndTenancy"
+                    class="rw-sm-modal-close-btn"
+                    id="tenant-end-close-btn"
+                    aria-label="{{ __('Close') }}"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                    </svg>
+                </button>
+                <div class="rw-sm-modal w-full">
+                    @if($endingUnitId)
+                        @livewire(\App\Livewire\SimpleEndTenancy::class, ['unitId' => $endingUnitId], key('simple-end-tenancy-'.$endingRentalId))
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- ── Tenant detail / login popup (duplicated from simple-room-list.blade.php
          — see App\Livewire\SimpleTenantList's class docblock) ── --}}
@@ -160,6 +248,22 @@
                             </button>
                         @endif
                     </div>
+
+                    {{-- ── Edit / End tenancy ── --}}
+                    <div class="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700 flex gap-2">
+                        <button
+                            type="button"
+                            wire:click="editTenant({{ $viewingRental->id }})"
+                            class="rw-sm-btn-ghost text-sm flex-1"
+                            id="tenant-view-edit-btn"
+                        >{{ __('Edit tenant') }}</button>
+                        <button
+                            type="button"
+                            wire:click="endTenancy({{ $viewingRental->id }})"
+                            class="rw-sm-btn-warning text-sm flex-1"
+                            id="tenant-view-end-tenancy-btn"
+                        >{{ __('End tenancy') }}</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -167,6 +271,13 @@
 
     {{-- ── Tenant list ── --}}
     @forelse($tenants as $rental)
+        @php
+            $statusColor = match($rental->status?->getColor()) {
+                'success' => 'rw-sm-badge-success',
+                'warning' => 'rw-sm-badge-warning',
+                default   => 'rw-sm-badge-gray',
+            };
+        @endphp
         <div class="rw-sm-invoice-card" id="tenant-card-{{ $rental->id }}">
             <div class="flex items-start justify-between gap-2">
                 <div>
@@ -176,6 +287,35 @@
                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ $rental->occupant_phone }}</p>
                     @endif
                 </div>
+                <span class="rw-sm-badge {{ $statusColor }} shrink-0">{{ $rental->status?->getLabel() }}</span>
+            </div>
+
+            <div class="mt-3 grid grid-cols-2 gap-y-1.5 text-sm">
+                <div>
+                    <p class="rw-sm-detail-label">{{ __('Total due') }}</p>
+                    @php $totalDue = $rental->invoices->sum(fn ($invoice) => $invoice->balance_usd + $invoice->balance_khr); @endphp
+                    <p class="rw-sm-detail-value {{ $totalDue > 0 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-emerald-600 dark:text-emerald-400' }}">
+                        {{ \App\Livewire\SimpleTenantList::totalDueFor($rental) }}
+                    </p>
+                </div>
+                @if($rental->monthly_rent)
+                    <div>
+                        <p class="rw-sm-detail-label">{{ __('Monthly rent') }}</p>
+                        <p class="rw-sm-detail-value">{{ \App\Support\Money::format($rental->monthly_rent, $rental->unit?->property?->currency) }}</p>
+                    </div>
+                @endif
+                @if($rental->start_date)
+                    <div>
+                        <p class="rw-sm-detail-label">{{ __('Move-in') }}</p>
+                        <p class="rw-sm-detail-value">{{ $rental->start_date->format('d M Y') }}</p>
+                    </div>
+                @endif
+                @if($rental->occupant_id_card)
+                    <div>
+                        <p class="rw-sm-detail-label">{{ __('ID card') }}</p>
+                        <p class="rw-sm-detail-value">{{ $rental->occupant_id_card }}</p>
+                    </div>
+                @endif
             </div>
 
             <div class="mt-3">

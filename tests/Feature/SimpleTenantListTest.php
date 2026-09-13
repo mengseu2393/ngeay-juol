@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\PlanBillingModel;
 use App\Enums\PlanInterval;
 use App\Enums\RentalStatus;
@@ -9,6 +10,7 @@ use App\Enums\SubscriptionStatus;
 use App\Enums\UnitStatus;
 use App\Enums\UserStatus;
 use App\Livewire\SimpleTenantList;
+use App\Models\Invoice;
 use App\Models\Property;
 use App\Models\Rental;
 use App\Models\Subscription;
@@ -39,6 +41,59 @@ class SimpleTenantListTest extends TestCase
 
         $this->seed(RolesAndPermissionsSeeder::class);
         ActiveProperty::clear();
+    }
+
+    public function test_row_shows_the_tenants_total_due(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+
+        Invoice::create([
+            'rental_id' => $rental->id,
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'tenant_id' => $rental->tenant_id,
+            'invoice_number' => 'INV-DUE-001',
+            'amount_due' => 500.0,
+            'period_start' => now()->startOfMonth(),
+            'period_end' => now()->endOfMonth(),
+            'issue_date' => now(),
+            'due_date' => now()->addDays(7),
+            'payment_status' => InvoiceStatus::Pending,
+        ]);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleTenantList::class)
+            ->assertSee(__('Total due'))
+            ->assertSee('$500.00');
+    }
+
+    public function test_row_shows_zero_due_when_fully_paid(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+
+        Invoice::create([
+            'rental_id' => $rental->id,
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'tenant_id' => $rental->tenant_id,
+            'invoice_number' => 'INV-PAID-001',
+            'amount_due' => 500.0,
+            'period_start' => now()->startOfMonth(),
+            'period_end' => now()->endOfMonth(),
+            'issue_date' => now(),
+            'due_date' => now()->addDays(7),
+            'payment_status' => InvoiceStatus::Paid,
+        ]);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleTenantList::class)
+            ->assertSee('$0.00');
     }
 
     public function test_only_active_tenancies_in_the_active_property_are_shown(): void
@@ -200,6 +255,52 @@ class SimpleTenantListTest extends TestCase
 
         Livewire::test(SimpleTenantList::class)
             ->assertSee(__('No tenants found.'));
+    }
+
+    public function test_open_add_tenant_shows_the_add_tenant_popup(): void
+    {
+        [$landlord, $property] = $this->landlordSetup(createRental: false);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::test(SimpleTenantList::class)
+            ->call('openAddTenant')
+            ->assertSet('showAddTenant', true)
+            ->call('closeAddTenant')
+            ->assertSet('showAddTenant', false);
+    }
+
+    public function test_edit_tenant_opens_popup_for_a_scoped_rental_only(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::test(SimpleTenantList::class)
+            ->call('editTenant', $rental->id)
+            ->assertSet('editingRentalId', $rental->id)
+            ->call('closeEditTenant')
+            ->assertSet('editingRentalId', null)
+            ->call('editTenant', 999999)
+            ->assertSet('editingRentalId', null);
+    }
+
+    public function test_end_tenancy_opens_popup_for_a_scoped_rental_only(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::test(SimpleTenantList::class)
+            ->call('endTenancy', $rental->id)
+            ->assertSet('endingRentalId', $rental->id)
+            ->call('closeEndTenancy')
+            ->assertSet('endingRentalId', null)
+            ->call('endTenancy', 999999)
+            ->assertSet('endingRentalId', null);
     }
 
     private function landlordSetup(bool $createRental = true): array

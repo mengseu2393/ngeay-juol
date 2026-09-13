@@ -114,6 +114,21 @@ class SimpleModeTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_properties_list_shows_back_to_simple_mode_when_from_simple(): void
+    {
+        $landlord = $this->makeLandlord();
+
+        $this->actingAs($landlord)
+            ->get('/app/properties?from=simple')
+            ->assertSuccessful()
+            ->assertSee(__('Back to Simple Mode'));
+
+        // Without the marker, the button must not render.
+        $this->get('/app/properties')
+            ->assertSuccessful()
+            ->assertDontSee(__('Back to Simple Mode'));
+    }
+
     /**
      * The Simple Mode add-tenant/end-tenancy screens' "Full Mode" links used
      * to omit ?from=simple entirely — a landlord with the preference enabled
@@ -604,6 +619,32 @@ class SimpleModeTest extends TestCase
             ->assertSee('/app/rentals?from=simple', false);
 
         $this->get('/app/rentals?from=simple')->assertSuccessful();
+    }
+
+    public function test_simple_end_tenancy_mount_param_jumps_straight_to_confirm_step(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+        $unit->update(['status' => UnitStatus::Occupied]);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleEndTenancy::class, ['unitId' => $unit->id])
+            ->assertSet('step', 'confirm')
+            ->assertSet('unitId', $unit->id);
+    }
+
+    public function test_simple_end_tenancy_without_unit_id_starts_at_pick_step(): void
+    {
+        [$landlord, $property] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleEndTenancy::class)
+            ->assertSet('step', 'pick');
     }
 
     // ── PWA ──────────────────────────────────────────────────────────────────

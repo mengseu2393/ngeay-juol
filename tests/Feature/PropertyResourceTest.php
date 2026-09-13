@@ -54,6 +54,25 @@ class PropertyResourceTest extends TestCase
         $response->assertDontSee('rw-force-card-split', false);
     }
 
+    /**
+     * The View row action defaults to navigating to the full ViewProperty page
+     * (since 'view' is a registered resource page) — it should pop up as a
+     * modal instead, using PropertyResource::infolist().
+     */
+    public function test_view_action_opens_as_a_modal_instead_of_navigating(): void
+    {
+        $landlord = $this->makeLandlord();
+        $property = Property::create(['landlord_id' => $landlord->id, 'name' => 'Modal Check Property']);
+
+        $response = $this->actingAs($landlord)->get('/app/properties');
+        $response->assertSuccessful();
+
+        // The View action mounts a modal action rather than rendering a link
+        // to the ViewProperty page — the record's own row-click link is
+        // untouched (unrelated to this row action) and would still be a link.
+        $this->assertStringContainsString('mountTableAction(&#039;view&#039;, &#039;'.$property->id.'&#039;)', $response->getContent());
+    }
+
     private function makeLandlord(): User
     {
         $landlord = User::create([

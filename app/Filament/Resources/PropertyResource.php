@@ -2,13 +2,19 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\PropertyType;
+use App\Enums\UnitStatus;
 use App\Filament\Resources\PropertyResource\Pages;
 use App\Filament\Tables\RowActionGroup;
 use App\Models\Property;
+use App\Support\Money;
 use App\Support\SimpleLandlordMode;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Infolists\Components\Section as InfolistSection;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -86,8 +92,74 @@ class PropertyResource extends Resource
         ]);
     }
 
+    /**
+     * Also used by the table's ViewAction (see table()) to pop up these details
+     * in a modal instead of navigating to the full ViewProperty page — a quick
+     * look shouldn't leave the list. Mirrors Pages\ViewProperty's infolist,
+     * minus that page's own header widgets/actions (setup checklist, Edit,
+     * Monthly billing, ...), which don't belong in a quick-glance popup.
+     */
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist->schema([
+            InfolistSection::make()
+                ->schema([
+                    TextEntry::make('name')->label(__('Property'))->weight('bold')->size('lg'),
+                    TextEntry::make('property_type')->badge(),
+                    TextEntry::make('address')
+                        ->label(__('Address'))
+                        ->state(fn ($record) => collect([$record->address_line, $record->village, $record->commune, $record->district, $record->city])->filter()->implode(', ') ?: '—'),
+                    TextEntry::make('landlord.name')->label(__('Owner'))->visible(fn () => auth()->user()?->isPlatformStaff()),
+                ])->columns(2),
+
+            InfolistSection::make(__('At a glance'))
+                ->schema([
+                    TextEntry::make('rooms')->label(__('Rooms'))
+                        ->state(fn ($record) => $record->units()->count()),
+                    TextEntry::make('occupied')->label(__('Occupied'))
+                        ->state(fn ($record) => $record->units()->where('status', UnitStatus::Occupied->value)->count()),
+                    TextEntry::make('utilities')->label(__('Active utilities'))
+                        ->state(fn ($record) => $record->propertyUtilities()->where('is_active', true)->count()),
+                    TextEntry::make('outstanding')->label(__('Outstanding'))
+                        ->state(function ($record) {
+                            $invoices = $record->invoices()
+                                ->whereIn('payment_status', [
+                                    InvoiceStatus::Pending->value,
+                                    InvoiceStatus::Partial->value,
+                                    InvoiceStatus::Overdue->value,
+                                ])
+                                ->get();
+
+                            $usdTotal = 0.0;
+                            $khrTotal = 0.0;
+
+                            foreach ($invoices as $invoice) {
+                                $usdTotal += $invoice->balance_usd;
+                                $khrTotal += $invoice->balance_khr;
+                            }
+
+                            $usdFormatted = Money::format($usdTotal, 'USD');
+                            $khrFormatted = Money::format($khrTotal, 'KHR');
+
+                            return "{$usdFormatted} / {$khrFormatted}";
+                        })
+                        ->color('warning'),
+                ])->columns(4),
+        ]);
+    }
+
     public static function table(Table $table): Table
     {
+        // request()->query('from') only reflects the request that loaded this
+        // page — a row action (View, Edit, ...) round-trips through Livewire's
+        // own /livewire/update endpoint, which carries none of the original
+        // URL's query string, so re-checking request() inside a column closure
+        // silently drops the class the moment any action runs. The page's own
+        // $fromSimpleMode property (set once in its mount()) is real Livewire
+        // component STATE and survives every subsequent request.
+        $livewire = $table->getLivewire();
+        $fromSimpleMode = property_exists($livewire, 'fromSimpleMode') && $livewire->fromSimpleMode;
+
         return $table
             ->columns([
                 // Split/Stack collapses to a card layout below `md` (see
@@ -122,7 +194,7 @@ class PropertyResource extends Resource
                     ])->space(2),
                 ])
                     ->from('md')
-                    ->extraAttributes(fn () => request()->query('from') === 'simple'
+                    ->extraAttributes(fn () => $fromSimpleMode
                         ? ['class' => 'rw-force-card-split']
                         : []),
             ])
@@ -132,7 +204,15 @@ class PropertyResource extends Resource
             ])
             ->actions([
                 RowActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
+                    // Explicit ->url(null) overrides Filament's default of
+                    // navigating to the 'view' page (registered in getPages())
+                    // — a quick "view details" tap should pop up, not leave
+                    // the list. ->infolist() supplies the modal's content
+                    // since the default (a disabled copy of form()) is far
+                    // less readable than the dedicated summary above.
+                    Tables\Actions\ViewAction::make()
+                        ->url(null)
+                        ->infolist(fn (Infolist $infolist) => static::infolist($infolist)),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
                 ]),

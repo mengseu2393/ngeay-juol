@@ -31,13 +31,21 @@
         </a>
     </div>
 
-    {{--
-        ── Account ──
-        Skipped: the landlord panel does not call ->profile() in
-        LandlordPanelProvider (grepped, no match — confirmed no
-        filament.landlord.auth.profile-style route exists either), so there
-        is no profile page to link to on this panel.
-    --}}
+    {{-- ── Account ── --}}
+    {{-- No ->profile() route on the landlord panel (grepped, no match), so
+         this is the in-page "profile" Alpine screen (SimpleProfile Livewire
+         component) rather than a link to a Filament profile page. --}}
+    <div class="rw-sm-panel rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <a href="?screen=profile" class="flex items-center justify-between gap-3" id="simple-settings-profile">
+            <div class="flex items-center gap-3">
+                <div class="rw-sm-action-icon bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Profile') }}</span>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+        </a>
+    </div>
 
     {{-- ── Language ── --}}
     <div class="rw-sm-panel rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -97,13 +105,6 @@
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
             </a>
-            <a href="{{ \App\Filament\Resources\TenantResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3" id="simple-settings-more-tenants">
-                <div class="flex items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
-                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Tenants') }}</span>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-            </a>
             <a href="{{ \App\Filament\Resources\RentalResource::getUrl(parameters: ['from' => 'simple']) }}" class="flex items-center justify-between gap-3" id="simple-settings-more-rentals">
                 <div class="flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
@@ -122,23 +123,6 @@
                 <div class="flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Utility Rates') }}</span>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-            </a>
-            <a href="{{ \App\Filament\Pages\MonthlyBilling::getUrl(['from' => 'simple']) }}" class="flex items-center justify-between gap-3" id="simple-settings-more-monthly-billing">
-                <div class="flex items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z"/></svg>
-                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Monthly Billing') }}</span>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-            </a>
-            {{-- The meter-reading screen moved off the bottom nav (that tab is
-                 now Tenants) — this is a plain in-page screen switch, not a
-                 desktop-panel escape hatch, so no ?from=simple param here. --}}
-            <a href="?screen=utility" class="flex items-center justify-between gap-3" id="simple-settings-more-utility">
-                <div class="flex items-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
-                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Utility') }}</span>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
             </a>
