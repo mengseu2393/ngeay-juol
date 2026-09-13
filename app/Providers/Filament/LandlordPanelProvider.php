@@ -122,6 +122,7 @@ class LandlordPanelProvider extends PanelProvider
                     '<meta name="apple-mobile-web-app-title" content="ងាយជួល">'.
                     '<link rel="apple-touch-icon" href="/icons/icon-192.png">'.
                     view('components.rw-loader-head')->render().
+                    view('components.rw-simple-popup-script')->render().
                     // Running as the installed PWA (home-screen icon) is hard-locked to
                     // Simple Mode — display-mode:standalone is only knowable client-side,
                     // so this redirects before paint rather than in RedirectToSimpleLandlordMode.

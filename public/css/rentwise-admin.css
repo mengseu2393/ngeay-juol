@@ -1905,10 +1905,13 @@ select.rw-sm-input {
 
 /* Direct child is always each popup's own white card wrapper (`.relative
    w-full max-w-* mt-6`) — animate it here rather than adding a new class to
-   every popup's markup. Livewire/Alpine unmount these instantly on close, so
-   only the entrance is animated; there's no graceful exit without added JS. */
+   every popup's markup. Only the entrance is keyframed — closing is an
+   instant display:none (see rw-simple-popup-script). will-change keeps the card on its own
+   compositor layer so the transform/opacity keyframes never re-rasterise the
+   card's contents (box-shadow, text) mid-animation on a phone GPU. */
 .rw-sm-modal-overlay > div {
     animation: rw-sm-modal-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
 }
 
 @keyframes rw-sm-modal-backdrop-in {
@@ -1921,9 +1924,56 @@ select.rw-sm-input {
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ── Invoice-view popup: placeholder card shown between the tap and the
+   server's invoice body. Deliberately tiny and shadow-free so the entrance
+   keyframes above animate a cheap surface, not the 700-line slip. Same
+   surface/border/radius as .rw-invoice so nothing "jumps" when the real
+   slip fades in over it. ── */
+.rw-sm-invoice-skeleton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 18rem;
+    border-radius: 1rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+.fi.dark .rw-sm-invoice-skeleton {
+    background: #131c2e;
+    border-color: #334155;
+    color: #94a3b8;
+}
+.rw-sm-invoice-skeleton-spinner {
+    width: 2rem;
+    height: 2rem;
+    color: rgb(var(--primary-600));
+}
+.fi.dark .rw-sm-invoice-skeleton-spinner {
+    color: rgb(var(--primary-400));
+}
+/* The real slip replaces the placeholder with a quick opacity-only fade
+   (x-show re-runs the keyframes each time it is displayed). */
+.rw-sm-invoice-view-body,
+.rw-sm-popup-body {
+    animation: rw-sm-modal-backdrop-in 0.15s ease-out;
+}
+/* Generic popups (<x-rw-simple-popup>) hold a small card, so their
+   placeholder is shorter than the invoice slip's. */
+.rw-sm-popup-skeleton {
+    min-height: 10rem;
+    border-radius: 1.25rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .rw-sm-modal-overlay,
-    .rw-sm-modal-overlay > div {
+    .rw-sm-modal-overlay > div,
+    .rw-sm-invoice-view-body,
+    .rw-sm-popup-body {
         animation: none;
     }
 }

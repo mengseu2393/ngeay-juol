@@ -38,22 +38,7 @@ class SimpleInvoiceList extends Component
 
     public ?string $paySuccessMessage = null;
 
-    /** ID of the invoice currently shown in the view-details modal */
-    public ?int $viewingInvoiceId = null;
-
     protected $queryString = ['filter', 'search'];
-
-    protected $listeners = ['invoice-view-closed' => 'closeView'];
-
-    public function viewInvoice(int $invoiceId): void
-    {
-        $this->viewingInvoiceId = $invoiceId;
-    }
-
-    public function closeView(): void
-    {
-        $this->viewingInvoiceId = null;
-    }
 
     public function updatingFilter(): void
     {

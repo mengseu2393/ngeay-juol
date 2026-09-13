@@ -22,25 +22,8 @@
 
     {{-- ── Set utility reading modal (fresh-start baseline reading, one metered
          utility per row; a flat charge needs no meter so isn't listed) ── --}}
-    @if($settingReadingUnitId)
-        <div
-            x-data
-            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
-            @keydown.escape.window="$wire.closeUtilityReading()"
-        >
-            <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeUtilityReading()">
-                <button
-                    type="button"
-                    wire:click="closeUtilityReading"
-                    class="rw-sm-modal-close-btn"
-                    id="utility-reading-close-btn"
-                    aria-label="{{ __('Close') }}"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-                    </svg>
-                </button>
-
+    <x-rw-simple-popup name="room-utility-reading" close="closeUtilityReading">
+        @if($settingReadingUnitId)
                 <div class="rw-sm-modal w-full">
                     <h3 class="rw-sm-modal-title">{{ __('Set utility reading') }}</h3>
                     <p class="rw-sm-modal-sub">{{ __('Record the starting meter reading for this unit\'s metered utilities.') }}</p>
@@ -73,14 +56,13 @@
                             @error('readingValues') <p class="rw-sm-error">{{ $message }}</p> @enderror
                         </div>
 
-                        <div class="mt-5 flex gap-3">
-                            <button type="button" wire:click="closeUtilityReading" class="rw-sm-btn-secondary flex-1" id="utility-reading-cancel-btn">{{ __('Cancel') }}</button>
+                        <div class="mt-5">
                             <button
                                 type="button"
                                 wire:click="submitUtilityReading"
                                 wire:loading.attr="disabled"
                                 wire:target="submitUtilityReading"
-                                class="rw-sm-btn-primary flex-1"
+                                class="rw-sm-btn-primary w-full"
                                 id="utility-reading-submit-btn"
                             >
                                 <span wire:loading.remove wire:target="submitUtilityReading">{{ __('Save') }}</span>
@@ -89,14 +71,13 @@
                         </div>
                     @endif
                 </div>
-            </div>
-        </div>
-    @endif
+        @endif
+    </x-rw-simple-popup>
 
     {{-- ── Tenant detail / login popup ── --}}
-    @if($viewingRental)
-        <div
-            x-data="{
+    <x-rw-simple-popup name="room-tenant-view" close="closeTenantView">
+        @if($viewingRental)
+                <div class="rw-sm-modal w-full" x-data="{
                 copied: null,
                 copy(text, key) {
                     navigator.clipboard.writeText(text).then(() => {
@@ -104,24 +85,7 @@
                         setTimeout(() => { if (this.copied === key) this.copied = null; }, 1500);
                     });
                 },
-            }"
-            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
-            @keydown.escape.window="$wire.closeTenantView()"
-        >
-            <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeTenantView()">
-                <button
-                    type="button"
-                    wire:click="closeTenantView"
-                    class="rw-sm-modal-close-btn"
-                    id="tenant-view-close-btn"
-                    aria-label="{{ __('Close') }}"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-                    </svg>
-                </button>
-
-                <div class="rw-sm-modal w-full">
+            }">
                     <h3 class="rw-sm-modal-title">{{ $viewingRental->occupant_name ?: __('Tenant') }}</h3>
                     <p class="rw-sm-modal-sub">{{ __('Room') }} {{ $viewingRental->unit?->room_number }}</p>
 
@@ -241,9 +205,8 @@
                         @endif
                     </div>
                 </div>
-            </div>
-        </div>
-    @endif
+        @endif
+    </x-rw-simple-popup>
 
     {{-- ── Room list ── --}}
     @forelse($rooms as $room)
@@ -279,7 +242,7 @@
                 @if($room->activeRental)
                     <button
                         type="button"
-                        wire:click="viewTenant({{ $room->activeRental->id }})"
+                        @click="$dispatch('rw-popup-open', { name: 'room-tenant-view', call: () => $wire.viewTenant({{ $room->activeRental->id }}) })"
                         class="rw-sm-btn-ghost text-sm"
                         id="room-view-tenant-btn-{{ $room->id }}"
                     >{{ __('View tenant') }}</button>
@@ -290,7 +253,7 @@
                          initial (baseline) meter reading before billing can start --}}
                     <button
                         type="button"
-                        wire:click="openUtilityReading({{ $room->id }})"
+                        @click="$dispatch('rw-popup-open', { name: 'room-utility-reading', call: () => $wire.openUtilityReading({{ $room->id }}) })"
                         class="rw-sm-btn-ghost text-sm"
                         id="room-set-utility-reading-{{ $room->id }}"
                     >{{ __('Set utility reading') }}</button>

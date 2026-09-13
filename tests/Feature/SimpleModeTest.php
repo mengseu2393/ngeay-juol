@@ -407,22 +407,32 @@ class SimpleModeTest extends TestCase
 
     // ── Simple invoice view popup ────────────────────────────────────────────
 
-    public function test_view_invoice_sets_the_viewing_id_and_close_view_clears_it(): void
+    /**
+     * The popup shell is opened client-side (Alpine) the instant "View details"
+     * is tapped; the only server work is SimpleInvoiceView::open() swapping the
+     * invoice body in. The parent list must therefore expose no view/close
+     * actions at all — if one creeps back in, the tap is gated on a round-trip
+     * (and a full list re-render) again, which is exactly the mobile lag this
+     * design removed.
+     */
+    public function test_invoice_list_no_longer_owns_the_view_popup_state(): void
     {
         [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
 
         $this->actingAs($landlord);
         ActiveProperty::set($property->id);
 
+        $this->assertFalse(method_exists(SimpleInvoiceList::class, 'viewInvoice'));
+        $this->assertFalse(property_exists(SimpleInvoiceList::class, 'viewingInvoiceId'));
+
+        // The popup component is mounted once alongside the list (empty until opened).
         Livewire::actingAs($landlord)
             ->test(SimpleInvoiceList::class)
-            ->call('viewInvoice', $invoice->id)
-            ->assertSet('viewingInvoiceId', $invoice->id)
-            ->call('closeView')
-            ->assertSet('viewingInvoiceId', null);
+            ->assertSeeLivewire(SimpleInvoiceView::class)
+            ->assertSeeHtml('invoice-view-'.$invoice->id);
     }
 
-    public function test_invoice_view_closed_event_clears_the_parents_viewing_id(): void
+    public function test_simple_invoice_view_mounts_empty_and_open_loads_the_invoice_body(): void
     {
         [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
 
@@ -430,11 +440,27 @@ class SimpleModeTest extends TestCase
         ActiveProperty::set($property->id);
 
         Livewire::actingAs($landlord)
-            ->test(SimpleInvoiceList::class)
-            ->call('viewInvoice', $invoice->id)
-            ->assertSet('viewingInvoiceId', $invoice->id)
-            ->dispatch('invoice-view-closed')
-            ->assertSet('viewingInvoiceId', null);
+            ->test(SimpleInvoiceView::class)
+            ->assertSet('invoiceId', null)
+            ->assertDontSee($invoice->invoice_number)
+            ->call('open', $invoice->id)
+            ->assertSet('invoiceId', $invoice->id)
+            ->assertSee($invoice->invoice_number);
+    }
+
+    public function test_simple_invoice_view_open_404s_for_an_invoice_outside_the_active_property(): void
+    {
+        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
+
+        $otherProperty = Property::create(['landlord_id' => $landlord->id, 'name' => 'Other property']);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($otherProperty->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleInvoiceView::class)
+            ->call('open', $invoice->id)
+            ->assertStatus(404);
     }
 
     public function test_simple_invoice_view_renders_the_scoped_invoice(): void

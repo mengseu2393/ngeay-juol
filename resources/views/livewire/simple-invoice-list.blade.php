@@ -127,12 +127,12 @@
         </div>
     </div>
 
-    {{-- ── View-details modal — isolated in its own Livewire component
-         (SimpleInvoiceView) so opening it doesn't force this whole invoice
-         list through a re-render/requery ── --}}
-    @if($viewingInvoiceId)
-        @livewire(\App\Livewire\SimpleInvoiceView::class, ['invoiceId' => $viewingInvoiceId], key('simple-invoice-view-'.$viewingInvoiceId))
-    @endif
+    {{-- ── View-details modal — its own Livewire component (SimpleInvoiceView),
+         mounted once and kept across this list's re-renders. The popup shell
+         opens client-side the instant a card's "View details" dispatches
+         rw-open-invoice; only the invoice body is fetched, so this list is
+         never re-rendered/requeried just to show a popup. ── --}}
+    @livewire(\App\Livewire\SimpleInvoiceView::class, [], key('simple-invoice-view'))
 
     {{-- ── Invoice cards ── --}}
     @forelse($invoices as $invoice)
@@ -187,16 +187,10 @@
             <div class="mt-4 flex flex-wrap sm:flex-nowrap gap-2">
                 <button
                     type="button"
-                    wire:click="viewInvoice({{ $invoice->id }})"
-                    wire:loading.attr="disabled"
-                    wire:target="viewInvoice({{ $invoice->id }})"
+                    @click="$dispatch('rw-open-invoice', { id: {{ $invoice->id }} })"
                     class="rw-sm-btn-ghost flex-1 text-center flex items-center justify-center gap-1.5"
                     id="invoice-view-{{ $invoice->id }}"
-                >
-                    <svg wire:loading wire:target="viewInvoice({{ $invoice->id }})" class="h-4 w-4 shrink-0 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                    <span wire:loading.remove wire:target="viewInvoice({{ $invoice->id }})">{{ __('View details') }}</span>
-                    <span wire:loading wire:target="viewInvoice({{ $invoice->id }})">{{ __('Loading…') }}</span>
-                </button>
+                >{{ __('View details') }}</button>
 
                 <button
                     type="button"

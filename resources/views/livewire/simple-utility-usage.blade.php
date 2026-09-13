@@ -23,25 +23,8 @@
     {{-- ── Record meter reading reveal — ongoing monthly reading with real
          consumption computed via MeterReadingResolver (not the baseline-only
          "initial setup" flow SimpleRoomList uses for a room's first reading) ── --}}
-    @if($recordingUnitId)
-        <div
-            x-data
-            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
-            @keydown.escape.window="$wire.closeUtilityReading()"
-        >
-            <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeUtilityReading()">
-                <button
-                    type="button"
-                    wire:click="closeUtilityReading"
-                    class="rw-sm-modal-close-btn"
-                    id="utility-usage-close-btn"
-                    aria-label="{{ __('Close') }}"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-                    </svg>
-                </button>
-
+    <x-rw-simple-popup name="utility-reading" close="closeUtilityReading">
+        @if($recordingUnitId)
                 <div class="rw-sm-modal w-full">
                     <h3 class="rw-sm-modal-title">{{ __('Record meter reading') }}</h3>
                     <p class="rw-sm-modal-sub">{{ __("Enter today's meter reading for each metered utility.") }}</p>
@@ -77,14 +60,13 @@
                             @error('readingValues') <p class="rw-sm-error">{{ $message }}</p> @enderror
                         </div>
 
-                        <div class="mt-5 flex gap-3">
-                            <button type="button" wire:click="closeUtilityReading" class="rw-sm-btn-secondary flex-1" id="utility-usage-cancel-btn">{{ __('Cancel') }}</button>
+                        <div class="mt-5">
                             <button
                                 type="button"
                                 wire:click="submitUtilityReading"
                                 wire:loading.attr="disabled"
                                 wire:target="submitUtilityReading"
-                                class="rw-sm-btn-primary flex-1"
+                                class="rw-sm-btn-primary w-full"
                                 id="utility-usage-submit-btn"
                             >
                                 <span wire:loading.remove wire:target="submitUtilityReading">{{ __('Save') }}</span>
@@ -93,9 +75,8 @@
                         </div>
                     @endif
                 </div>
-            </div>
-        </div>
-    @endif
+        @endif
+    </x-rw-simple-popup>
 
     {{-- ── Room list ── --}}
     @forelse($rooms as $room)
@@ -105,9 +86,7 @@
 
         <button
             type="button"
-            wire:click="openUtilityReading({{ $room->id }})"
-            wire:loading.attr="disabled"
-            wire:target="openUtilityReading({{ $room->id }})"
+            @click="$dispatch('rw-popup-open', { name: 'utility-reading', call: () => $wire.openUtilityReading({{ $room->id }}) })"
             class="rw-sm-room-row w-full text-left"
             id="utility-usage-room-{{ $room->id }}"
         >
