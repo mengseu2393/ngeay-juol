@@ -110,6 +110,49 @@ class SimpleModeTest extends TestCase
             ->assertSuccessful();
     }
 
+    /**
+     * A landlord who has never opted into Simple Mode gets nudged into it on a
+     * phone-sized user agent — a suggestion, not a persisted preference change.
+     */
+    public function test_mobile_user_agent_is_auto_switched_to_simple_mode(): void
+    {
+        $landlord = $this->makeLandlord();
+
+        $this->actingAs($landlord)
+            ->withHeaders(['User-Agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15'])
+            ->get('/app/properties')
+            ->assertRedirect(route('filament.landlord.pages.simple'));
+
+        $this->assertFalse($landlord->fresh()->prefersSimpleLandlordMode());
+    }
+
+    public function test_mobile_auto_switch_does_not_repeat_within_the_same_session(): void
+    {
+        $landlord = $this->makeLandlord();
+        $agent = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36';
+
+        $this->actingAs($landlord)
+            ->withHeaders(['User-Agent' => $agent])
+            ->get('/app/properties')
+            ->assertRedirect(route('filament.landlord.pages.simple'));
+
+        // Same session: a manual "switch to full mode" should stick, not bounce
+        // straight back to Simple Mode on the very next mobile request.
+        $this->withHeaders(['User-Agent' => $agent])
+            ->get('/app/properties')
+            ->assertSuccessful();
+    }
+
+    public function test_desktop_user_agent_is_not_auto_switched_to_simple_mode(): void
+    {
+        $landlord = $this->makeLandlord();
+
+        $this->actingAs($landlord)
+            ->withHeaders(['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36'])
+            ->get('/app/properties')
+            ->assertSuccessful();
+    }
+
     public function test_simple_mode_menu_action_enables_preference(): void
     {
         $landlord = $this->makeLandlord();

@@ -15,6 +15,12 @@ class RedirectToSimpleLandlordMode
             return redirect()->route('filament.landlord.pages.simple');
         }
 
+        if (SimpleLandlordMode::shouldAutoSwitchToSimple($request)) {
+            $request->session()->put('mobile_simple_mode_suggested', true);
+
+            return redirect()->route('filament.landlord.pages.simple');
+        }
+
         return $next($request);
     }
 }
