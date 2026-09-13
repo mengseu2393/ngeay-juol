@@ -138,17 +138,6 @@
             @keydown.escape.window="$wire.closeView()"
         >
             <div class="relative w-full max-w-4xl mt-6" @click.outside="$wire.closeView()">
-                <button
-                    type="button"
-                    wire:click="closeView"
-                    class="rw-sm-modal-close-btn"
-                    id="invoice-view-close-btn"
-                    aria-label="{{ __('Close') }}"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-                    </svg>
-                </button>
                 {{-- rw-sm-hide-invoice-toolbar: Simple Mode only shows the invoice
                      slip itself — Print/PDF/View-details live on desktop and the
                      tenant portal via this same shared component, so the toolbar
@@ -156,6 +145,15 @@
                 <div class="rw-sm-hide-invoice-toolbar">
                     @include('components.invoice-slip-modal', ['invoice' => $viewingInvoice])
                 </div>
+
+                <button
+                    type="button"
+                    wire:click="closeView"
+                    class="rw-sm-btn-secondary w-full mt-3"
+                    id="invoice-view-cancel-btn"
+                >
+                    {{ __('Cancel') }}
+                </button>
             </div>
         </div>
     @endif

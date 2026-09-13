@@ -18,6 +18,8 @@ use App\Models\User;
 use App\Support\ActiveProperty;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -168,6 +170,25 @@ class SimpleTenantListTest extends TestCase
             ->assertSet('viewingRentalId', $rental->id)
             ->assertSee('012345678')
             ->assertSee('ID-999');
+    }
+
+    public function test_tenant_detail_modal_shows_uploaded_id_card_photos(): void
+    {
+        Storage::fake('public');
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+
+        $photo = UploadedFile::fake()->image('id-front.jpg');
+        $rental->addMedia($photo->getRealPath())
+            ->usingFileName($photo->getClientOriginalName())
+            ->toMediaCollection('id_cards');
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::test(SimpleTenantList::class)
+            ->call('viewTenant', $rental->id)
+            ->assertSee(__('ID card photos'))
+            ->assertSee($rental->getFirstMediaUrl('id_cards'), false);
     }
 
     public function test_empty_state_renders_when_there_are_no_active_tenants(): void

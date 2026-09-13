@@ -88,6 +88,22 @@
                         @endif
                     </div>
 
+                    {{-- ── ID card photos (Rental's own `id_cards` media collection —
+                         the same one RentalResource's desktop form and the mobile
+                         add-tenant upload both use) ── --}}
+                    @if($viewingRental->getMedia('id_cards')->isNotEmpty())
+                        <div class="mt-4">
+                            <p class="rw-sm-detail-label mb-2">{{ __('ID card photos') }}</p>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($viewingRental->getMedia('id_cards') as $media)
+                                    <a href="{{ $media->getUrl() }}" target="_blank" rel="noopener" class="block h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                                        <img src="{{ $media->getUrl() }}" class="h-full w-full object-cover" alt="{{ __('ID card photo') }}">
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     {{-- ── Portal login ── --}}
                     <div class="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <p class="rw-sm-label">{{ __('Tenant portal login') }}</p>
