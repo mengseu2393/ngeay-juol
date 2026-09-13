@@ -82,6 +82,55 @@
                 </div>
             </div>
 
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="rw-sm-label" for="at-dob">{{ __('Date of birth') }}</label>
+                    <input type="date" id="at-dob" wire:model="occupantDob" class="rw-sm-input">
+                    @error('occupantDob') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="rw-sm-label" for="at-nationality">{{ __('Nationality') }}</label>
+                    <input type="text" id="at-nationality" wire:model="occupantNationality" class="rw-sm-input" placeholder="{{ __('e.g. Khmer, Vietnamese') }}">
+                    @error('occupantNationality') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                </div>
+            </div>
+
+            <div>
+                <label class="rw-sm-label" for="at-workplace">{{ __('Workplace') }}</label>
+                <input type="text" id="at-workplace" wire:model="occupantWorkplace" class="rw-sm-input" placeholder="{{ __('e.g. company name') }}">
+                @error('occupantWorkplace') <p class="rw-sm-error">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="rw-sm-label" for="at-address">{{ __('Address') }}</label>
+                <textarea id="at-address" wire:model="occupantAddress" class="rw-sm-input" rows="2"></textarea>
+                @error('occupantAddress') <p class="rw-sm-error">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <p class="rw-sm-label mb-2">{{ __('Emergency contact') }}</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="rw-sm-label" for="at-ec-name">{{ __('Name') }}</label>
+                        <input type="text" id="at-ec-name" wire:model="emergencyContactName" class="rw-sm-input">
+                        @error('emergencyContactName') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="rw-sm-label" for="at-ec-phone">{{ __('Phone') }}</label>
+                            <input type="tel" id="at-ec-phone" wire:model="emergencyContactPhone" class="rw-sm-input">
+                            @error('emergencyContactPhone') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="rw-sm-label" for="at-ec-relationship">{{ __('Relationship') }}</label>
+                            <input type="text" id="at-ec-relationship" wire:model="emergencyContactRelationship" class="rw-sm-input">
+                            @error('emergencyContactRelationship') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div>
                 <label class="rw-sm-label" for="at-start">{{ __('Start date') }} <span class="text-red-500">*</span></label>
                 <input type="date" id="at-start" wire:model="startDate" class="rw-sm-input">
@@ -111,7 +160,7 @@
             </button>
 
             <p class="text-xs text-center text-gray-400 dark:text-gray-500">
-                {{ __('More fields (date of birth, guarantor, address, etc.) are available in') }}
+                {{ __('Guarantor details and an ID card photo are available in') }}
                 <a href="{{ \App\Filament\Resources\RentalResource::getUrl('create', panel: 'landlord') }}" class="underline text-primary-600 dark:text-primary-400">{{ __('Full Mode') }}</a>.
             </p>
         </div>

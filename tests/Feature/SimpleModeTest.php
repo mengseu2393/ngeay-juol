@@ -317,6 +317,49 @@ class SimpleModeTest extends TestCase
         ]);
     }
 
+    public function test_simple_add_tenant_saves_the_full_occupant_and_emergency_contact_detail(): void
+    {
+        [$landlord, $property, $unit] = $this->landlordSetup(createRental: false);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleAddTenant::class)
+            ->call('pickRoom', $unit->id)
+            ->set('occupantName', 'Sok Dara')
+            ->set('occupantPhone', '012345678')
+            ->set('occupantIdCard', '123456789')
+            ->set('occupantGender', 'male')
+            ->set('occupantDob', '1995-06-15')
+            ->set('occupantNationality', 'Khmer')
+            ->set('occupantWorkplace', 'ABC Company')
+            ->set('occupantAddress', 'House 12, Street 3, Phnom Penh')
+            ->set('emergencyContactName', 'Sok Sopheak')
+            ->set('emergencyContactPhone', '098765432')
+            ->set('emergencyContactRelationship', 'Sibling')
+            ->set('startDate', now()->toDateString())
+            ->set('monthlyRent', '500.00')
+            ->call('submit')
+            ->assertSet('step', 'done');
+
+        $this->assertDatabaseHas('rentals', [
+            'unit_id' => $unit->id,
+            'occupant_name' => 'Sok Dara',
+            'occupant_id_card' => '123456789',
+            'occupant_gender' => 'male',
+            'occupant_nationality' => 'Khmer',
+            'occupant_workplace' => 'ABC Company',
+            'occupant_address' => 'House 12, Street 3, Phnom Penh',
+            'emergency_contact_name' => 'Sok Sopheak',
+            'emergency_contact_phone' => '098765432',
+            'emergency_contact_relationship' => 'Sibling',
+        ]);
+
+        $rental = Rental::where('unit_id', $unit->id)->firstOrFail();
+        $this->assertSame('1995-06-15', $rental->occupant_dob->toDateString());
+    }
+
     public function test_simple_add_tenant_saves_id_card_gender_and_deposit(): void
     {
         [$landlord, $property, $unit] = $this->landlordSetup(createRental: false);

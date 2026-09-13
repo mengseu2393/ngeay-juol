@@ -13,8 +13,9 @@ use Livewire\Component;
 /**
  * Simple add-tenant flow for mobile/PWA.
  * Step 1: pick vacant room → Step 2: enter tenant info → Step 3: confirm result.
- * Covers the fields a landlord fills in on move-in day (name, phone, ID card,
- * gender, deposit); guarantor/occupant-address and other rarer fields stay
+ * Covers the occupant/tenancy fields a landlord fills in on move-in day (name,
+ * phone, ID card, gender, DOB, nationality, workplace, address, emergency
+ * contact, deposit). Guarantor details and an ID card photo upload stay
  * deferred to Full Mode. Uses existing rental/tenancy rules and RoomAccountService.
  */
 class SimpleAddTenant extends Component
@@ -31,6 +32,20 @@ class SimpleAddTenant extends Component
     public string $occupantIdCard = '';
 
     public string $occupantGender = '';
+
+    public string $occupantDob = '';
+
+    public string $occupantNationality = '';
+
+    public string $occupantWorkplace = '';
+
+    public string $occupantAddress = '';
+
+    public string $emergencyContactName = '';
+
+    public string $emergencyContactPhone = '';
+
+    public string $emergencyContactRelationship = '';
 
     public string $startDate = '';
 
@@ -71,6 +86,13 @@ class SimpleAddTenant extends Component
         $this->occupantPhone = '';
         $this->occupantIdCard = '';
         $this->occupantGender = '';
+        $this->occupantDob = '';
+        $this->occupantNationality = '';
+        $this->occupantWorkplace = '';
+        $this->occupantAddress = '';
+        $this->emergencyContactName = '';
+        $this->emergencyContactPhone = '';
+        $this->emergencyContactRelationship = '';
         $this->monthlyRent = '';
         $this->securityDeposit = '';
         $this->result = null;
@@ -83,6 +105,13 @@ class SimpleAddTenant extends Component
             'occupantPhone' => 'nullable|string|max:50',
             'occupantIdCard' => 'nullable|string|max:255',
             'occupantGender' => 'nullable|in:male,female,other',
+            'occupantDob' => 'nullable|date',
+            'occupantNationality' => 'nullable|string|max:255',
+            'occupantWorkplace' => 'nullable|string|max:255',
+            'occupantAddress' => 'nullable|string|max:1000',
+            'emergencyContactName' => 'nullable|string|max:255',
+            'emergencyContactPhone' => 'nullable|string|max:50',
+            'emergencyContactRelationship' => 'nullable|string|max:255',
             'startDate' => 'required|date',
             'monthlyRent' => 'required|numeric|min:0',
             'securityDeposit' => 'nullable|numeric|min:0',
@@ -116,6 +145,13 @@ class SimpleAddTenant extends Component
             'occupant_phone' => trim($this->occupantPhone) ?: null,
             'occupant_id_card' => trim($this->occupantIdCard) ?: null,
             'occupant_gender' => $this->occupantGender ?: null,
+            'occupant_dob' => $this->occupantDob ?: null,
+            'occupant_nationality' => trim($this->occupantNationality) ?: null,
+            'occupant_workplace' => trim($this->occupantWorkplace) ?: null,
+            'occupant_address' => trim($this->occupantAddress) ?: null,
+            'emergency_contact_name' => trim($this->emergencyContactName) ?: null,
+            'emergency_contact_phone' => trim($this->emergencyContactPhone) ?: null,
+            'emergency_contact_relationship' => trim($this->emergencyContactRelationship) ?: null,
             'monthly_rent' => (float) $this->monthlyRent,
             'monthly_rent_currency' => $unit->rent_currency ?: 'USD',
             'security_deposit' => $this->securityDeposit !== '' ? (float) $this->securityDeposit : 0,
@@ -143,6 +179,8 @@ class SimpleAddTenant extends Component
     {
         $this->reset([
             'unitId', 'occupantName', 'occupantPhone', 'occupantIdCard', 'occupantGender',
+            'occupantDob', 'occupantNationality', 'occupantWorkplace', 'occupantAddress',
+            'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelationship',
             'startDate', 'monthlyRent', 'securityDeposit', 'result',
         ]);
         $this->startDate = now()->toDateString();
