@@ -23,7 +23,7 @@
     {{-- ── Add tenant popup ── --}}
     @if($showAddTenant)
         <div
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
             @keydown.escape.window="$wire.closeAddTenant()"
         >
             <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeAddTenant()">
@@ -48,7 +48,7 @@
     {{-- ── Edit tenant popup ── --}}
     @if($editingRentalId)
         <div
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
             @keydown.escape.window="$wire.closeEditTenant()"
         >
             <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeEditTenant()">
@@ -76,7 +76,7 @@
             $endingUnitId = $this->scopedRental($endingRentalId)?->unit_id;
         @endphp
         <div
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
             @keydown.escape.window="$wire.closeEndTenancy()"
         >
             <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeEndTenancy()">
@@ -113,7 +113,7 @@
                     });
                 },
             }"
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
             @keydown.escape.window="$wire.closeTenantView()"
         >
             <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeTenantView()">

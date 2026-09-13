@@ -76,22 +76,46 @@ html.rw-loading::before,
 html.rw-loading::after {
     content: "";
     position: fixed;
-    inset: 0;
     z-index: 2147483000;
     /* Never swallow clicks: if this ever outlives a load, the app underneath still works. */
     pointer-events: none;
 }
 
 html.rw-loading::before {
+    /* `inset: 0` sizes this against a `position: fixed` box's containing
+       block, which mobile browsers resolve to the "large" viewport (as if
+       the address bar were hidden), not what's actually visible right after
+       a fresh page load — the bar hasn't collapsed yet. `dvw`/`dvh` track
+       the real, currently-visible viewport instead. */
+    inset: 0;
+    width: 100dvw;
+    height: 100dvh;
     background-color: var(--rw-loader-backdrop);
 }
 
 html.rw-loading::after {
     --rw-loader-dot: no-repeat radial-gradient(farthest-side, var(--rw-loader-color) 92%, #0000);
 
+    /* Same viewport-size mismatch as ::before above, but `inset: 0` +
+       `margin: auto` can't be patched with dvh/dvw the way a background box
+       can — margin-based centering still resolves against that same
+       oversized containing block. Pin the CENTER POINT with dvh/dvw instead,
+       then pull the box back by half its own size via negative margins —
+       `transform: translate()` would do the same job, but this element's
+       `rw-spin` animation already owns `transform` (rotation) below, and an
+       animated `transform` fully replaces the property's static value each
+       frame, dropping any translate() sat alongside it. `50%` first as the
+       fallback for a browser without dvh/dvw (still the old buggy centering,
+       but centered is centered when the toolbar is out of the way); dvh/dvw
+       overrides it everywhere modern enough to have introduced the bug. */
+    top: 50%;
+    left: 50%;
+    top: 50dvh;
+    left: 50dvw;
+
     width: var(--rw-loader-size);
     height: var(--rw-loader-size);
-    margin: auto;
+    margin: calc(var(--rw-loader-size) / -2) 0 0 calc(var(--rw-loader-size) / -2);
     background:
         var(--rw-loader-dot) top,
         var(--rw-loader-dot) left,

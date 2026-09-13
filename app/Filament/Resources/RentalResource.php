@@ -227,7 +227,7 @@ class RentalResource extends Resource
                             ->icon('heroicon-m-identification')
                             ->color('gray')
                             ->placeholder('—')
-                            ->visible(fn (Rental $record) => filled($record->occupant_id_card))
+                            ->visible(fn (?Rental $record) => filled($record?->occupant_id_card))
                             ->toggleable(isToggledHiddenByDefault: true),
                     ])->space(2),
 
@@ -251,7 +251,7 @@ class RentalResource extends Resource
                             ->icon('heroicon-m-users')
                             ->counts('occupants')
                             ->color(fn ($state) => $state > 1 ? 'info' : 'gray')
-                            ->visible(fn ($state) => $state > 1)
+                            ->visible(fn (?Rental $record) => ($record?->occupants_count ?? 0) > 1)
                             ->toggleable(),
                     ])->space(2),
                 ])

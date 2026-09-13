@@ -25,7 +25,7 @@
     @if($settingReadingUnitId)
         <div
             x-data
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
             @keydown.escape.window="$wire.closeUtilityReading()"
         >
             <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeUtilityReading()">
@@ -105,7 +105,7 @@
                     });
                 },
             }"
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
             @keydown.escape.window="$wire.closeTenantView()"
         >
             <div class="relative w-full max-w-md mt-6" @click.outside="$wire.closeTenantView()">

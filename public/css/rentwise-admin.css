@@ -3540,3 +3540,13 @@ select.rw-sm-input {
         display: none !important;
     }
 }
+
+/* SimpleProfile's avatar circle — h-24/w-24 aren't in Filament's precompiled
+   Tailwind (only the utility sizes Filament's own components happen to use
+   are included), so they silently compiled to nothing and the container had
+   no actual fixed size, leaving the photo un-cropped instead of a circle. */
+.rw-sm-avatar {
+    width: 6rem;
+    height: 6rem;
+    flex-shrink: 0;
+}

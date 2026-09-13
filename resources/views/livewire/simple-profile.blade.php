@@ -5,7 +5,7 @@
         <p class="rw-sm-property-label text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400 mb-3">{{ __('Photo') }}</p>
 
         <div class="flex flex-col items-center gap-3">
-            <div class="h-24 w-24 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+            <div class="rw-sm-avatar overflow-hidden rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
                 @if($avatarPhoto)
                     <img src="{{ $avatarPhoto->temporaryUrl() }}" class="h-full w-full object-cover" alt="{{ __('Profile photo') }}">
                 @elseif($avatarUrl)

@@ -134,7 +134,7 @@
         <div
             x-data
             x-init="$nextTick(() => {})"
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
             @keydown.escape.window="$wire.closeView()"
         >
             <div class="relative w-full max-w-4xl mt-6" @click.outside="$wire.closeView()">
