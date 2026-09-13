@@ -10,6 +10,7 @@ use App\Enums\RentalStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UnitStatus;
 use App\Enums\UserStatus;
+use App\Filament\Resources\RentalResource\Pages\CreateRental;
 use App\Livewire\SimpleAddTenant;
 use App\Livewire\SimpleEndTenancy;
 use App\Livewire\SimpleInvoiceList;
@@ -22,6 +23,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Support\ActiveProperty;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -110,6 +112,102 @@ class SimpleModeTest extends TestCase
         $this->actingAs($landlord)
             ->get('/app/properties?from=simple')
             ->assertSuccessful();
+    }
+
+    /**
+     * The Simple Mode add-tenant/end-tenancy screens' "Full Mode" links used
+     * to omit ?from=simple entirely — a landlord with the preference enabled
+     * tapping either link got bounced straight back to /app/simple before the
+     * full rental form ever loaded.
+     */
+    public function test_add_tenant_full_mode_link_carries_from_simple_and_is_reachable(): void
+    {
+        [$landlord, $property, $unit] = $this->landlordSetup(createRental: false);
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        // ?unit_id= puts the component straight into the 'details' step, where
+        // the "Full Mode" hint (and its link) actually renders.
+        $this->get('/app/simple?screen=add-tenant&unit_id='.$unit->id)
+            ->assertSuccessful()
+            ->assertSee('/app/rentals/create?from=simple', false);
+
+        $this->get('/app/rentals/create?from=simple')->assertSuccessful();
+
+        ActiveProperty::clear();
+    }
+
+    /**
+     * CreateRental's post-save redirect used to always land on the plain
+     * index — losing ?from=simple and getting bounced back to Simple Mode by
+     * the very next request, right after the tenant was successfully created.
+     */
+    public function test_create_rental_redirect_preserves_from_simple(): void
+    {
+        Filament::setCurrentPanel(Filament::getPanel('landlord'));
+
+        [$landlord, $property, $unit] = $this->landlordSetup(createRental: false);
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        $component = Livewire::withQueryParams(['from' => 'simple'])
+            ->test(CreateRental::class)
+            ->assertSet('fromSimpleMode', true)
+            ->fillForm([
+                'unit_id' => $unit->id,
+                'occupant_name' => 'Sok Dara',
+                'monthly_rent' => 500,
+                'start_date' => now()->toDateString(),
+                'status' => RentalStatus::Active->value,
+            ])
+            ->call('create');
+
+        $component->assertHasNoFormErrors();
+        $component->assertRedirect(route('filament.landlord.resources.rentals.index', ['from' => 'simple']));
+
+        ActiveProperty::clear();
+    }
+
+    /**
+     * A single link only carries ?from=simple for its own request — the very
+     * next click inside that full page (e.g. "Edit" on a property reached via
+     * the Settings hub) has no marker of its own. Without the escape window
+     * this follow-on request would get bounced straight back to Simple Mode
+     * mid-task.
+     */
+    public function test_from_simple_escape_window_covers_follow_on_navigation_without_the_marker(): void
+    {
+        $landlord = $this->makeLandlord();
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+
+        // Same client (session persists across requests in a single test).
+        $this->actingAs($landlord)
+            ->get('/app/properties?from=simple')
+            ->assertSuccessful();
+
+        // Follow-on request, no ?from=simple at all.
+        $this->get('/app/properties/create')
+            ->assertSuccessful();
+    }
+
+    public function test_from_simple_escape_window_ends_when_landlord_returns_to_simple_mode(): void
+    {
+        $landlord = $this->makeLandlord();
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+
+        $this->actingAs($landlord)
+            ->get('/app/properties?from=simple')
+            ->assertSuccessful();
+
+        // Explicitly back to Simple Mode ends the errand.
+        $this->get('/app/simple')->assertSuccessful();
+
+        // A later unrelated full-mode URL (no marker) is bounced back again.
+        $this->get('/app/properties')
+            ->assertRedirect(route('filament.landlord.pages.simple'));
     }
 
     /**
@@ -485,6 +583,27 @@ class SimpleModeTest extends TestCase
 
         $this->assertEquals(RentalStatus::Vacated, $rental->status);
         $this->assertEquals(UnitStatus::Available, $unit->status);
+    }
+
+    public function test_end_tenancy_full_mode_link_carries_from_simple_and_is_reachable(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleEndTenancy::class)
+            ->call('pickRoom', $unit->id)
+            ->set('endDate', now()->toDateString())
+            ->set('status', (string) RentalStatus::Vacated->value)
+            ->set('freeRoom', true)
+            ->call('submit')
+            ->assertSet('step', 'done')
+            ->assertSee('/app/rentals?from=simple', false);
+
+        $this->get('/app/rentals?from=simple')->assertSuccessful();
     }
 
     // ── PWA ──────────────────────────────────────────────────────────────────

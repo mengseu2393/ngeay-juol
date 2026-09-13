@@ -1465,5 +1465,7 @@
     "ID card photo": "រូបថតអត្តសញ្ញាណប័ណ្ណ",
     "Add photo": "បន្ថែមរូបថត",
     "Uploading…": "កំពុងបញ្ចូល…",
-    "Guarantor details are available in": "ព័ត៌មានអ្នកធានា មាននៅក្នុង"
+    "Guarantor details are available in": "ព័ត៌មានអ្នកធានា មាននៅក្នុង",
+    "No tenant": "គ្មានអ្នកជួល",
+    "No tenants found.": "រកមិនឃើញអ្នកជួល។"
 }

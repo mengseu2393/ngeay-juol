@@ -32,12 +32,12 @@
 
     <button
         type="button"
-        @click="setScreen('utility')"
-        :class="screen === 'utility' ? 'is-active' : ''"
+        @click="setScreen('tenants')"
+        :class="screen === 'tenants' ? 'is-active' : ''"
         class="rw-simple-bottom-nav-item"
     >
-        <x-heroicon-o-bolt class="h-6 w-6" />
-        <span>{{ __('Utility') }}</span>
+        <x-heroicon-o-users class="h-6 w-6" />
+        <span>{{ __('Tenant') }}</span>
     </button>
 
     <button

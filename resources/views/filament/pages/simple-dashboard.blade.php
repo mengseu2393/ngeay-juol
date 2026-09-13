@@ -93,7 +93,20 @@
                 </div>
             </div>
 
-            {{-- ── Utility screen ── --}}
+            {{-- ── Tenants screen ── --}}
+            <div x-show="screen === 'tenants'" x-cloak>
+                <div class="rw-sm-screen-header">
+                    <h2 class="rw-sm-screen-title flex-1">{{ __('Tenants') }}</h2>
+                </div>
+                <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                    @livewire('simple-tenant-list', key('simple-tenant-list'))
+                </div>
+            </div>
+
+            {{-- ── Utility screen — no longer a bottom-nav tab (that slot is now
+                 Tenants); reached via the "Utility" link on the Settings screen
+                 instead, so this stays in the Alpine screen set but doesn't
+                 roll up into any bottom-nav tab's active state. ── --}}
             <div x-show="screen === 'utility'" x-cloak>
                 <div class="rw-sm-screen-header">
                     <h2 class="rw-sm-screen-title flex-1">{{ __('Utility') }}</h2>

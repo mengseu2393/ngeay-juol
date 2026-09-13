@@ -114,6 +114,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="rw-sm-room-number">{{ $room->room_number }}</p>
+                    <p class="rw-sm-tenant-name">{{ $room->activeRental?->occupant_name ?? __('No tenant') }}</p>
                 </div>
                 <span
                     wire:loading.remove

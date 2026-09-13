@@ -18,6 +18,11 @@ class SimpleLandlordMode
         return self::canUse($user) && (bool) $user?->prefers_simple_landlord_mode;
     }
 
+    /** Session key + lifetime for {@see markEscape()}. */
+    private const ESCAPE_SESSION_KEY = 'simple_mode_escape_until';
+
+    private const ESCAPE_MINUTES = 20;
+
     public static function shouldRedirectToSimple(Request $request): bool
     {
         if (! $request->isMethodSafe()) {
@@ -31,7 +36,23 @@ class SimpleLandlordMode
         // Simple Mode's own screens link out to full pages on purpose (Property
         // Settings, Utility Rates, Monthly Billing, ...) — ?from=simple marks
         // that as a deliberate one-task exit, not a stray link to bounce back.
+        //
+        // But a single link only carries that marker for its OWN request — the
+        // very next click inside that full page (e.g. "Edit" on a property
+        // reached via the Settings hub) has no ?from=simple at all, and would
+        // otherwise get bounced straight back here mid-task. hasActiveEscape()
+        // extends a short grace window server-side so a whole full-mode errand
+        // (not just its first click) stays reachable, without needing every
+        // link in every resource to carry the marker forever.
         if ($request->query('from') === 'simple') {
+            self::markEscape($request);
+
+            return false;
+        }
+
+        if (self::hasActiveEscape($request)) {
+            self::markEscape($request); // sliding window: still-active use keeps extending it
+
             return false;
         }
 
@@ -39,6 +60,26 @@ class SimpleLandlordMode
 
         return ($request->is($panel) || $request->is($panel.'/*'))
             && ! $request->is($panel.'/simple', $panel.'/simple/*');
+    }
+
+    /** Start/extend the full-mode escape window from this request. */
+    public static function markEscape(Request $request): void
+    {
+        $request->session()->put(self::ESCAPE_SESSION_KEY, now()->addMinutes(self::ESCAPE_MINUTES)->timestamp);
+    }
+
+    /** Whether a ?from=simple escape (or a page reached within its window) is still active. */
+    public static function hasActiveEscape(Request $request): bool
+    {
+        $until = $request->session()->get(self::ESCAPE_SESSION_KEY);
+
+        return is_int($until) && now()->timestamp < $until;
+    }
+
+    /** Clear the escape window — called when a landlord deliberately returns to Simple Mode. */
+    public static function clearEscape(Request $request): void
+    {
+        $request->session()->forget(self::ESCAPE_SESSION_KEY);
     }
 
     /**
@@ -70,7 +111,7 @@ class SimpleLandlordMode
             return false;
         }
 
-        if ($request->query('from') === 'simple') {
+        if ($request->query('from') === 'simple' || self::hasActiveEscape($request)) {
             return false;
         }
 

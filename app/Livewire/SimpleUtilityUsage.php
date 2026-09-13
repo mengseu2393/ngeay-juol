@@ -152,6 +152,7 @@ class SimpleUtilityUsage extends Component
 
         $rooms = $propertyId
             ? Unit::query()
+                ->with('activeRental')
                 ->where('property_id', $propertyId)
                 ->when($this->search !== '', function ($q) {
                     $q->where('room_number', 'like', '%'.trim($this->search).'%');

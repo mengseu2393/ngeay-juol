@@ -126,8 +126,11 @@ class LandlordPanelProvider extends PanelProvider
                     // Simple Mode — display-mode:standalone is only knowable client-side,
                     // so this redirects before paint rather than in RedirectToSimpleLandlordMode.
                     // ?from=simple pages (Property Settings, Utility Rates, ...) are Simple
-                    // Mode's own sanctioned exits and must stay reachable, not bounced back.
-                    (SimpleLandlordMode::canUse(auth()->user()) ? '<script>(function(){'
+                    // Mode's own sanctioned exits and must stay reachable, not bounced back —
+                    // and so is any page reached WITHIN that same errand (hasActiveEscape()),
+                    // since a follow-on click (e.g. "Edit" from a Properties list opened via
+                    // the Settings hub) carries no ?from=simple of its own.
+                    (SimpleLandlordMode::canUse(auth()->user()) && ! SimpleLandlordMode::hasActiveEscape(request()) ? '<script>(function(){'
                         .'var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;'
                         .'if (standalone && ! /^\\/app\\/simple(\\/|$)/.test(location.pathname) && ! new URLSearchParams(location.search).has("from")) {'
                         .'location.replace("'.url('/'.self::PATH.'/simple').'");'

@@ -77,7 +77,7 @@
                 <span x-text="pay.tenant"></span>
             </p>
             <p class="rw-sm-modal-balance">
-                {{ __('Balance') }}: <strong x-text="pay.balance"></strong>
+                {{ __('Amount Due') }}: <strong x-text="pay.balance"></strong>
             </p>
 
             <div class="mt-4 space-y-3">
@@ -202,7 +202,7 @@
                     <p class="rw-sm-detail-value">{{ \App\Support\Money::formatForRecord($invoice->amount_due, $invoice) }}</p>
                 </div>
                 <div>
-                    <p class="rw-sm-detail-label">{{ __('Balance') }}</p>
+                    <p class="rw-sm-detail-label">{{ __('Amount Due') }}</p>
                     <p class="rw-sm-detail-value {{ $balance > 0 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-emerald-600 dark:text-emerald-400' }}">
                         {{ \App\Support\Money::formatForRecord($balance, $invoice) }}
                     </p>

@@ -132,6 +132,16 @@
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
             </a>
+            {{-- The meter-reading screen moved off the bottom nav (that tab is
+                 now Tenants) — this is a plain in-page screen switch, not a
+                 desktop-panel escape hatch, so no ?from=simple param here. --}}
+            <a href="?screen=utility" class="flex items-center justify-between gap-3" id="simple-settings-more-utility">
+                <div class="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Utility') }}</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+            </a>
         </div>
     </div>
 

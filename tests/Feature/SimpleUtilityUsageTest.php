@@ -6,11 +6,13 @@ use App\Enums\BillingType;
 use App\Enums\PlanBillingModel;
 use App\Enums\PlanInterval;
 use App\Enums\ReadingType;
+use App\Enums\RentalStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
 use App\Livewire\SimpleUtilityUsage;
 use App\Models\Property;
 use App\Models\PropertyUtility;
+use App\Models\Rental;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\Unit;
@@ -61,6 +63,43 @@ class SimpleUtilityUsageTest extends TestCase
             ->test(SimpleUtilityUsage::class)
             ->assertSee($unit->room_number)
             ->assertDontSee($otherUnit->room_number);
+    }
+
+    public function test_room_row_shows_the_active_tenants_name(): void
+    {
+        [$landlord, $property, $unit] = $this->propertySetup();
+
+        $tenant = User::factory()->create(['email' => 'tenant-'.uniqid().'@example.com']);
+        $tenant->assignRole('tenant');
+
+        Rental::create([
+            'landlord_id' => $landlord->id,
+            'unit_id' => $unit->id,
+            'tenant_id' => $tenant->id,
+            'occupant_name' => 'Sok Dara',
+            'monthly_rent' => 500,
+            'status' => RentalStatus::Active,
+            'start_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleUtilityUsage::class)
+            ->assertSee('Sok Dara');
+    }
+
+    public function test_room_row_shows_no_tenant_placeholder_when_vacant(): void
+    {
+        [$landlord, $property, $unit] = $this->propertySetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleUtilityUsage::class)
+            ->assertSee(__('No tenant'));
     }
 
     public function test_submitting_reading_computes_real_consumption_from_prior_reading(): void

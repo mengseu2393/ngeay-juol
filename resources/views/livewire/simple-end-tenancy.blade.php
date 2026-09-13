@@ -114,7 +114,7 @@
             </button>
 
             <div class="mt-3 text-center">
-                <a href="{{ \App\Filament\Resources\RentalResource::getUrl('index', panel: 'landlord') }}" class="text-sm text-gray-400 underline">
+                <a href="{{ \App\Filament\Resources\RentalResource::getUrl('index', ['from' => 'simple'], panel: 'landlord') }}" class="text-sm text-gray-400 underline">
                     {{ __('Full Mode') }} — {{ __('check rental history') }}
                 </a>
             </div>

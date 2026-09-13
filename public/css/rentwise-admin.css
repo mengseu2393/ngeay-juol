@@ -2125,6 +2125,28 @@ select.rw-sm-input {
     gap: 0.5rem !important;
 }
 
+/* Give each row an actual card look (rounded, bordered, shadowed, spaced) when
+   forced into card mode — plain Split/Stack only stacks the columns, it
+   doesn't change the table's own thin-divider-list styling. `:has()` reaches
+   up from the marker class on the Split div to its ancestor row/list wrapper. */
+.fi-ta-content:has(.rw-force-card-split) {
+    background-color: transparent !important;
+}
+.fi-ta-content:has(.rw-force-card-split) > div[class*="grid-cols-"] {
+    background-color: transparent !important;
+    gap: 0.75rem !important;
+    padding: 0.75rem !important;
+}
+.fi-ta-record:has(.rw-force-card-split) {
+    border-radius: 1rem !important;
+    border: 1px solid rgb(var(--gray-200)) !important;
+    box-shadow: 0 1px 3px rgba(var(--gray-950), 0.08) !important;
+}
+.fi.dark .fi-ta-record:has(.rw-force-card-split) {
+    border-color: rgb(var(--gray-700)) !important;
+    box-shadow: none !important;
+}
+
 /* ── Simple Mode: persistent bottom tab-bar navigation ──
    Partial: resources/views/components/rw-simple-bottom-nav.blade.php
    Width-matched to `.rw-simple--billing` (the modifier simple-dashboard.blade.php

@@ -207,7 +207,7 @@
 
             <p class="text-xs text-center text-gray-400 dark:text-gray-500">
                 {{ __('Guarantor details are available in') }}
-                <a href="{{ \App\Filament\Resources\RentalResource::getUrl('create', panel: 'landlord') }}" class="underline text-primary-600 dark:text-primary-400">{{ __('Full Mode') }}</a>.
+                <a href="{{ \App\Filament\Resources\RentalResource::getUrl('create', ['from' => 'simple'], panel: 'landlord') }}" class="underline text-primary-600 dark:text-primary-400">{{ __('Full Mode') }}</a>.
             </p>
         </div>
         </div>
