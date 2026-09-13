@@ -29,6 +29,7 @@ use App\Filament\Widgets\TopDebtorsWidget;
 use App\Filament\Widgets\UtilityAnomalyWidget;
 use App\Filament\Widgets\UtilityUsageWidget;
 use App\Http\Middleware\EnsureActiveSubscription;
+use App\Http\Middleware\IdleTimeout;
 use App\Http\Middleware\RedirectToSimpleLandlordMode;
 use App\Http\Middleware\SetLocale;
 use App\Support\ActiveProperty;
@@ -233,6 +234,7 @@ class LandlordPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                IdleTimeout::class,
                 EnsureActiveSubscription::class,
                 RedirectToSimpleLandlordMode::class,
             ]);

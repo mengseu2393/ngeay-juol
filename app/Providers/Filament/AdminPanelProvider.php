@@ -16,6 +16,7 @@ use App\Filament\Widgets\AdminLandlordActivityWidget;
 use App\Filament\Widgets\AdminPlanMixWidget;
 use App\Filament\Widgets\AdminPlatformStatsWidget;
 use App\Filament\Widgets\AdminPlatformUsageWidget;
+use App\Http\Middleware\IdleTimeout;
 use App\Http\Middleware\SetLocale;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
@@ -155,6 +156,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                IdleTimeout::class,
             ]);
     }
 }
