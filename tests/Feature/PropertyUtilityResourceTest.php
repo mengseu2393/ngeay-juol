@@ -3,10 +3,16 @@
 namespace Tests\Feature;
 
 use App\Enums\BillingType;
+use App\Enums\PlanBillingModel;
+use App\Enums\PlanInterval;
 use App\Enums\ReadingType;
+use App\Enums\SubscriptionStatus;
+use App\Enums\UserStatus;
 use App\Filament\Resources\PropertyUtilityResource\Pages\ListPropertyUtilities;
 use App\Models\Property;
 use App\Models\PropertyUtility;
+use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\UtilityUsage;
@@ -353,5 +359,70 @@ class PropertyUtilityResourceTest extends TestCase
             ->assertHasNoTableActionErrors();
 
         $this->assertEquals(0, UtilityUsage::count());
+    }
+
+    /**
+     * The "Add utility" header action's default create URL has no ?from=simple,
+     * so a landlord with the Simple Mode preference enabled was getting bounced
+     * straight back to /app/simple by RedirectToSimpleLandlordMode before the
+     * create form ever loaded.
+     */
+    public function test_add_utility_action_preserves_from_simple_query_param(): void
+    {
+        $landlord = User::create([
+            'name' => 'Landlord User',
+            'email' => 'landlord2@example.com',
+            'password' => bcrypt('password'),
+        ]);
+        $landlord->assignRole('landlord');
+        // Auto-switch to Simple Mode redirects mobile requests before the
+        // ?from=simple bypass in RedirectToSimpleLandlordMode is even reached
+        // (see SimpleLandlordMode::shouldAutoSwitchToSimple) — enabling the
+        // persisted preference here reproduces the actual reported bug path.
+        $landlord->forceFill([
+            'status' => UserStatus::Active,
+            'prefers_simple_landlord_mode' => true,
+        ])->save();
+
+        $plan = SubscriptionPlan::firstOrCreate(['slug' => 'starter'], [
+            'name' => 'Starter',
+            'billing_model' => PlanBillingModel::Tiered,
+            'interval' => PlanInterval::Monthly,
+            'price' => 30,
+            'currency' => 'USD',
+            'trial_days' => 0,
+            'grace_days' => 7,
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+        Subscription::withoutGlobalScopes()->create([
+            'landlord_id' => $landlord->id,
+            'plan_id' => $plan->id,
+            'status' => SubscriptionStatus::Active,
+            'billing_model' => PlanBillingModel::Tiered,
+            'interval' => PlanInterval::Monthly,
+            'price' => 30,
+            'currency' => 'USD',
+            'starts_at' => now()->startOfMonth(),
+            'ends_at' => now()->addMonth()->endOfMonth(),
+            'auto_renew' => true,
+        ]);
+
+        $property = Property::create([
+            'landlord_id' => $landlord->id,
+            'name' => 'Property Alpha',
+        ]);
+        ActiveProperty::set($property->id);
+
+        // The header action must render the create URL with ?from=simple attached.
+        $this->actingAs($landlord)
+            ->get('/app/property-utilities?from=simple')
+            ->assertSuccessful()
+            ->assertSee('/app/property-utilities/create?from=simple', false);
+
+        // And that URL must not get bounced back to /app/simple.
+        $this->actingAs($landlord)
+            ->get('/app/property-utilities/create?from=simple')
+            ->assertSuccessful();
     }
 }

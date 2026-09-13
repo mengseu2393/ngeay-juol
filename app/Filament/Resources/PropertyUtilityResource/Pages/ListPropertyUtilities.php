@@ -29,7 +29,14 @@ class ListPropertyUtilities extends ListRecords
                 ->color('gray')
                 ->url(route('filament.landlord.pages.simple'))
                 ->visible(fn () => $this->fromSimpleMode),
-            Actions\CreateAction::make()->label(__('Add utility')),
+            Actions\CreateAction::make()
+                ->label(__('Add utility'))
+                // Default create URL has no ?from=simple, so a landlord with the
+                // Simple Mode preference enabled gets bounced straight back to
+                // /app/simple by RedirectToSimpleLandlordMode before the form loads.
+                ->url(fn () => $this->fromSimpleMode
+                    ? PropertyUtilityResource::getUrl('create', ['from' => 'simple'])
+                    : PropertyUtilityResource::getUrl('create')),
         ];
     }
 }

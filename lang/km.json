@@ -1450,5 +1450,12 @@
     "You don't have permission to view this page.": "អ្នកមិនមានសិទ្ធិមើលទំព័រនេះទេ។",
     "Contact your administrator if you think this is a mistake.": "សូមទាក់ទងអ្នកគ្រប់គ្រង ប្រសិនបើអ្នកគិតថានេះជាកំហុស។",
     "Go back": "ត្រឡប់ក្រោយ",
-    "Back to home": "ត្រឡប់ទៅទំព័រដើម"
+    "Back to home": "ត្រឡប់ទៅទំព័រដើម",
+    "View tenant": "មើលអ្នកជួល",
+    "Move-in": "ថ្ងៃចូលនៅ",
+    "Tenant portal login": "ការចូលប្រើវិបផតថលអ្នកជួល",
+    "Copy": "ចម្លង",
+    "Copied!": "បានចម្លង!",
+    "New password — copy it now, it will not be shown again.": "ពាក្យសម្ងាត់ថ្មី — សូមចម្លងវាឥឡូវនេះ វានឹងមិនត្រូវបានបង្ហាញម្តងទៀតទេ។",
+    "This replaces the current password — the tenant will need the new one to sign in. Continue?": "នេះនឹងជំនួសពាក្យសម្ងាត់បច្ចុប្បន្ន — អ្នកជួលនឹងត្រូវការពាក្យសម្ងាត់ថ្មីដើម្បីចូល។ បន្តទេ?"
 }

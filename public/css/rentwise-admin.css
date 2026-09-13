@@ -2116,6 +2116,15 @@ select.rw-sm-input {
     gap: 0.5rem !important;
 }
 
+/* PropertyUtilityResource's table Split forces a card layout (instead of the
+   md:flex-row split) when reached from Simple Mode (?from=simple), regardless
+   of viewport width — see PropertyUtilityResource::table(). */
+.rw-force-card-split.fi-ta-split {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+}
+
 /* ── Simple Mode: persistent bottom tab-bar navigation ──
    Partial: resources/views/components/rw-simple-bottom-nav.blade.php
    Width-matched to `.rw-simple--billing` (the modifier simple-dashboard.blade.php

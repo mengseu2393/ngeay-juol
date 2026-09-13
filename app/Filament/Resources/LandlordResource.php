@@ -349,6 +349,18 @@ class LandlordResource extends Resource
                         ->placeholder('—'),
                 ])->columns(3),
 
+            // Mirrors the Location section's field labels/order on the
+            // create/edit form (App\Filament\Forms\LocationFields) — the view
+            // page previously had no way to see a landlord's selected
+            // province/district/commune/village at all.
+            Infolists\Components\Section::make(__('Location'))
+                ->schema([
+                    Infolists\Components\TextEntry::make('province')->label(__('City / Province'))->placeholder('—'),
+                    Infolists\Components\TextEntry::make('district')->label(__('District (Khan / Srok)'))->placeholder('—'),
+                    Infolists\Components\TextEntry::make('commune')->label(__('Commune (Sangkat / Khum)'))->placeholder('—'),
+                    Infolists\Components\TextEntry::make('village')->label(__('Village (Phum)'))->placeholder('—'),
+                ])->columns(4),
+
             Infolists\Components\Section::make(__('Portfolio'))
                 ->schema([
                     Infolists\Components\TextEntry::make('properties_count')->label(__('Properties'))->badge(),

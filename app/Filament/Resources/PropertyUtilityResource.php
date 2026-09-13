@@ -108,50 +108,45 @@ class PropertyUtilityResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $fromSimpleMode = request()->query('from') === 'simple';
-
         return $table
-            ->columns($fromSimpleMode
-                // A dedicated, fully custom card for Simple Mode — the generic
-                // Split/Stack layout (still used on desktop below) rendered its
-                // selection checkbox awkwardly once forced into a card shape.
-                ? [
-                    Tables\Columns\ViewColumn::make('simple_card')
-                        ->label('')
-                        ->searchable(['name', 'provider'])
-                        ->view('filament.tables.columns.property-utility-simple-card'),
-                ]
-                : [
-                    // Split/Stack collapses to a card layout below `md` (see
-                    // InvoiceResource's table for the same pattern) instead of a
-                    // cramped horizontally-scrolling table on mobile.
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\Layout\Stack::make([
-                            Tables\Columns\TextColumn::make('name')
-                                ->weight('bold')
-                                ->formatStateUsing(fn ($state) => static::utilityLabel((string) $state))
-                                ->searchable(),
-                            Tables\Columns\TextColumn::make('billing_type')->badge(),
-                        ])->space(1),
+            ->columns([
+                // Split/Stack collapses to a card layout below `md` (see
+                // InvoiceResource's table for the same pattern) instead of a
+                // cramped horizontally-scrolling table on mobile. A custom
+                // ViewColumn-only "card" was tried here instead but broke
+                // Filament's row DOM shape (glitches after edit/delete), so
+                // stick to Filament's own supported Split/Stack layout and
+                // just force it to stay stacked at any width via CSS when
+                // coming from Simple Mode (?from=simple) — see
+                // .rw-force-card-split in rentwise-admin.css.
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('name')
+                            ->weight('bold')
+                            ->formatStateUsing(fn ($state) => static::utilityLabel((string) $state))
+                            ->searchable(),
+                        Tables\Columns\TextColumn::make('billing_type')->badge(),
+                    ])->space(1),
 
-                        Tables\Columns\Layout\Stack::make([
-                            Tables\Columns\TextColumn::make('rate')
-                                ->formatStateUsing(fn ($state, PropertyUtility $record) => Money::formatForRecord($state, $record)),
-                            Tables\Columns\TextColumn::make('unit_of_measure')
-                                ->label(__('Unit'))
-                                ->prefix(fn () => __('Unit').': ')
-                                ->color('gray'),
-                        ])->space(1),
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('rate')
+                            ->formatStateUsing(fn ($state, PropertyUtility $record) => Money::formatForRecord($state, $record)),
+                        Tables\Columns\TextColumn::make('unit_of_measure')
+                            ->label(__('Unit'))
+                            ->prefix(fn () => __('Unit').': ')
+                            ->color('gray'),
+                    ])->space(1),
 
-                        Tables\Columns\Layout\Stack::make([
-                            Tables\Columns\TextColumn::make('provider')->placeholder('—')->toggleable(),
-                            Tables\Columns\IconColumn::make('is_active')->boolean(),
-                        ])->space(1)->alignment('end'),
-                    ])->from('md'),
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\TextColumn::make('provider')->placeholder('—')->toggleable(),
+                        Tables\Columns\IconColumn::make('is_active')->boolean(),
+                    ])->space(1)->alignment('end'),
                 ])
-            // Row-selection checkboxes don't fit the Simple Mode card — bulk
-            // delete isn't a mobile quick task anyway.
-            ->selectable(! $fromSimpleMode)
+                    ->from('md')
+                    ->extraAttributes(fn () => request()->query('from') === 'simple'
+                        ? ['class' => 'rw-force-card-split']
+                        : []),
+            ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active'),
                 Tables\Filters\TrashedFilter::make(),

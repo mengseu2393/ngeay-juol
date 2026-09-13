@@ -240,6 +240,32 @@ class LandlordProvisioningTest extends TestCase
     }
 
     /**
+     * The view page's infolist had no Location section at all, so a landlord's
+     * province/district/commune/village — collected via the same cascading
+     * selects (App\Filament\Forms\LocationFields) on the create/edit form —
+     * was invisible on /admin/landlords/{id}.
+     */
+    public function test_the_customer_view_shows_the_landlords_location(): void
+    {
+        $this->actingAs($this->support());
+
+        $landlord = $this->landlord('located');
+        $landlord->forceFill([
+            'province' => 'Phnom Penh Capital',
+            'district' => 'Chamkarmon',
+            'commune' => 'Tonle Bassac',
+            'village' => 'Trapaeng Krala',
+        ])->save();
+
+        Livewire::test(ViewLandlord::class, ['record' => $landlord->getKey()])
+            ->assertSuccessful()
+            ->assertSee('Phnom Penh Capital')
+            ->assertSee('Chamkarmon')
+            ->assertSee('Tonle Bassac')
+            ->assertSee('Trapaeng Krala');
+    }
+
+    /**
      * The portfolio/receivables aggregates are the numbers a support agent quotes
      * back to a customer, so pin the exact arithmetic: Draft, Paid and Cancelled
      * invoices are NOT receivables, and legacy rows with no `total_usd` fall back
