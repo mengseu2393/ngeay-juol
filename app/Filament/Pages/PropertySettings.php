@@ -78,9 +78,14 @@ class PropertySettings extends Page implements HasForms
         return ActiveProperty::id() !== null;
     }
 
+    /** Whether this page was reached from a Simple Mode link (?from=simple). */
+    public bool $fromSimpleMode = false;
+
     public function mount(): void
     {
         abort_unless(ActiveProperty::id() !== null, 403);
+
+        $this->fromSimpleMode = request()->query('from') === 'simple';
 
         $this->setting = PropertySetting::firstOrCreate(
             ['property_id' => ActiveProperty::id()],
@@ -109,6 +114,12 @@ class PropertySettings extends Page implements HasForms
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('backToSimpleMode')
+                ->label(__('Back to Simple Mode'))
+                ->icon('heroicon-o-device-phone-mobile')
+                ->color('gray')
+                ->url(route('filament.landlord.pages.simple'))
+                ->visible(fn () => $this->fromSimpleMode),
             Actions\Action::make('openingReadings')
                 ->label(__('Opening readings'))
                 ->icon('heroicon-o-bolt')

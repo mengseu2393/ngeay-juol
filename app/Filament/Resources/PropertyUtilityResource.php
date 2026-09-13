@@ -137,6 +137,10 @@ class PropertyUtilityResource extends Resource
                     ])->space(1)->alignment('end'),
                 ])->from('md'),
             ])
+            // Row-selection checkboxes render awkwardly inside the Split/Stack
+            // card layout at narrow widths — bulk-delete isn't a mobile quick
+            // task anyway, so skip selection when reached from Simple Mode.
+            ->selectable(fn () => request()->query('from') !== 'simple')
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active'),
                 Tables\Filters\TrashedFilter::make(),
