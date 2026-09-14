@@ -1482,5 +1482,17 @@
     "Guarantor details are available in": "ព័ត៌មានអ្នកធានា មាននៅក្នុង",
     "No tenant": "គ្មានអ្នកជួល",
     "No tenants found.": "រកមិនឃើញអ្នកជួល។",
-    "Set Utility": "កំណត់សេវាកម្ម"
+    "Set Utility": "កំណត់សេវាកម្ម",
+    "Share to Telegram": "ចែករំលែកទៅ Telegram",
+    "Vacant": "បន្ទប់ទំនេរ",
+    "Billing type": "ប្រភេទគិតថ្លៃ",
+    "Invoice :number — :room — :amount due :date": "វិក្កយបត្រ :number — បន្ទប់ :room — ត្រូវបង់ :amount ត្រឹមថ្ងៃ :date",
+    "Edit room price": "កែតម្លៃបន្ទប់",
+    "Room price saved.": "បានរក្សាទុកតម្លៃបន្ទប់។",
+    "Actions": "សកម្មភាព",
+    "Tenant name, phone or room…": "ឈ្មោះអ្នកជួល លេខទូរស័ព្ទ ឬបន្ទប់…",
+    "With": "រួមជាមួយ",
+    "Has balance due": "មានប្រាក់ជំពាក់",
+    "Ended": "បានបញ្ចប់",
+    "Occupants": "អ្នកស្នាក់នៅ"
 }

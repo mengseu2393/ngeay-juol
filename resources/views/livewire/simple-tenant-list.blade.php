@@ -8,12 +8,24 @@
         </button>
     </div>
 
+    {{-- ── Filters ── --}}
+    <div class="rw-sm-filter-bar flex gap-2 overflow-x-auto pb-1">
+        @foreach(['active' => __('Active'), 'due' => __('Has balance due'), 'ended' => __('Ended'), 'all' => __('All')] as $val => $label)
+            <button
+                type="button"
+                wire:click="$set('filter', '{{ $val }}')"
+                id="tenant-filter-{{ $val }}"
+                class="rw-sm-filter-pill {{ $filter === $val ? 'rw-sm-filter-active' : '' }}"
+            >{{ $label }}</button>
+        @endforeach
+    </div>
+
     {{-- ── Search ── --}}
     <div class="relative">
         <input
             type="search"
             wire:model.live.debounce.400ms="search"
-            placeholder="{{ __('Room or tenant name…') }}"
+            placeholder="{{ __('Tenant name, phone or room…') }}"
             class="rw-sm-search-input"
             id="tenant-search"
         >
@@ -30,7 +42,7 @@
     </x-rw-simple-popup>
 
     {{-- ── Edit tenant popup ── --}}
-    <x-rw-simple-popup name="tenant-edit" close="closeEditTenant">
+    <x-rw-simple-popup name="tenant-edit" close="closeEditTenant" :cancel="false" @tenant-edit-cancel.window="close()">
         @if($editingRentalId)
                 <div class="rw-sm-modal w-full">
                     @livewire(\App\Livewire\SimpleEditTenant::class, ['rentalId' => $editingRentalId], key('simple-edit-tenant-'.$editingRentalId))
@@ -54,7 +66,7 @@
 
     {{-- ── Tenant detail / login popup (duplicated from simple-room-list.blade.php
          — see App\Livewire\SimpleTenantList's class docblock) ── --}}
-    <x-rw-simple-popup name="tenant-view" close="closeTenantView">
+    <x-rw-simple-popup name="tenant-view" close="closeTenantView" :cancel="false">
         @if($viewingRental)
                 <div class="rw-sm-modal w-full" x-data="{
                 copied: null,
@@ -188,6 +200,12 @@
                     <div class="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700 flex gap-2">
                         <button
                             type="button"
+                            @click="close()"
+                            class="rw-sm-btn-secondary text-sm flex-1"
+                            id="tenant-view-cancel-btn"
+                        >{{ __('Cancel') }}</button>
+                        <button
+                            type="button"
                             @click="$dispatch('rw-popup-open', { name: 'tenant-edit', call: () => $wire.editTenant({{ $viewingRental->id }}) })"
                             class="rw-sm-btn-ghost text-sm flex-1"
                             id="tenant-view-edit-btn"
@@ -212,16 +230,27 @@
                 default   => 'rw-sm-badge-gray',
             };
         @endphp
+        @php
+            $primaryName = $rental->occupant_name ?: ($rental->tenant?->name ?? __('Tenant'));
+            $coOccupants = $rental->occupants
+                ->filter(fn ($o) => $o->role !== 'primary' && $o->occupant_name && $o->occupant_name !== $primaryName)
+                ->pluck('occupant_name');
+        @endphp
         <div class="rw-sm-invoice-card" id="tenant-card-{{ $rental->id }}">
             <div class="flex items-start justify-between gap-2">
-                <div>
-                    <p class="rw-sm-room-number">{{ $rental->unit?->room_number }}</p>
-                    <p class="rw-sm-tenant-name">{{ $rental->occupant_name ?: ($rental->tenant?->name ?? __('Tenant')) }}</p>
+                <div class="min-w-0">
+                    <p class="rw-sm-room-number truncate">{{ $primaryName }}</p>
                     @if($rental->occupant_phone)
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ $rental->occupant_phone }}</p>
+                        <p class="rw-sm-tenant-name">{{ $rental->occupant_phone }}</p>
+                    @endif
+                    @if($coOccupants->isNotEmpty())
+                        <p class="rw-sm-tenant-name">{{ __('With') }}: {{ $coOccupants->implode(', ') }}</p>
                     @endif
                 </div>
-                <span class="rw-sm-badge {{ $statusColor }} shrink-0">{{ $rental->status?->getLabel() }}</span>
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                    <span class="rw-sm-badge {{ $statusColor }}">{{ $rental->status?->getLabel() }}</span>
+                    <span class="rw-sm-badge rw-sm-badge-gray">{{ __('Room') }} {{ $rental->unit?->room_number }}</span>
+                </div>
             </div>
 
             <div class="mt-3 grid grid-cols-2 gap-y-1.5 text-sm">

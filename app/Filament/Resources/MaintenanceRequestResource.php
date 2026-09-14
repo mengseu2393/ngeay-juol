@@ -140,6 +140,45 @@ class MaintenanceRequestResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // See PropertyResource::table()'s matching comment — the page's own
+        // $fromSimpleMode state survives row-action round-trips.
+        $livewire = $table->getLivewire();
+        $fromSimpleMode = property_exists($livewire, 'fromSimpleMode') && $livewire->fromSimpleMode;
+
+        // Simple Mode: one invoice-style card per row (see /app/simple's
+        // invoice list), no bulk checkboxes, no sort bar.
+        if ($fromSimpleMode) {
+            return $table
+                ->modifyQueryUsing(fn (Builder $query) => $query->with(['tenant', 'property', 'unit', 'rental']))
+                ->defaultSort('created_at', 'desc')
+                ->columns([
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\ViewColumn::make('simple_card')
+                            ->label('')
+                            ->view('filament.tables.columns.maintenance-simple-card'),
+                    ]),
+                    // Hidden columns so the search box still matches title / tenant / room.
+                    Tables\Columns\TextColumn::make('title')->searchable()->hidden(),
+                    Tables\Columns\TextColumn::make('tenant.name')->searchable()->hidden(),
+                    Tables\Columns\TextColumn::make('unit.room_number')->searchable()->hidden(),
+                ])
+                ->contentGrid(['default' => 1])
+                ->recordClasses('rw-sm-prop-record')
+                ->filters([
+                    Tables\Filters\SelectFilter::make('status')->options(MaintenanceStatus::class),
+                    Tables\Filters\SelectFilter::make('priority')->options(MaintenancePriority::class),
+                ])
+                ->actions([
+                    RowActionGroup::make([
+                        Tables\Actions\ViewAction::make(),
+                        static::statusAction(),
+                        static::priorityAction(),
+                        Tables\Actions\EditAction::make(),
+                    ]),
+                ])
+                ->bulkActions([]);
+        }
+
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['tenant', 'property', 'unit']))
             ->defaultSort('created_at', 'desc')

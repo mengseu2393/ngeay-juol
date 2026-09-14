@@ -90,6 +90,49 @@
             return false;
         };
 
+        // Share the invoice PDF *file* to Telegram. Phones/PWA (and desktop
+        // browsers that support file sharing): fetch the PDF and hand it to the
+        // system share sheet, where Telegram is one tap away — the Web Share API
+        // cannot target one app directly. Anywhere file sharing is unsupported:
+        // save the PDF and open Telegram Web so it can be attached from the
+        // download; Telegram's URL scheme cannot carry a file.
+        window.rwShareInvoiceTelegram = async function (btn) {
+            const canShareFiles = typeof navigator.canShare === 'function'
+                && navigator.canShare({ files: [new File([''], 'x.pdf', { type: 'application/pdf' })] });
+
+            const label = btn.querySelector('[data-label]');
+            const original = label ? label.textContent : null;
+            btn.disabled = true;
+            if (label && btn.dataset.preparing) label.textContent = btn.dataset.preparing;
+
+            try {
+                const res = await fetch(btn.dataset.downloadUrl, { credentials: 'same-origin', headers: { Accept: 'application/pdf' } });
+                if (! res.ok) throw new Error('HTTP ' + res.status);
+                const blob = await res.blob();
+                const file = new File([blob], btn.dataset.filename, { type: 'application/pdf' });
+
+                if (canShareFiles) {
+                    await navigator.share({ files: [file], title: btn.dataset.filename, text: btn.dataset.shareText || '' });
+                    return;
+                }
+
+                const url = URL.createObjectURL(blob);
+                const a = Object.assign(document.createElement('a'), { href: url, download: btn.dataset.filename });
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                window.open('https://web.telegram.org/', '_blank', 'noopener');
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    window.location.href = btn.dataset.downloadUrl;
+                }
+            } finally {
+                btn.disabled = false;
+                if (label && original !== null) label.textContent = original;
+            }
+        };
+
         // 58mm thermal print handler: applies 58mm print CSS class and triggers browser print
         window.rwPrintInvoice58mm = function (btn) {
             const wrap = btn ? (btn.closest('.rw-invoice-wrap') || document.querySelector('.rw-invoice-wrap')) : document.querySelector('.rw-invoice-wrap');

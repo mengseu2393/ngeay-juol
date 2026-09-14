@@ -22,6 +22,11 @@ class SimpleTenantList extends Component
 {
     public string $search = '';
 
+    /** active | due | ended | all */
+    public string $filter = 'active';
+
+    protected $queryString = ['filter'];
+
     /** ID of the rental whose tenant-detail popup is open */
     public ?int $viewingRentalId = null;
 
@@ -164,24 +169,31 @@ class SimpleTenantList extends Component
 
         $tenants = $propertyId
             ? Rental::query()
-                ->with(['unit', 'tenant', 'invoices' => fn ($q) => $q->whereIn('payment_status', [
+                ->with(['unit', 'tenant', 'occupants', 'invoices' => fn ($q) => $q->whereIn('payment_status', [
                     InvoiceStatus::Pending->value,
                     InvoiceStatus::Partial->value,
                     InvoiceStatus::Overdue->value,
                 ])])
                 ->whereHas('unit', fn ($q) => $q->where('property_id', $propertyId))
-                ->where('status', RentalStatus::Active->value)
+                ->when($this->filter === 'active' || $this->filter === 'due', fn ($q) => $q->where('status', RentalStatus::Active->value))
+                ->when($this->filter === 'ended', fn ($q) => $q->where('status', '!=', RentalStatus::Active->value))
+                ->when($this->filter === 'due', fn ($q) => $q->whereHas('invoices', fn ($iq) => $iq->whereIn('payment_status', [
+                    InvoiceStatus::Pending->value,
+                    InvoiceStatus::Partial->value,
+                    InvoiceStatus::Overdue->value,
+                ])))
                 ->when($this->search !== '', function ($q) {
                     $s = '%'.trim($this->search).'%';
                     $q->where(function ($q) use ($s) {
                         $q->where('occupant_name', 'like', $s)
                             ->orWhere('occupant_phone', 'like', $s)
                             ->orWhereHas('tenant', fn ($tq) => $tq->where('name', 'like', $s))
+                            ->orWhereHas('occupants', fn ($oq) => $oq->where('occupant_name', 'like', $s)->orWhere('occupant_phone', 'like', $s))
                             ->orWhereHas('unit', fn ($uq) => $uq->where('room_number', 'like', $s));
                     });
                 })
                 ->get()
-                ->sortBy(fn (Rental $rental) => $rental->unit?->room_number)
+                ->sortBy(fn (Rental $rental) => mb_strtolower($rental->occupant_name ?: ($rental->tenant?->name ?? '')))
                 ->values()
             : collect();
 

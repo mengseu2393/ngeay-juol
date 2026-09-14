@@ -1,4 +1,49 @@
-<div class="space-y-4">
+<div
+    class="space-y-4"
+    x-data="{
+        priceOpen: false,
+        price: { id: null, room: '', currency: '', value: '' },
+        openPrice(unit) { this.price = { ...unit }; this.priceOpen = true; },
+
+        readingOpen: false,
+        reading: { id: null, room: '', values: {} },
+        openReading(unit) { this.reading = { ...unit, values: {} }; this.readingOpen = true; },
+
+        tenantOpen: false,
+        tenant: {},
+        newPassword: null,
+        resetting: false,
+        copied: null,
+        openTenant(data) { this.tenant = { ...data }; this.newPassword = null; this.copied = null; this.tenantOpen = true; },
+        resetLogin() {
+            if (this.tenant.username && ! confirm(@js(__('This replaces the current password — the tenant will need the new one to sign in. Continue?')))) return;
+            this.resetting = true;
+            $wire.resetTenantLogin(this.tenant.id)
+                .then(r => { if (r && r.password) { this.tenant.username = r.username; this.newPassword = r.password; } })
+                .finally(() => { this.resetting = false; });
+        },
+        copy(text, key) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.copied = key;
+                setTimeout(() => { if (this.copied === key) this.copied = null; }, 1500);
+            });
+        },
+    }"
+    @room-price-saved.window="priceOpen = false"
+    @room-reading-saved.window="readingOpen = false"
+>
+    <style>[x-cloak] { display: none !important; }</style>
+
+    {{-- ── Filters ── --}}
+    <div class="rw-sm-filter-bar flex gap-2 overflow-x-auto pb-1">
+        @foreach(['all' => __('All'), 'available' => __('Vacant'), 'occupied' => __('Occupied'), 'maintenance' => __('Maintenance')] as $val => $label)
+            <button
+                wire:click="$set('filter', '{{ $val }}')"
+                id="room-filter-{{ $val }}"
+                class="rw-sm-filter-pill {{ $filter === $val ? 'rw-sm-filter-active' : '' }}"
+            >{{ $label }}</button>
+        @endforeach
+    </div>
 
     {{-- ── Search ── --}}
     <div class="relative">
@@ -20,193 +65,240 @@
         </div>
     @endif
 
-    {{-- ── Set utility reading modal (fresh-start baseline reading, one metered
-         utility per row; a flat charge needs no meter so isn't listed) ── --}}
-    <x-rw-simple-popup name="room-utility-reading" close="closeUtilityReading">
-        @if($settingReadingUnitId)
-                <div class="rw-sm-modal w-full">
-                    <h3 class="rw-sm-modal-title">{{ __('Set utility reading') }}</h3>
-                    <p class="rw-sm-modal-sub">{{ __('Record the starting meter reading for this unit\'s metered utilities.') }}</p>
+    @if($priceSuccess)
+        <div class="rw-sm-success-banner" role="status">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>{{ __('Room price saved.') }}</span>
+        </div>
+    @endif
 
-                    @if($meteredUtilities->isEmpty())
-                        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                            {{ __('This property has no metered utilities set up yet.') }}
+    {{-- ── Popups: all three are Alpine-owned and open instantly with data the
+         card already carries (same pattern as the invoice list's pay modal).
+         The only server round-trips are the Save / Reset-login calls. ── --}}
+
+    {{-- Edit room price --}}
+    <div
+        x-cloak
+        x-show="priceOpen"
+        class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-4"
+        @keydown.escape.window="priceOpen = false"
+        id="room-edit-price-popup"
+    >
+        <div class="rw-sm-modal w-full max-w-sm" @click.outside="priceOpen = false">
+            <h3 class="rw-sm-modal-title">{{ __('Edit room price') }}</h3>
+            <p class="rw-sm-modal-sub">{{ __('Room') }} <span x-text="price.room"></span></p>
+
+            <div class="mt-4">
+                <label class="rw-sm-label" for="room-price-input">
+                    {{ __('Monthly rent') }}
+                    <span class="text-gray-400" x-show="price.currency" x-text="'(' + price.currency + ')'"></span>
+                </label>
+                <input type="number" id="room-price-input" x-model="price.value" step="0.01" min="0" class="rw-sm-input" placeholder="0.00">
+                @error('priceValue') <p class="rw-sm-error">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="mt-5 flex gap-3">
+                <button type="button" @click="priceOpen = false" class="rw-sm-btn-secondary flex-1" id="room-price-cancel-btn">{{ __('Cancel') }}</button>
+                <button
+                    type="button"
+                    @click="$wire.submitEditPriceFor(price.id, String(price.value ?? ''))"
+                    wire:loading.attr="disabled"
+                    wire:target="submitEditPriceFor"
+                    class="rw-sm-btn-primary flex-1"
+                    id="room-price-submit-btn"
+                >
+                    <span wire:loading.remove wire:target="submitEditPriceFor">{{ __('Save') }}</span>
+                    <span wire:loading wire:target="submitEditPriceFor">{{ __('Saving…') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Set utility reading (baseline; metered utilities are property-wide so
+         the form is rendered once and reused for every room) --}}
+    <div
+        x-cloak
+        x-show="readingOpen"
+        class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-4"
+        @keydown.escape.window="readingOpen = false"
+        id="room-utility-reading-popup"
+    >
+        <div class="rw-sm-modal w-full max-w-sm" @click.outside="readingOpen = false">
+            <h3 class="rw-sm-modal-title">{{ __('Set utility reading') }}</h3>
+            <p class="rw-sm-modal-sub">{{ __('Room') }} <span x-text="reading.room"></span> &middot; {{ __('Record the starting meter reading for this unit\'s metered utilities.') }}</p>
+
+            @if($meteredUtilities->isEmpty())
+                <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                    {{ __('This property has no metered utilities set up yet.') }}
+                </p>
+                <button type="button" @click="readingOpen = false" class="rw-sm-btn-secondary w-full mt-5">{{ __('Cancel') }}</button>
+            @else
+                <div class="mt-4 space-y-3">
+                    @foreach($meteredUtilities as $utility)
+                        <div>
+                            <label class="rw-sm-label" for="utility-reading-{{ $utility->id }}">
+                                {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($utility->name) }}
+                                @if($utility->unit_of_measure)
+                                    <span class="text-gray-400">({{ $utility->unit_of_measure }})</span>
+                                @endif
+                            </label>
+                            <input
+                                type="number"
+                                id="utility-reading-{{ $utility->id }}"
+                                x-model="reading.values['{{ $utility->id }}']"
+                                step="0.001"
+                                min="0"
+                                class="rw-sm-input"
+                                placeholder="0.000"
+                            >
+                            @error('readingValues.'.$utility->id) <p class="rw-sm-error">{{ $message }}</p> @enderror
+                        </div>
+                    @endforeach
+                    @error('readingValues') <p class="rw-sm-error">{{ $message }}</p> @enderror
+                </div>
+
+                <div class="mt-5 flex gap-3">
+                    <button type="button" @click="readingOpen = false" class="rw-sm-btn-secondary flex-1" id="utility-reading-cancel-btn">{{ __('Cancel') }}</button>
+                    <button
+                        type="button"
+                        @click="$wire.submitUtilityReadingFor(reading.id, reading.values)"
+                        wire:loading.attr="disabled"
+                        wire:target="submitUtilityReadingFor"
+                        class="rw-sm-btn-primary flex-1"
+                        id="utility-reading-submit-btn"
+                    >
+                        <span wire:loading.remove wire:target="submitUtilityReadingFor">{{ __('Save') }}</span>
+                        <span wire:loading wire:target="submitUtilityReadingFor">{{ __('Saving…') }}</span>
+                    </button>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Tenant detail / login --}}
+    <div
+        x-cloak
+        x-show="tenantOpen"
+        class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+        @keydown.escape.window="tenantOpen = false"
+        id="room-tenant-view-popup"
+    >
+        <div class="rw-sm-modal w-full max-w-md mt-6" @click.outside="tenantOpen = false">
+            <h3 class="rw-sm-modal-title" x-text="tenant.name || @js(__('Tenant'))"></h3>
+            <p class="rw-sm-modal-sub">{{ __('Room') }} <span x-text="tenant.room"></span></p>
+
+            <div class="mt-4 grid grid-cols-2 gap-3">
+                <template x-if="tenant.phone"><div>
+                    <p class="rw-sm-detail-label">{{ __('Phone') }}</p>
+                    <p class="rw-sm-detail-value" x-text="tenant.phone"></p>
+                </div></template>
+                <template x-if="tenant.idCard"><div>
+                    <p class="rw-sm-detail-label">{{ __('ID card') }}</p>
+                    <p class="rw-sm-detail-value" x-text="tenant.idCard"></p>
+                </div></template>
+                <template x-if="tenant.rent"><div>
+                    <p class="rw-sm-detail-label">{{ __('Monthly rent') }}</p>
+                    <p class="rw-sm-detail-value" x-text="tenant.rent"></p>
+                </div></template>
+                <template x-if="tenant.moveIn"><div>
+                    <p class="rw-sm-detail-label">{{ __('Move-in') }}</p>
+                    <p class="rw-sm-detail-value" x-text="tenant.moveIn"></p>
+                </div></template>
+                <template x-if="tenant.address"><div class="col-span-2">
+                    <p class="rw-sm-detail-label">{{ __('Address') }}</p>
+                    <p class="rw-sm-detail-value" x-text="tenant.address"></p>
+                </div></template>
+                <template x-if="tenant.emergency"><div class="col-span-2">
+                    <p class="rw-sm-detail-label">{{ __('Emergency contact') }}</p>
+                    <p class="rw-sm-detail-value" x-text="tenant.emergency"></p>
+                </div></template>
+            </div>
+
+            <template x-if="tenant.idCards && tenant.idCards.length">
+                <div class="mt-4">
+                    <p class="rw-sm-detail-label mb-2">{{ __('ID card photos') }}</p>
+                    <div class="flex flex-wrap gap-2">
+                        <template x-for="url in tenant.idCards" :key="url">
+                            <a :href="url" target="_blank" rel="noopener" class="block h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                                <img :src="url" class="h-full w-full object-cover" alt="{{ __('ID card photo') }}">
+                            </a>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            {{-- Portal login --}}
+            <div class="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p class="rw-sm-label">{{ __('Tenant portal login') }}</p>
+
+                <template x-if="tenant.username">
+                    <div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                        <span class="text-sm font-mono text-gray-900 dark:text-white truncate" x-text="tenant.username"></span>
+                        <button type="button" @click="copy(tenant.username, 'username')" class="rw-sm-btn-secondary text-xs shrink-0" id="tenant-view-copy-username">
+                            <span x-show="copied !== 'username'">{{ __('Copy') }}</span>
+                            <span x-show="copied === 'username'" x-cloak>{{ __('Copied!') }}</span>
+                        </button>
+                    </div>
+                </template>
+
+                <template x-if="newPassword">
+                    {{-- Shown exactly once, right after (re)generating — it cannot
+                         be retrieved again once this popup closes. --}}
+                    <div class="mt-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3">
+                        <p class="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                            {{ __('New password — copy it now, it will not be shown again.') }}
                         </p>
-                    @else
-                        <div class="mt-4 space-y-3">
-                            @foreach($meteredUtilities as $utility)
-                                <div>
-                                    <label class="rw-sm-label" for="utility-reading-{{ $utility->id }}">
-                                        {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($utility->name) }}
-                                        @if($utility->unit_of_measure)
-                                            <span class="text-gray-400">({{ $utility->unit_of_measure }})</span>
-                                        @endif
-                                    </label>
-                                    <input
-                                        type="number"
-                                        id="utility-reading-{{ $utility->id }}"
-                                        wire:model="readingValues.{{ $utility->id }}"
-                                        step="0.001"
-                                        min="0"
-                                        class="rw-sm-input"
-                                        placeholder="0.000"
-                                    >
-                                </div>
-                            @endforeach
-                            @error('readingValues') <p class="rw-sm-error">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div class="mt-5">
-                            <button
-                                type="button"
-                                wire:click="submitUtilityReading"
-                                wire:loading.attr="disabled"
-                                wire:target="submitUtilityReading"
-                                class="rw-sm-btn-primary w-full"
-                                id="utility-reading-submit-btn"
-                            >
-                                <span wire:loading.remove wire:target="submitUtilityReading">{{ __('Save') }}</span>
-                                <span wire:loading wire:target="submitUtilityReading">{{ __('Saving…') }}</span>
+                        <div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-white dark:bg-gray-900 px-3 py-2">
+                            <span class="text-sm font-mono text-gray-900 dark:text-white truncate" x-text="newPassword"></span>
+                            <button type="button" @click="copy(newPassword, 'password')" class="rw-sm-btn-secondary text-xs shrink-0" id="tenant-view-copy-password">
+                                <span x-show="copied !== 'password'">{{ __('Copy') }}</span>
+                                <span x-show="copied === 'password'" x-cloak>{{ __('Copied!') }}</span>
                             </button>
                         </div>
-                    @endif
-                </div>
-        @endif
-    </x-rw-simple-popup>
-
-    {{-- ── Tenant detail / login popup ── --}}
-    <x-rw-simple-popup name="room-tenant-view" close="closeTenantView">
-        @if($viewingRental)
-                <div class="rw-sm-modal w-full" x-data="{
-                copied: null,
-                copy(text, key) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        this.copied = key;
-                        setTimeout(() => { if (this.copied === key) this.copied = null; }, 1500);
-                    });
-                },
-            }">
-                    <h3 class="rw-sm-modal-title">{{ $viewingRental->occupant_name ?: __('Tenant') }}</h3>
-                    <p class="rw-sm-modal-sub">{{ __('Room') }} {{ $viewingRental->unit?->room_number }}</p>
-
-                    {{-- ── Occupant details ── --}}
-                    <div class="mt-4 grid grid-cols-2 gap-3">
-                        @if($viewingRental->occupant_phone)
-                            <div>
-                                <p class="rw-sm-detail-label">{{ __('Phone') }}</p>
-                                <p class="rw-sm-detail-value">{{ $viewingRental->occupant_phone }}</p>
-                            </div>
-                        @endif
-                        @if($viewingRental->occupant_id_card)
-                            <div>
-                                <p class="rw-sm-detail-label">{{ __('ID card') }}</p>
-                                <p class="rw-sm-detail-value">{{ $viewingRental->occupant_id_card }}</p>
-                            </div>
-                        @endif
-                        @if($viewingRental->monthly_rent)
-                            <div>
-                                <p class="rw-sm-detail-label">{{ __('Monthly rent') }}</p>
-                                <p class="rw-sm-detail-value">{{ \App\Support\Money::format($viewingRental->monthly_rent, $viewingRental->unit?->property?->currency) }}</p>
-                            </div>
-                        @endif
-                        @if($viewingRental->start_date)
-                            <div>
-                                <p class="rw-sm-detail-label">{{ __('Move-in') }}</p>
-                                <p class="rw-sm-detail-value">{{ $viewingRental->start_date->format('d M Y') }}</p>
-                            </div>
-                        @endif
-                        @if($viewingRental->occupant_address)
-                            <div class="col-span-2">
-                                <p class="rw-sm-detail-label">{{ __('Address') }}</p>
-                                <p class="rw-sm-detail-value">{{ $viewingRental->occupant_address }}</p>
-                            </div>
-                        @endif
-                        @if($viewingRental->emergency_contact_name || $viewingRental->emergency_contact_phone)
-                            <div class="col-span-2">
-                                <p class="rw-sm-detail-label">{{ __('Emergency contact') }}</p>
-                                <p class="rw-sm-detail-value">
-                                    {{ $viewingRental->emergency_contact_name }}
-                                    @if($viewingRental->emergency_contact_phone) — {{ $viewingRental->emergency_contact_phone }} @endif
-                                </p>
-                            </div>
-                        @endif
                     </div>
+                </template>
 
-                    {{-- ── ID card photos (Rental's own `id_cards` media collection —
-                         the same one RentalResource's desktop form and the mobile
-                         add-tenant upload both use) ── --}}
-                    @if($viewingRental->getMedia('id_cards')->isNotEmpty())
-                        <div class="mt-4">
-                            <p class="rw-sm-detail-label mb-2">{{ __('ID card photos') }}</p>
-                            <div class="flex flex-wrap gap-2">
-                                @foreach($viewingRental->getMedia('id_cards') as $media)
-                                    <a href="{{ $media->getUrl() }}" target="_blank" rel="noopener" class="block h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                                        <img src="{{ $media->getUrl() }}" class="h-full w-full object-cover" alt="{{ __('ID card photo') }}">
-                                    </a>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
+                <template x-if="! newPassword">
+                    <button
+                        type="button"
+                        @click="resetLogin()"
+                        :disabled="resetting"
+                        class="rw-sm-btn-ghost text-sm mt-2 w-full"
+                        id="tenant-view-reset-login"
+                    >
+                        <span x-show="! resetting" x-text="tenant.username ? @js(__('Reset password')) : @js(__('Create login'))"></span>
+                        <span x-show="resetting" x-cloak>{{ __('Loading…') }}</span>
+                    </button>
+                </template>
+            </div>
 
-                    {{-- ── Portal login ── --}}
-                    <div class="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <p class="rw-sm-label">{{ __('Tenant portal login') }}</p>
+            {{-- Footer actions --}}
+            <div class="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+                <button type="button" @click="tenantOpen = false" class="rw-sm-btn-secondary flex-1" id="room-tenant-view-cancel-btn">{{ __('Cancel') }}</button>
+                <button
+                    type="button"
+                    @click="tenantOpen = false; $wire.editTenant(tenant.id)"
+                    class="rw-sm-btn-primary flex-1"
+                    id="room-tenant-view-edit-btn"
+                >{{ __('Edit tenant') }}</button>
+            </div>
+        </div>
+    </div>
 
-                        @if($viewingRental->tenant?->username)
-                            <div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                                <span class="text-sm font-mono text-gray-900 dark:text-white truncate">{{ $viewingRental->tenant->username }}</span>
-                                <button
-                                    type="button"
-                                    @click="copy(@js($viewingRental->tenant->username), 'username')"
-                                    class="rw-sm-btn-secondary text-xs shrink-0"
-                                    id="tenant-view-copy-username"
-                                >
-                                    <span x-show="copied !== 'username'">{{ __('Copy') }}</span>
-                                    <span x-show="copied === 'username'" x-cloak>{{ __('Copied!') }}</span>
-                                </button>
-                            </div>
-                        @endif
-
-                        @if($newPassword)
-                            {{-- Shown exactly once, right after (re)generating — same rule
-                                 as RentalResource\Actions\TenantLogin's desktop notification:
-                                 it cannot be retrieved again once this popup closes. --}}
-                            <div class="mt-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3">
-                                <p class="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                                    {{ __('New password — copy it now, it will not be shown again.') }}
-                                </p>
-                                <div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-white dark:bg-gray-900 px-3 py-2">
-                                    <span class="text-sm font-mono text-gray-900 dark:text-white truncate">{{ $newPassword }}</span>
-                                    <button
-                                        type="button"
-                                        @click="copy(@js($newPassword), 'password')"
-                                        class="rw-sm-btn-secondary text-xs shrink-0"
-                                        id="tenant-view-copy-password"
-                                    >
-                                        <span x-show="copied !== 'password'">{{ __('Copy') }}</span>
-                                        <span x-show="copied === 'password'" x-cloak>{{ __('Copied!') }}</span>
-                                    </button>
-                                </div>
-                            </div>
-                        @else
-                            <button
-                                type="button"
-                                @click="if (! @js((bool) $viewingRental->tenant?->username) || confirm(@js(__('This replaces the current password — the tenant will need the new one to sign in. Continue?')))) { $wire.resetTenantLogin({{ $viewingRental->id }}) }"
-                                wire:loading.attr="disabled"
-                                wire:target="resetTenantLogin({{ $viewingRental->id }})"
-                                class="rw-sm-btn-ghost text-sm mt-2 w-full"
-                                id="tenant-view-reset-login"
-                            >
-                                <span wire:loading.remove wire:target="resetTenantLogin({{ $viewingRental->id }})">
-                                    {{ $viewingRental->tenant?->username ? __('Reset password') : __('Create login') }}
-                                </span>
-                                <span wire:loading wire:target="resetTenantLogin({{ $viewingRental->id }})">{{ __('Loading…') }}</span>
-                            </button>
-                        @endif
-                    </div>
-                </div>
-        @endif
-    </x-rw-simple-popup>
+    {{-- Edit tenant (server-rendered: the edit form is its own Livewire
+         component, so this one opens on the round-trip that sets editingRentalId) --}}
+    @if($editingRentalId)
+        <div
+            class="rw-sm-modal-overlay fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-8"
+            @keydown.escape.window="$wire.closeEditTenant()"
+            @tenant-edit-cancel.window="$wire.closeEditTenant()"
+            id="room-tenant-edit-popup"
+        >
+            <div class="rw-sm-modal w-full max-w-md mt-6" @click.outside="$wire.closeEditTenant()">
+                @livewire(\App\Livewire\SimpleEditTenant::class, ['rentalId' => $editingRentalId], key('simple-room-edit-tenant-'.$editingRentalId))
+            </div>
+        </div>
+    @endif
 
     {{-- ── Room list ── --}}
     @forelse($rooms as $room)
@@ -219,6 +311,20 @@
                 default   => 'rw-sm-badge-gray',
             };
             $tenantName = $room->activeRental?->occupant_name ?: ($room->activeRental?->tenant?->name ?? null);
+            $rental = $room->activeRental;
+            $tenantData = $rental ? [
+                'id' => $rental->id,
+                'name' => $rental->occupant_name,
+                'room' => $room->room_number,
+                'phone' => $rental->occupant_phone,
+                'idCard' => $rental->occupant_id_card,
+                'rent' => $rental->monthly_rent ? \App\Support\Money::format($rental->monthly_rent, $room->property?->currency) : null,
+                'moveIn' => $rental->start_date?->format('d M Y'),
+                'address' => $rental->occupant_address,
+                'emergency' => trim(($rental->emergency_contact_name ?? '').($rental->emergency_contact_phone ? ' — '.$rental->emergency_contact_phone : '')) ?: null,
+                'idCards' => $rental->getMedia('id_cards')->map->getUrl()->values()->all(),
+                'username' => $rental->tenant?->username,
+            ] : null;
         @endphp
 
         <div class="rw-sm-invoice-card" id="room-card-{{ $room->id }}">
@@ -234,40 +340,53 @@
                         </p>
                     @endif
                 </div>
-                <span class="rw-sm-badge {{ $statusColor }} shrink-0">{{ $statusLabel }}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="rw-sm-badge {{ $statusColor }}">{{ $statusLabel }}</span>
+
+                    {{-- Row action menu (mirrors the desktop table's ActionGroup) --}}
+                    <div class="rw-sm-menu" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                        <button
+                            type="button"
+                            @click="open = ! open"
+                            class="rw-sm-menu-btn"
+                            id="room-actions-btn-{{ $room->id }}"
+                            aria-label="{{ __('Actions') }}"
+                            :aria-expanded="open"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM11.5 15.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z"/></svg>
+                        </button>
+                        <div x-show="open" x-cloak x-transition.opacity class="rw-sm-menu-panel">
+                            @if($room->activeRental)
+                                <button
+                                    type="button"
+                                    @click="open = false; openTenant(@js($tenantData))"
+                                    class="rw-sm-menu-item"
+                                    id="room-view-tenant-btn-{{ $room->id }}"
+                                >{{ __('View tenant') }}</button>
+                            @endif
+                            <button
+                                type="button"
+                                @click="open = false; openPrice(@js(['id' => $room->id, 'room' => $room->room_number, 'currency' => $room->property?->currency, 'value' => $room->rent_amount !== null ? (string) $room->rent_amount : '']))"
+                                class="rw-sm-menu-item"
+                                id="room-edit-price-btn-{{ $room->id }}"
+                            >{{ __('Edit room price') }}</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {{-- Quick actions --}}
             <div class="mt-3 flex flex-wrap gap-2">
-                @if($room->activeRental)
-                    <button
-                        type="button"
-                        @click="$dispatch('rw-popup-open', { name: 'room-tenant-view', call: () => $wire.viewTenant({{ $room->activeRental->id }}) })"
-                        class="rw-sm-btn-ghost text-sm"
-                        id="room-view-tenant-btn-{{ $room->id }}"
-                    >{{ __('View tenant') }}</button>
-                @endif
-
                 @if($room->utility_usages_count === 0)
                     {{-- No utility reading recorded yet for this unit — set the
                          initial (baseline) meter reading before billing can start --}}
                     <button
                         type="button"
-                        @click="$dispatch('rw-popup-open', { name: 'room-utility-reading', call: () => $wire.openUtilityReading({{ $room->id }}) })"
+                        @click="openReading(@js(['id' => $room->id, 'room' => $room->room_number]))"
                         class="rw-sm-btn-ghost text-sm"
                         id="room-set-utility-reading-{{ $room->id }}"
                     >{{ __('Set utility reading') }}</button>
 
-                    {{-- Deep-links to the Utility tab, straight into this room's
-                         reading form — same shortcut pattern as Add/End tenancy
-                         below. Distinct from the button above: that one is this
-                         screen's own baseline-only "initial setup" flow (see
-                         SimpleUtilityUsage's class docblock), this one goes to
-                         the dedicated Utility tab's real consumption math. --}}
-                    <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'utility', 'unit_id' => $room->id]) }}"
-                       class="rw-sm-btn-ghost text-sm"
-                       id="room-goto-utility-{{ $room->id }}"
-                    >{{ __('Set Utility') }}</a>
                 @endif
 
                 @if($room->status === \App\Enums\UnitStatus::Available)

@@ -15,6 +15,8 @@ use App\Livewire\SimpleAddTenant;
 use App\Livewire\SimpleEndTenancy;
 use App\Livewire\SimpleInvoiceList;
 use App\Livewire\SimpleInvoiceView;
+use App\Livewire\SimpleRoomList;
+use App\Livewire\SimpleTenantList;
 use App\Models\Invoice;
 use App\Models\Property;
 use App\Models\Rental;
@@ -408,12 +410,12 @@ class SimpleModeTest extends TestCase
     // ── Simple invoice view popup ────────────────────────────────────────────
 
     /**
-     * The popup shell is opened client-side (Alpine) the instant "View details"
-     * is tapped; the only server work is SimpleInvoiceView::open() swapping the
-     * invoice body in. The parent list must therefore expose no view/close
-     * actions at all — if one creeps back in, the tap is gated on a round-trip
-     * (and a full list re-render) again, which is exactly the mobile lag this
-     * design removed.
+     * "View details" is fully client-side, exactly like "Record payment": the
+     * list emits a data-slip-url per card, the popup prefetches those slip
+     * fragments in the background and injects one on tap. The list must
+     * therefore own no view/close state and mount no Livewire popup — if
+     * either creeps back in, the tap is gated on a round-trip (and a list
+     * re-render) again, which is the mobile lag this design removed.
      */
     public function test_invoice_list_no_longer_owns_the_view_popup_state(): void
     {
@@ -424,69 +426,69 @@ class SimpleModeTest extends TestCase
 
         $this->assertFalse(method_exists(SimpleInvoiceList::class, 'viewInvoice'));
         $this->assertFalse(property_exists(SimpleInvoiceList::class, 'viewingInvoiceId'));
+        $this->assertFalse(class_exists(SimpleInvoiceView::class));
 
-        // The popup component is mounted once alongside the list (empty until opened).
         Livewire::actingAs($landlord)
             ->test(SimpleInvoiceList::class)
-            ->assertSeeLivewire(SimpleInvoiceView::class)
-            ->assertSeeHtml('invoice-view-'.$invoice->id);
+            ->assertSeeHtml('invoice-view-'.$invoice->id)
+            ->assertSeeHtml('data-slip-url="'.route('invoices.slip', $invoice).'"');
     }
 
-    public function test_simple_invoice_view_mounts_empty_and_open_loads_the_invoice_body(): void
+    public function test_invoice_slip_fragment_renders_the_slip_without_a_layout(): void
     {
         [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
+
+        $this->actingAs($landlord)
+            ->get(route('invoices.slip', $invoice))
+            ->assertOk()
+            ->assertSee($invoice->invoice_number)
+            ->assertSee('rw-invoice-wrap')
+            ->assertDontSee('<html', false);
+    }
+
+    public function test_invoice_slip_fragment_404s_for_another_landlords_invoice(): void
+    {
+        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
+        $other = $this->makeLandlord();
+
+        $this->actingAs($other)
+            ->get(route('invoices.slip', $invoice))
+            ->assertNotFound();
+    }
+
+    public function test_invoice_slip_fragment_requires_login(): void
+    {
+        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
+
+        $this->get(route('invoices.slip', $invoice))->assertRedirect();
+    }
+
+    // ── Simple room list filter ───────────────────────────────────────────────
+
+    public function test_room_list_filter_pills_narrow_rooms_by_status(): void
+    {
+        [$landlord, $property, $vacant] = $this->landlordSetup(createRental: false);
+        $occupied = Unit::create([
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'room_number' => '202',
+            'room_type' => 'Standard',
+            'rent_amount' => 500,
+            'status' => UnitStatus::Occupied,
+        ]);
 
         $this->actingAs($landlord);
         ActiveProperty::set($property->id);
 
         Livewire::actingAs($landlord)
-            ->test(SimpleInvoiceView::class)
-            ->assertSet('invoiceId', null)
-            ->assertDontSee($invoice->invoice_number)
-            ->call('open', $invoice->id)
-            ->assertSet('invoiceId', $invoice->id)
-            ->assertSee($invoice->invoice_number);
-    }
-
-    public function test_simple_invoice_view_open_404s_for_an_invoice_outside_the_active_property(): void
-    {
-        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
-
-        $otherProperty = Property::create(['landlord_id' => $landlord->id, 'name' => 'Other property']);
-
-        $this->actingAs($landlord);
-        ActiveProperty::set($otherProperty->id);
-
-        Livewire::actingAs($landlord)
-            ->test(SimpleInvoiceView::class)
-            ->call('open', $invoice->id)
-            ->assertStatus(404);
-    }
-
-    public function test_simple_invoice_view_renders_the_scoped_invoice(): void
-    {
-        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
-
-        $this->actingAs($landlord);
-        ActiveProperty::set($property->id);
-
-        Livewire::actingAs($landlord)
-            ->test(SimpleInvoiceView::class, ['invoiceId' => $invoice->id])
-            ->assertSee($invoice->invoice_number);
-    }
-
-    public function test_simple_invoice_view_404s_for_an_invoice_outside_the_active_property(): void
-    {
-        [$landlord, $property, $unit, $rental, $invoice] = $this->landlordSetup();
-
-        $otherProperty = Property::create(['landlord_id' => $landlord->id, 'name' => 'Other property']);
-
-        $this->actingAs($landlord);
-        ActiveProperty::set($otherProperty->id);
-
-        Livewire::actingAs($landlord)
-            ->test(SimpleInvoiceView::class, ['invoiceId' => $invoice->id])
-            ->assertStatus(404);
+            ->test(SimpleRoomList::class)
+            ->assertSee('101')->assertSee('202')
+            ->set('filter', 'available')
+            ->assertSee('101')->assertDontSee('202')
+            ->set('filter', 'occupied')
+            ->assertDontSee('101')->assertSee('202')
+            ->set('filter', 'all')
+            ->assertSee('101')->assertSee('202');
     }
 
     // ── Simple add tenant ──────────────────────────────────────────────────────
@@ -661,6 +663,93 @@ class SimpleModeTest extends TestCase
     }
 
     // ── Simple end tenancy ─────────────────────────────────────────────────────
+
+    /**
+     * The room card's kebab menu offers "Edit room price" — saving updates the
+     * unit's listed rent AND the active tenancy's monthly_rent, because the card
+     * (and the next invoice) read the rental's rent, not the unit's. The old
+     * inline "Set Utility" deep-link was removed from the card in the same change.
+     */
+    public function test_simple_room_list_edit_price_updates_unit_and_active_rental(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+        $unit->update(['status' => UnitStatus::Occupied]);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleRoomList::class)
+            ->assertSee(__('Edit room price'))
+            ->assertDontSee(__('Set Utility'))
+            ->call('openEditPrice', $unit->id)
+            ->assertSet('editingPriceUnitId', $unit->id)
+            ->set('priceValue', '175.50')
+            ->call('submitEditPrice')
+            ->assertHasNoErrors()
+            ->assertSet('editingPriceUnitId', null)
+            ->assertSet('priceSuccess', true);
+
+        $this->assertEquals('175.50', $unit->refresh()->rent_amount);
+        $this->assertEquals('175.50', $rental->refresh()->monthly_rent);
+    }
+
+    public function test_simple_room_list_can_open_edit_tenant_from_tenant_popup(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+        $unit->update(['status' => UnitStatus::Occupied]);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleRoomList::class)
+            ->call('viewTenant', $rental->id)
+            ->assertSet('viewingRentalId', $rental->id)
+            ->assertSee(__('Edit tenant'))
+            ->call('editTenant', $rental->id)
+            ->assertSet('viewingRentalId', null)
+            ->assertSet('editingRentalId', $rental->id);
+    }
+
+    public function test_simple_tenant_list_filter_switches_between_active_and_ended(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->landlordSetup();
+        $rental->update(['occupant_name' => 'Active Person']);
+        $endedUnit = Unit::create([
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'room_number' => 'Z9',
+            'room_type' => 'Standard',
+            'rent_amount' => 100,
+            'status' => UnitStatus::Available,
+        ]);
+        Rental::create([
+            'landlord_id' => $landlord->id,
+            'unit_id' => $endedUnit->id,
+            'tenant_id' => $rental->tenant_id,
+            'occupant_name' => 'Ended Person',
+            'security_deposit' => 0,
+            'start_date' => now()->subYear(),
+            'end_date' => now()->subMonth(),
+            'monthly_rent' => 100,
+            'status' => RentalStatus::Vacated,
+        ]);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        Livewire::actingAs($landlord)
+            ->test(SimpleTenantList::class)
+            ->assertSee('Active Person')
+            ->assertDontSee('Ended Person')
+            ->set('filter', 'ended')
+            ->assertSee('Ended Person')
+            ->assertDontSee('Active Person')
+            ->set('filter', 'all')
+            ->assertSee('Active Person')
+            ->assertSee('Ended Person');
+    }
 
     public function test_simple_end_tenancy_updates_rental_status_and_room_status(): void
     {

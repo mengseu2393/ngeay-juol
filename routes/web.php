@@ -51,6 +51,9 @@ Route::middleware(['auth', SetLocale::class])->group(function () {
     Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'pdf'])->name('invoices.pdf');
     Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/excel', [InvoiceDocumentController::class, 'excel'])->name('invoices.excel');
     Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/view', [InvoiceDocumentController::class, 'view'])->name('invoices.view');
+    // Bare invoice-slip HTML fragment (no layout) — fetched and cached client-side
+    // by Simple Mode's "View details" popup so a tap needs no server round-trip.
+    Route::get(LandlordPanelProvider::PATH.'/invoices/{invoice}/slip', [InvoiceDocumentController::class, 'slip'])->name('invoices.slip');
 
     // Payment receipt — the slip a landlord hands over after taking cash. Payment
     // has no landlord_id and therefore no LandlordScope on the binding, so unlike

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\RentalStatus;
 use App\Filament\Concerns\ScopesToActiveProperty;
 use App\Filament\Resources\PropertyUtilityResource\RelationManagers\ChargeRulesRelationManager;
@@ -23,6 +24,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class RentalResource extends Resource
 {
@@ -209,6 +211,47 @@ class RentalResource extends Resource
         // round-trips, unlike re-reading request()->query('from') here.
         $livewire = $table->getLivewire();
         $fromSimpleMode = property_exists($livewire, 'fromSimpleMode') && $livewire->fromSimpleMode;
+
+        // Simple Mode: one tenant-first card per row, styled like the Tenants
+        // tab on /app/simple — no bulk checkboxes, no sort bar. Same swap
+        // PropertyResource::table() does with its property-simple-card.
+        if ($fromSimpleMode) {
+            return $table
+                ->modifyQueryUsing(fn (Builder $query) => $query
+                    ->with(['unit', 'tenant', 'invoices' => fn ($q) => $q->whereIn('payment_status', [
+                        InvoiceStatus::Pending->value,
+                        InvoiceStatus::Partial->value,
+                        InvoiceStatus::Overdue->value,
+                    ])])
+                    ->withCount('occupants'))
+                ->defaultSort('start_date', 'desc')
+                ->columns([
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\ViewColumn::make('simple_card')
+                            ->label('')
+                            ->view('filament.tables.columns.rental-simple-card'),
+                    ]),
+                    // Hidden column so the search box still matches tenant name / phone / room.
+                    Tables\Columns\TextColumn::make('occupant_name')->searchable()->hidden(),
+                    Tables\Columns\TextColumn::make('occupant_phone')->searchable()->hidden(),
+                    Tables\Columns\TextColumn::make('unit.room_number')->searchable()->hidden(),
+                ])
+                ->contentGrid(['default' => 1])
+                ->recordClasses('rw-sm-prop-record')
+                ->filters([
+                    Tables\Filters\SelectFilter::make('status')->options(RentalStatus::class),
+                ])
+                ->actions([
+                    RowActionGroup::make([
+                        Tables\Actions\ViewAction::make(),
+                        Tables\Actions\EditAction::make(),
+                        TenantLogin::table(),
+                        CompleteMoveIn::table(),
+                        MoveOut::table(),
+                    ]),
+                ])
+                ->bulkActions([]);
+        }
 
         return $table
             ->columns([

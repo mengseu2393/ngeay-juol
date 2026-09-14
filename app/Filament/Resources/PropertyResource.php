@@ -19,6 +19,7 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class PropertyResource extends Resource
 {
@@ -160,13 +161,45 @@ class PropertyResource extends Resource
         $livewire = $table->getLivewire();
         $fromSimpleMode = property_exists($livewire, 'fromSimpleMode') && $livewire->fromSimpleMode;
 
+        // Simple Mode: one card-style ViewColumn styled like /app/simple's
+        // room/invoice cards, no bulk checkboxes, no sort bar — the desktop
+        // Split/Stack layout stays untouched.
+        if ($fromSimpleMode) {
+            return $table
+                ->modifyQueryUsing(fn (Builder $query) => $query->withCount([
+                    'units',
+                    'units as occupied_units_count' => fn (Builder $q) => $q->where('status', UnitStatus::Occupied),
+                ]))
+                ->columns([
+                    // A Layout component is what switches Filament from <table>
+                    // to its div/card renderer (hasColumnsLayout()).
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\ViewColumn::make('simple_card')
+                            ->label('')
+                            ->view('filament.tables.columns.property-simple-card'),
+                    ]),
+                ])
+                ->contentGrid(['default' => 1])
+                ->recordClasses('rw-sm-prop-record')
+                ->filters([
+                    Tables\Filters\SelectFilter::make('property_type')->options(PropertyType::class),
+                ])
+                ->actions([
+                    RowActionGroup::make([
+                        Tables\Actions\ViewAction::make()
+                            ->url(null)
+                            ->infolist(fn (Infolist $infolist) => static::infolist($infolist)),
+                        Tables\Actions\EditAction::make(),
+                        Tables\Actions\DeleteAction::make(),
+                    ]),
+                ])
+                ->bulkActions([]);
+        }
+
         return $table
             ->columns([
                 // Split/Stack collapses to a card layout below `md` (see
-                // InvoiceResource/PropertyUtilityResource's table for the same
-                // pattern), and stays forced into a card at any width when
-                // reached from Simple Mode (?from=simple) — see
-                // .rw-force-card-split in rentwise-admin.css.
+                // InvoiceResource's table for the same pattern).
                 Tables\Columns\Layout\Split::make([
                     Tables\Columns\Layout\Stack::make([
                         Tables\Columns\TextColumn::make('name')->weight('bold')->searchable()->sortable(),
@@ -193,10 +226,7 @@ class PropertyResource extends Resource
                             ->formatStateUsing(fn ($state) => trans_choice(':count room|:count rooms', $state, ['count' => $state])),
                     ])->space(2),
                 ])
-                    ->from('md')
-                    ->extraAttributes(fn () => $fromSimpleMode
-                        ? ['class' => 'rw-force-card-split']
-                        : []),
+                    ->from('md'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('property_type')->options(PropertyType::class),

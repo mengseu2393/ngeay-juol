@@ -45,6 +45,21 @@ class InvoiceDocumentController extends Controller
     }
 
     /**
+     * The invoice slip alone, as an HTML fragment (no <html>/<head>/layout).
+     * Simple Mode's "View details" popup prefetches these in the background and
+     * injects one on tap, which is what makes the popup open with no loading
+     * state — the same "data is already on the phone" trick as Record payment.
+     */
+    public function slip(Invoice $invoice)
+    {
+        $this->guard($invoice);
+        $invoice->loadMissing(['lines.utilityUsage.propertyUtility', 'rental.unit.property', 'tenant', 'property.settings']);
+
+        return response(view('components.invoice-slip-modal', compact('invoice'))->render())
+            ->header('Cache-Control', 'no-store');
+    }
+
+    /**
      * Render the invoice as a PDF. ?size= picks the paper (defaults to a4);
      * ?mode=stream opens inline (print preview) instead of downloading.
      */

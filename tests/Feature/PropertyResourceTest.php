@@ -40,7 +40,9 @@ class PropertyResourceTest extends TestCase
         $response = $this->actingAs($landlord)->get('/app/properties?from=simple');
 
         $response->assertSuccessful();
-        $response->assertSee('rw-force-card-split', false);
+        $response->assertSee('rw-sm-prop-record', false);
+        $response->assertSee('rw-sm-prop-card', false);
+        $response->assertSee('Card Check Property');
     }
 
     public function test_without_from_simple_the_table_stays_a_plain_split(): void
@@ -51,7 +53,7 @@ class PropertyResourceTest extends TestCase
         $response = $this->actingAs($landlord)->get('/app/properties');
 
         $response->assertSuccessful();
-        $response->assertDontSee('rw-force-card-split', false);
+        $response->assertDontSee('rw-sm-prop-record', false);
     }
 
     /**

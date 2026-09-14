@@ -147,9 +147,15 @@
                 </div>
             </div>
 
-            <button wire:click="submit" class="rw-sm-btn-primary w-full" id="edit-tenant-submit">
-                {{ __('Save') }}
-            </button>
+            <div class="flex gap-3">
+                {{-- Parents own the popup — they close it on this event --}}
+                <button type="button" @click="$dispatch('tenant-edit-cancel')" class="rw-sm-btn-secondary flex-1" id="edit-tenant-cancel">
+                    {{ __('Cancel') }}
+                </button>
+                <button wire:click="submit" class="rw-sm-btn-primary flex-1" id="edit-tenant-submit">
+                    {{ __('Save') }}
+                </button>
+            </div>
         </div>
     @endif
 </div>

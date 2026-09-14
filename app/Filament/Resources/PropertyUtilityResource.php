@@ -119,17 +119,43 @@ class PropertyUtilityResource extends Resource
         $livewire = $table->getLivewire();
         $fromSimpleMode = property_exists($livewire, 'fromSimpleMode') && $livewire->fromSimpleMode;
 
+        // Simple Mode: one card-style ViewColumn (wrapped in a Stack so Filament
+        // keeps its supported card/grid row renderer — a bare ViewColumn broke
+        // the row DOM shape after edit/delete), styled like /app/simple's
+        // room/invoice cards. See PropertyResource::table() for the twin.
+        if ($fromSimpleMode) {
+            return $table
+                ->columns([
+                    Tables\Columns\Layout\Stack::make([
+                        Tables\Columns\ViewColumn::make('simple_card')
+                            ->label('')
+                            ->view('filament.tables.columns.property-utility-simple-card'),
+                    ]),
+                ])
+                ->contentGrid(['default' => 1])
+                ->recordClasses('rw-sm-prop-record')
+                ->filters([
+                    Tables\Filters\TernaryFilter::make('is_active'),
+                ])
+                ->actions([
+                    RowActionGroup::make([
+                        Tables\Actions\ViewAction::make(),
+                        static::initializeReadingsAction(),
+                        static::resetReadingsAction(),
+                        static::manageApplicabilityAction(),
+                        static::addWaiverAction(),
+                        Tables\Actions\EditAction::make(),
+                        Tables\Actions\DeleteAction::make(),
+                    ]),
+                ])
+                ->bulkActions([]);
+        }
+
         return $table
             ->columns([
                 // Split/Stack collapses to a card layout below `md` (see
                 // InvoiceResource's table for the same pattern) instead of a
-                // cramped horizontally-scrolling table on mobile. A custom
-                // ViewColumn-only "card" was tried here instead but broke
-                // Filament's row DOM shape (glitches after edit/delete), so
-                // stick to Filament's own supported Split/Stack layout and
-                // just force it to stay stacked at any width via CSS when
-                // coming from Simple Mode (?from=simple) — see
-                // .rw-force-card-split in rentwise-admin.css.
+                // cramped horizontally-scrolling table on mobile.
                 Tables\Columns\Layout\Split::make([
                     Tables\Columns\Layout\Stack::make([
                         Tables\Columns\TextColumn::make('name')
@@ -162,10 +188,7 @@ class PropertyUtilityResource extends Resource
                             ->color(fn ($state) => $state ? 'success' : 'gray'),
                     ])->space(2)->alignment('end'),
                 ])
-                    ->from('md')
-                    ->extraAttributes(fn () => $fromSimpleMode
-                        ? ['class' => 'rw-force-card-split']
-                        : []),
+                    ->from('md'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active'),

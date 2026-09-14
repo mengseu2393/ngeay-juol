@@ -2227,19 +2227,15 @@ select.rw-sm-input {
     gap: 0.5rem !important;
 }
 
-/* PropertyUtilityResource's table Split forces a card layout (instead of the
-   md:flex-row split) when reached from Simple Mode (?from=simple), regardless
-   of viewport width — see PropertyUtilityResource::table(). */
+/* RentalResource's table Split forces a card layout (instead of the md:flex-row
+   split) when reached from Simple Mode (?from=simple), regardless of viewport
+   width — see RentalResource::table(). (Properties / Utility Rates moved to the
+   .rw-sm-prop-record card renderer below.) */
 .rw-force-card-split.fi-ta-split {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 0.5rem !important;
 }
-
-/* Give each row an actual card look (rounded, bordered, shadowed, spaced) when
-   forced into card mode — plain Split/Stack only stacks the columns, it
-   doesn't change the table's own thin-divider-list styling. `:has()` reaches
-   up from the marker class on the Split div to its ancestor row/list wrapper. */
 .fi-ta-content:has(.rw-force-card-split) {
     background-color: transparent !important;
 }
@@ -2257,12 +2253,108 @@ select.rw-sm-input {
     border-color: rgb(var(--gray-700)) !important;
     box-shadow: none !important;
 }
-
-/* The row-actions kebab menu defaults to justify-start below `md` (it sits
-   left-aligned, flush under the content on a forced mobile card) — pin it to
-   the card's right edge instead, matching where a "..." menu is expected. */
 .fi-ta-record:has(.rw-force-card-split) .fi-ta-actions {
     justify-content: flex-end !important;
+}
+
+/* ── Simple Mode: resource lists reached via ?from=simple (Properties,
+   Utility Rates) ── PropertyResource / PropertyUtilityResource ::table()
+   render one ViewColumn card per row there
+   (resources/views/filament/tables/columns/*-simple-card.blade.php)
+   inside Filament's contentGrid card renderer. Strip the table chrome so each
+   row reads as a stand-alone card matching the room/invoice cards on
+   /app/simple. `:has()` climbs from the marker record class to the wrappers. */
+.fi-ta-ctn:has(.rw-sm-prop-record) {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    overflow: visible !important;
+}
+.fi-ta-ctn:has(.rw-sm-prop-record) > * {
+    border-color: transparent !important;
+}
+.fi-ta-ctn:has(.rw-sm-prop-record) .fi-ta-header-ctn {
+    background: rgb(255 255 255);
+    border: 1px solid rgb(var(--gray-200));
+    border-radius: var(--rw-radius-card);
+    margin-bottom: 0.75rem;
+}
+.fi.dark .fi-ta-ctn:has(.rw-sm-prop-record) .fi-ta-header-ctn {
+    background: rgb(var(--gray-900));
+    border-color: rgb(var(--gray-700));
+}
+.fi-ta-content:has(.rw-sm-prop-record) {
+    background-color: transparent !important;
+    overflow: visible !important;
+}
+.fi-ta-content:has(.rw-sm-prop-record) > .fi-ta-content-grid {
+    gap: 0.75rem !important;
+    padding: 0 !important;
+}
+.fi-ta-record.rw-sm-prop-record {
+    position: relative;
+    padding: 0 !important;
+    border-radius: var(--rw-radius-card) !important;
+    background: rgb(255 255 255) !important;
+    border: 1px solid rgb(var(--gray-200)) !important;
+    box-shadow: var(--rw-shadow) !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+}
+.fi.dark .fi-ta-record.rw-sm-prop-record {
+    background: rgb(var(--gray-900)) !important;
+    border-color: rgb(var(--gray-700)) !important;
+}
+.fi-ta-record.rw-sm-prop-record:hover,
+.fi.dark .fi-ta-record.rw-sm-prop-record:hover {
+    background: inherit !important;
+}
+/* Filament wraps the columns in a shrink-to-fit flex row — let the card fill it. */
+.fi-ta-record.rw-sm-prop-record > div {
+    display: block !important;
+    width: 100%;
+}
+.fi-ta-record.rw-sm-prop-record .fi-ta-col-wrp,
+.fi-ta-record.rw-sm-prop-record .fi-ta-cell {
+    padding: 0 !important;
+}
+.fi-ta-record.rw-sm-prop-record .fi-ta-col-wrp,
+.fi-ta-record.rw-sm-prop-record .fi-ta-col-wrp > *,
+.fi-ta-record.rw-sm-prop-record .fi-ta-cell,
+.fi-ta-record.rw-sm-prop-record .fi-ta-cell > * {
+    display: block !important;
+    width: 100% !important;
+}
+/* Row-actions kebab: top-right of the card, next to the type badge
+   (.rw-sm-prop-card-head reserves the space with padding-right). */
+.fi-ta-record.rw-sm-prop-record .fi-ta-actions {
+    position: absolute !important;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0 !important;
+    margin: 0 !important;
+    justify-content: flex-end !important;
+}
+
+.rw-sm-prop-card {
+    padding: 1rem;
+}
+.rw-sm-prop-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-right: 2.25rem;
+}
+.rw-sm-prop-card-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed rgb(var(--gray-200));
+}
+.fi.dark .rw-sm-prop-card-stats {
+    border-top-color: rgb(var(--gray-700));
 }
 
 /* ── Simple Mode: persistent bottom tab-bar navigation ──
@@ -2349,6 +2441,55 @@ select.rw-sm-input {
    from the shared component. */
 .rw-sm-hide-invoice-toolbar .rw-invoice-toolbar {
     display: none !important;
+}
+
+/* Simple Mode invoice popup: the action row is the slip card's footer, so the
+   slip loses its bottom corners/shadow and the bar picks them up. */
+.rw-sm-invoice-view-body .rw-invoice {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 0;
+    box-shadow: none;
+}
+.rw-sm-invoice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 1rem clamp(1.25rem, 4vw, 2.5rem) 1.25rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-top: 1px dashed #e2e8f0;
+    border-radius: 0 0 1rem 1rem;
+}
+.fi.dark .rw-sm-invoice-actions {
+    background: #131c2e;
+    border-color: #334155;
+}
+.rw-sm-invoice-actions > * {
+    min-width: 8rem;
+}
+.rw-sm-btn-telegram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--rw-radius-control);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    background: #229ed9;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--rw-dur) var(--rw-ease),
+                transform var(--rw-dur) var(--rw-ease);
+}
+.rw-sm-btn-telegram:hover {
+    background: #1b8ac0;
+    transform: translateY(-1px);
+}
+.rw-sm-btn-telegram:disabled {
+    opacity: 0.6;
+    cursor: wait;
 }
 
 /* Compact property switcher embedded in Simple Mode's topbar (TOPBAR_START,
@@ -3661,3 +3802,54 @@ select.rw-sm-input {
     height: 6rem;
     flex-shrink: 0;
 }
+
+/* ── Simple Mode room-card action menu (kebab) ── */
+.rw-sm-menu { position: relative; }
+.rw-sm-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    border: none;
+    background: transparent;
+    color: rgb(var(--gray-500));
+    cursor: pointer;
+    transition: background-color var(--rw-dur) var(--rw-ease);
+}
+.rw-sm-menu-btn:hover { background: rgb(var(--gray-100)); }
+.fi.dark .rw-sm-menu-btn { color: rgb(var(--gray-400)); }
+.fi.dark .rw-sm-menu-btn:hover { background: rgb(var(--gray-800)); }
+.rw-sm-menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.25rem);
+    z-index: 20;
+    min-width: 11rem;
+    padding: 0.25rem;
+    border-radius: var(--rw-radius-control);
+    background: #fff;
+    border: 1px solid rgb(var(--gray-200));
+    box-shadow: 0 10px 25px rgba(var(--gray-950), 0.12);
+}
+.fi.dark .rw-sm-menu-panel {
+    background: rgb(var(--gray-900));
+    border-color: rgb(var(--gray-700));
+}
+.rw-sm-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-radius: calc(var(--rw-radius-control) - 2px);
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    color: rgb(var(--gray-800));
+    cursor: pointer;
+}
+.rw-sm-menu-item:hover { background: rgb(var(--gray-100)); }
+.fi.dark .rw-sm-menu-item { color: rgb(var(--gray-200)); }
+.fi.dark .rw-sm-menu-item:hover { background: rgb(var(--gray-800)); }
