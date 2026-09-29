@@ -41,6 +41,10 @@ services:
       # TRUSTED_PROXIES to its address, or the login throttle keys on the
       # proxy's IP instead of the client's.
       - "8080:80"
+    volumes:
+      # Read-only: nginx serves /storage/ (avatars, ID photos) from the same volume the
+      # app writes to. See docker/nginx/default.conf.
+      - storage:/var/www/html/storage/app:ro
     depends_on:
       - app
 

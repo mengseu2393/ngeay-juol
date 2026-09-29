@@ -7,6 +7,10 @@
 node_modules
 vendor
 public/build
+# Host-only artefacts: a dangling `storage:link` symlink (absolute host path) would be baked in and
+# stop the container's own link from being created; host cache files carry host paths.
+public/storage
+bootstrap/cache/*.php
 public/hot
 storage/app/exports/*
 storage/app/private/*
