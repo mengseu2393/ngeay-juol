@@ -79,7 +79,7 @@
                             <div class="w-5 h-5 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
                             </div>
-                            <p class="text-xs text-slate-300">{{ __('Landlords & Admins: Log in using your registered email address to manage properties.') }}</p>
+                            <p class="text-xs text-slate-300">{{ __('Landlords & Admins: Log in with your email or phone number to manage properties.') }}</p>
                         </div>
                         <div class="flex items-start gap-3.5">
                             <div class="w-5 h-5 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 mt-0.5">
@@ -122,14 +122,14 @@
                         
                         <!-- Login Field -->
                         <div>
-                            <label for="login" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ __('Email or Username') }}</label>
+                            <label for="login" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ __('Email, phone or username') }}</label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                                 </div>
                                 <input id="login" name="login" type="text" value="{{ old('login') }}" required autofocus
                                     class="block w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/25 outline-none transition-all text-sm"
-                                    placeholder="Enter your email or username">
+                                    placeholder="{{ __('Enter your email, phone or username') }}">
                             </div>
                         </div>
 
@@ -164,6 +164,16 @@
                             {{ __('Sign In') }}
                         </button>
                     </form>
+
+                    @if (\App\Services\LandlordRegistrationService::isOpen())
+                        <!-- Landlord self-registration -->
+                        <div class="mt-6 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center">
+                            <p class="text-sm text-slate-600 dark:text-slate-300">{{ __('New landlord?') }}</p>
+                            <a href="{{ route('register') }}" class="mt-2 inline-block w-full py-3 rounded-xl border border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold text-sm hover:bg-emerald-500/10 transition-colors">
+                                {{ __('Register as Landlord') }}
+                            </a>
+                        </div>
+                    @endif
 
                     <!-- Back to Landing Page -->
                     <div class="mt-8 text-center">

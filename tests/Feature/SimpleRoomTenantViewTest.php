@@ -152,6 +152,46 @@ class SimpleRoomTenantViewTest extends TestCase
         $this->assertSame($oldHash, $rental->fresh()->tenant->password);
     }
 
+    /**
+     * The landlord shows the QR on their own screen and the tenant scans it
+     * with their phone — the link must sign the *tenant* in (not the landlord
+     * who minted it) and land them on the portal.
+     */
+    public function test_tenant_login_qr_signs_the_tenant_into_the_portal(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->rentalSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        $url = Livewire::actingAs($landlord)
+            ->test(SimpleRoomList::class)
+            ->call('tenantLoginQr', $rental->id)
+            ->effects['returns'][0]['url'] ?? null;
+
+        $this->assertNotNull($url);
+        $this->assertStringNotContainsString('password', $url);
+
+        // A fresh device: the tenant's phone has no landlord session.
+        auth()->logout();
+        $this->flushSession();
+
+        $this->get($url)->assertRedirect(route('portal.dashboard'));
+        $this->assertAuthenticatedAs($rental->tenant);
+    }
+
+    public function test_tenant_login_qr_is_not_reachable_for_a_landlord_who_does_not_own_the_rental(): void
+    {
+        [$landlord, $property, $unit, $rental] = $this->rentalSetup();
+
+        Livewire::actingAs($this->makeLandlord())
+            ->test(SimpleRoomList::class)
+            ->call('tenantLoginQr', $rental->id)
+            ->assertStatus(404);
+
+        $this->assertDatabaseCount('qr_login_tokens', 0);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**

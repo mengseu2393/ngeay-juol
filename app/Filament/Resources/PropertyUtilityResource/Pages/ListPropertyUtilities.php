@@ -15,9 +15,16 @@ class ListPropertyUtilities extends ListRecords
 
     public function mount(): void
     {
-        parent::mount();
+        // Simple Mode has its own Utility Rates screen (SimpleUtilityRates:
+        // cards + client-rendered Alpine add/edit popups). Old ?from=simple
+        // links land there instead of on this desktop table.
+        if (request()->query('from') === 'simple') {
+            $this->redirect(route('filament.landlord.pages.simple', ['screen' => 'utility-rates']));
 
-        $this->fromSimpleMode = request()->query('from') === 'simple';
+            return;
+        }
+
+        parent::mount();
     }
 
     protected function getHeaderActions(): array

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PropertyType;
 use App\Models\Concerns\BelongsToLandlord;
+use App\Services\SubscriptionService;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -50,6 +51,16 @@ class Property extends Model implements HasMedia
             ->logOnly(['name', 'property_type', 'landlord_id'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    /** Enforce the subscription's max_properties on create (mirrors Unit's unit cap). */
+    protected static function booted(): void
+    {
+        static::creating(function (Property $property) {
+            if ($property->landlord_id && $landlord = User::find($property->landlord_id)) {
+                SubscriptionService::assertWithinPropertyCap($landlord);
+            }
+        });
     }
 
     public function registerMediaCollections(): void

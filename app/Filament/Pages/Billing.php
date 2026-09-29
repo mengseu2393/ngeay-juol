@@ -167,7 +167,7 @@ class Billing extends Page
 
     public function getDaysToExpiry(): ?int
     {
-        if (! $this->subscription?->ends_at) {
+        if (! $this->subscription?->ends_at || $this->subscription->isLifetime()) {
             return null;
         }
 

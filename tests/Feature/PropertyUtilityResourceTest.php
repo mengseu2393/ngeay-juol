@@ -414,13 +414,13 @@ class PropertyUtilityResourceTest extends TestCase
         ]);
         ActiveProperty::set($property->id);
 
-        // The header action must render the create URL with ?from=simple attached.
+        // The old ?from=simple list link now lands on Simple Mode's own
+        // Utility Rates screen (client-rendered cards + popups).
         $this->actingAs($landlord)
             ->get('/app/property-utilities?from=simple')
-            ->assertSuccessful()
-            ->assertSee('/app/property-utilities/create?from=simple', false);
+            ->assertRedirect('/app/simple?screen=utility-rates');
 
-        // And that URL must not get bounced back to /app/simple.
+        // The create form's ?from=simple URL must still not get bounced back to /app/simple.
         $this->actingAs($landlord)
             ->get('/app/property-utilities/create?from=simple')
             ->assertSuccessful();

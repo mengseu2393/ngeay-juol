@@ -75,6 +75,12 @@ class Subscription extends Model
             ->dontSubmitEmptyLogs();
     }
 
+    /** A "Forever" subscription — its far-future ends_at is not shown as a date. */
+    public function isLifetime(): bool
+    {
+        return $this->interval === PlanInterval::Lifetime;
+    }
+
     /** Fallback landlord_id derivation for staff/nested creates. */
     public function resolveLandlordId(): ?int
     {

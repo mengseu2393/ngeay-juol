@@ -54,6 +54,10 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($throttleKey);
         });
 
+        // Landlord self-registration: a handful of honest retries per IP, not a
+        // bulk account-creation endpoint.
+        RateLimiter::for('register', fn (Request $request) => Limit::perHour(10)->by($request->ip()));
+
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
         });

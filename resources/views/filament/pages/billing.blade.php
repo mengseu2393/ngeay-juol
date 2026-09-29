@@ -91,7 +91,9 @@
                     @php $days = $this->getDaysToExpiry(); @endphp
                     <div>
                         <p class="text-3xl font-bold tracking-tight @if($days !== null && $days <= 0) text-danger-600 @elseif($days !== null && $days <= 7) text-warning-600 @endif">
-                            @if($days !== null && $days > 0)
+                            @if($subscription->isLifetime())
+                                {{ __('Forever') }}
+                            @elseif($days !== null && $days > 0)
                                 {{ $days }} {{ __('days') }}
                             @elseif($days !== null && $days <= 0)
                                 {{ __('Expired') }}
@@ -100,7 +102,9 @@
                             @endif
                         </p>
                         <p class="text-sm text-gray-500 dark:text-gray-400">
-                            @if($days !== null && $days > 0)
+                            @if($subscription->isLifetime())
+                                {{ __('No expiry') }}
+                            @elseif($days !== null && $days > 0)
                                 {{ __('until :date', ['date' => $subscription->ends_at?->format('Y-m-d')]) }}
                             @elseif($days !== null && $days <= 0)
                                 {{ __('ended on :date', ['date' => $subscription->ends_at?->format('Y-m-d')]) }}

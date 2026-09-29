@@ -213,7 +213,7 @@ class PropertyUtilityResource extends Resource
     }
 
     /** @return array<string, string> */
-    protected static function utilityOptions(): array
+    public static function utilityOptions(): array
     {
         return [
             'Electricity' => __('Electricity'),
@@ -246,9 +246,10 @@ class PropertyUtilityResource extends Resource
         return static::utilityOptions()[$name] ?? $name;
     }
 
-    protected static function applyUtilityDefaults(mixed $state, Forms\Set $set): void
+    /** Sensible unit/billing defaults for a utility name (shared with Simple Mode). */
+    public static function utilityDefaults(string $name): array
     {
-        $defaults = match ((string) $state) {
+        return match ($name) {
             'Electricity' => ['unit' => 'kWh', 'billing' => BillingType::Metered],
             'Water' => ['unit' => 'm³', 'billing' => BillingType::Metered],
             'Gas' => ['unit' => 'm³', 'billing' => BillingType::Metered],
@@ -259,6 +260,11 @@ class PropertyUtilityResource extends Resource
             'Security' => ['unit' => 'month', 'billing' => BillingType::Flat],
             default => ['unit' => 'unit', 'billing' => BillingType::Flat],
         };
+    }
+
+    protected static function applyUtilityDefaults(mixed $state, Forms\Set $set): void
+    {
+        $defaults = static::utilityDefaults((string) $state);
 
         $set('unit_of_measure', $defaults['unit']);
         $set('billing_type', $defaults['billing']->value);

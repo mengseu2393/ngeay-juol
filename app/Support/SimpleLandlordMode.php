@@ -59,7 +59,10 @@ class SimpleLandlordMode
         $panel = LandlordPanelProvider::PATH;
 
         return ($request->is($panel) || $request->is($panel.'/*'))
-            && ! $request->is($panel.'/simple', $panel.'/simple/*');
+            && ! $request->is($panel.'/simple', $panel.'/simple/*')
+            // The setup wizard is already phone-first; bouncing it to Simple Mode
+            // would loop with RedirectToLandlordSetup.
+            && ! $request->is($panel.'/setup');
     }
 
     /** Start/extend the full-mode escape window from this request. */
@@ -126,6 +129,9 @@ class SimpleLandlordMode
         $panel = LandlordPanelProvider::PATH;
 
         return ($request->is($panel) || $request->is($panel.'/*'))
-            && ! $request->is($panel.'/simple', $panel.'/simple/*');
+            && ! $request->is($panel.'/simple', $panel.'/simple/*')
+            // The setup wizard is already phone-first; bouncing it to Simple Mode
+            // would loop with RedirectToLandlordSetup.
+            && ! $request->is($panel.'/setup');
     }
 }

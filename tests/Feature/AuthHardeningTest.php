@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\UserStatus;
+use App\Models\Setting;
+use App\Models\Subscription;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Database\Seeders\SubscriptionPlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
@@ -75,12 +79,34 @@ class AuthHardeningTest extends TestCase
         $this->assertAuthenticated();
     }
 
-    public function test_public_registration_routes_are_disabled(): void
+    /**
+     * Public registration used to be off entirely, because Fortify's registration
+     * made an account with no role and no landlord link — a login that could enter
+     * no panel. Landlord self-registration (RegisterController) replaced that, so
+     * this now guards the same hole from the other side: every sign-up is a fully
+     * provisioned landlord (role + subscription), and the admin kill switch still
+     * takes the route away completely.
+     */
+    public function test_public_registration_only_creates_fully_provisioned_landlords(): void
     {
-        $this->assertFalse(
-            app('router')->getRoutes()->hasNamedRoute('register'),
-            'Public self-registration must not be routable.',
-        );
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(SubscriptionPlanSeeder::class);
+
+        $this->post('/register', [
+            'name' => 'Walk In',
+            'email' => 'walkin@example.com',
+            'password' => 'Str0ngPassphrase!',
+            'password_confirmation' => 'Str0ngPassphrase!',
+        ])->assertRedirect(route('filament.landlord.pages.setup'));
+
+        $user = User::where('email', 'walkin@example.com')->firstOrFail();
+        $this->assertSame(['landlord'], $user->getRoleNames()->all());
+        $this->assertTrue(Subscription::withoutGlobalScopes()->where('landlord_id', $user->id)->exists());
+    }
+
+    public function test_public_registration_is_not_routable_when_switched_off(): void
+    {
+        Setting::set('registration_enabled', false, 'bool', 'registration');
 
         $this->get('/register')->assertNotFound();
         $this->post('/register', [

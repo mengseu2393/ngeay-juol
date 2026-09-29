@@ -167,6 +167,8 @@ return [
         // account gets no role and no landlord link, so it can enter neither panel;
         // leaving GET|POST /register reachable only offered the internet a free
         // account-creation and user-enumeration surface.
+        // Landlords now self-register through App\Http\Controllers\Auth\RegisterController
+        // (role + subscription + setup wizard, throttled, admin kill switch) — keep this off.
         // Features::registration(),
         Features::resetPasswords(),
         // Features::emailVerification(),

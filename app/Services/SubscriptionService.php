@@ -8,6 +8,7 @@ use App\Enums\SubscriptionAccess;
 use App\Enums\SubscriptionAction;
 use App\Enums\SubscriptionPaymentStatus;
 use App\Enums\SubscriptionStatus;
+use App\Models\Property;
 use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\SubscriptionHistory;
@@ -17,11 +18,11 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Notifications\SubscriptionAccessChangedNotification;
 use App\Notifications\SubscriptionRenewalPendingNotification;
-use App\Support\Notifications\NotificationDeduplicator;
-use App\Support\Notifications\NotificationRecipients;
 use App\Services\Billing\ManualGateway;
 use App\Services\Billing\UnsupportedGateway;
 use App\Support\Billing\GatewayChargeResult;
+use App\Support\Notifications\NotificationDeduplicator;
+use App\Support\Notifications\NotificationRecipients;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -532,6 +533,28 @@ class SubscriptionService
         if (($currentCount + $newCount) > $sub->max_units) {
             throw ValidationException::withMessages([
                 'subscription' => __('You have reached the maximum limit of :max units for your current subscription plan. Please upgrade your plan to add more rooms.', ['max' => $sub->max_units]),
+            ]);
+        }
+    }
+
+    /** Same contract as assertWithinUnitCap(), for the plan's max_properties. */
+    public static function assertWithinPropertyCap(User $user, int $newCount = 1): void
+    {
+        $sub = Subscription::withoutGlobalScopes()
+            ->where('landlord_id', $user->effectiveLandlordId())
+            ->first();
+
+        if (! $sub || ! $sub->max_properties) {
+            return; // No cap defined
+        }
+
+        $currentCount = Property::withoutGlobalScopes()
+            ->where('landlord_id', $user->effectiveLandlordId())
+            ->count();
+
+        if (($currentCount + $newCount) > $sub->max_properties) {
+            throw ValidationException::withMessages([
+                'subscription' => __('You have reached the maximum limit of :max properties for your current subscription plan. Please upgrade your plan to add more properties.', ['max' => $sub->max_properties]),
             ]);
         }
     }

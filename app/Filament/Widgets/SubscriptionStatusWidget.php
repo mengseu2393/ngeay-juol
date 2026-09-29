@@ -19,6 +19,7 @@ class SubscriptionStatusWidget extends StatsOverviewWidget
     public static function canView(): bool
     {
         $user = Auth::user();
+
         return $user && $user->hasAnyRole(['landlord', 'landlord_manager']);
     }
 
@@ -40,7 +41,7 @@ class SubscriptionStatusWidget extends StatsOverviewWidget
             ];
         }
 
-        $daysToExpiry = $sub->ends_at ? (int) now()->startOfDay()->diffInDays($sub->ends_at, false) : null;
+        $daysToExpiry = $sub->ends_at && ! $sub->isLifetime() ? (int) now()->startOfDay()->diffInDays($sub->ends_at, false) : null;
 
         $color = match (true) {
             $access === SubscriptionAccess::Revoked => 'danger',
@@ -51,9 +52,11 @@ class SubscriptionStatusWidget extends StatsOverviewWidget
             default => 'success',
         };
 
-        $label = $daysToExpiry !== null && $daysToExpiry > 0
-            ? "{$daysToExpiry} " . __('days remaining')
-            : $access->getLabel();
+        $label = match (true) {
+            $sub->isLifetime() && $access === SubscriptionAccess::Full => __('Forever'),
+            $daysToExpiry !== null && $daysToExpiry > 0 => "{$daysToExpiry} ".__('days remaining'),
+            default => $access->getLabel(),
+        };
 
         return [
             Stat::make(
@@ -70,7 +73,7 @@ class SubscriptionStatusWidget extends StatsOverviewWidget
 
             Stat::make(
                 __('Units'),
-                ($sub->current_unit_count ?? 0) . ($sub->max_units ? " / {$sub->max_units}" : '')
+                ($sub->current_unit_count ?? 0).($sub->max_units ? " / {$sub->max_units}" : '')
             )
                 ->description(__('of max allowed'))
                 ->icon('heroicon-o-building-office-2', IconPosition::Before)
@@ -80,7 +83,7 @@ class SubscriptionStatusWidget extends StatsOverviewWidget
                 __('Status'),
                 $sub->status->getLabel()
             )
-                ->description($sub->ends_at?->format('Y-m-d') ?? '')
+                ->description($sub->isLifetime() ? __('No expiry') : ($sub->ends_at?->format('Y-m-d') ?? ''))
                 ->icon('heroicon-o-credit-card', IconPosition::Before)
                 ->color($sub->status->getColor()),
         ];
