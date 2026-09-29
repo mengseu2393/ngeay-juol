@@ -4,7 +4,9 @@ namespace App\Livewire;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -100,6 +102,23 @@ class SimpleProfile extends Component
         $this->infoSaved = true;
     }
 
+    /**
+     * Picking a photo saves it straight away. This used to be a two-step "choose, then tap
+     * Save photo" — landlords picked a photo, saw the preview and left, so the avatar never
+     * changed. There is nothing to review on a profile picture that a re-pick can't fix.
+     */
+    public function updatedAvatarPhoto(): void
+    {
+        try {
+            $this->saveAvatar();
+        } catch (ValidationException $e) {
+            // Don't keep showing a preview of a file that was rejected.
+            $this->reset('avatarPhoto');
+
+            throw $e;
+        }
+    }
+
     public function saveAvatar(): void
     {
         $user = Auth::user();
@@ -108,8 +127,12 @@ class SimpleProfile extends Component
             'avatarPhoto' => 'required|image|max:5120',
         ]);
 
+        // Never store the client's file name: "game?.jpeg" (or any name with URL/filesystem
+        // special characters) makes an unreliable path on some servers and object stores.
+        $extension = $this->avatarPhoto->guessExtension() ?: 'jpg';
+
         $user->addMedia($this->avatarPhoto->getRealPath())
-            ->usingFileName($this->avatarPhoto->getClientOriginalName())
+            ->usingFileName('avatar-'.Str::lower(Str::random(8)).'.'.$extension)
             ->toMediaCollection('avatar');
 
         $this->reset('avatarPhoto');

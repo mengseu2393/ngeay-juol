@@ -23,8 +23,6 @@ use Livewire\Component;
  */
 class SimpleUtilityUsage extends Component
 {
-    public string $search = '';
-
     /** ID of the unit whose "record meter reading" reveal is open */
     public ?int $recordingUnitId = null;
 
@@ -165,9 +163,6 @@ class SimpleUtilityUsage extends Component
             ? Unit::query()
                 ->with('activeRental')
                 ->where('property_id', $propertyId)
-                ->when($this->search !== '', function ($q) {
-                    $q->where('room_number', 'like', '%'.trim($this->search).'%');
-                })
                 ->orderBy('room_number')
                 ->get()
             : collect();

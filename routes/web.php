@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\QrLoginController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\InvoiceDocumentController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\TenantPortalController;
@@ -17,6 +18,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::view('info', 'info')->name('info');
+
 Route::get('login', [LoginController::class, 'showLogin'])->name('login');
 // throttle:login is the limiter defined in FortifyServiceProvider (5/min keyed by
 // username + IP). This app authenticates through its own LoginController rather
@@ -24,6 +27,11 @@ Route::get('login', [LoginController::class, 'showLogin'])->name('login');
 // onto the route it registers itself.
 Route::post('login', [LoginController::class, 'login'])->middleware('throttle:login');
 Route::post('logout', [LoginController::class, 'logout'])->name('logout');
+
+// Landlord self-registration (step 1 of onboarding; the rest is /app/setup).
+// Not Fortify's registration feature — that stays off (see config/fortify.php).
+Route::get('register', [RegisterController::class, 'show'])->name('register');
+Route::post('register', [RegisterController::class, 'register'])->middleware('throttle:register');
 
 // ---------------------------------------------------------------------------
 // QR quick-login redemption. The QR image carries a single-use, 15-minute,

@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div class="space-y-4" x-data="rwListFilter()">
 
     {{-- ── Add tenant button ── --}}
     <div class="flex justify-end">
@@ -24,7 +24,7 @@
     <div class="relative">
         <input
             type="search"
-            wire:model.live.debounce.400ms="search"
+            x-model="q"
             placeholder="{{ __('Tenant name, phone or room…') }}"
             class="rw-sm-search-input"
             id="tenant-search"
@@ -236,7 +236,19 @@
                 ->filter(fn ($o) => $o->role !== 'primary' && $o->occupant_name && $o->occupant_name !== $primaryName)
                 ->pluck('occupant_name');
         @endphp
-        <div class="rw-sm-invoice-card" id="tenant-card-{{ $rental->id }}">
+        <div
+            class="rw-sm-invoice-card"
+            id="tenant-card-{{ $rental->id }}"
+            data-rw-item
+            data-q="{{ mb_strtolower(trim(implode(' ', array_filter([
+                $primaryName,
+                $rental->occupant_phone,
+                $rental->tenant?->name,
+                $rental->unit?->room_number,
+                ...$rental->occupants->flatMap(fn ($o) => [$o->occupant_name, $o->occupant_phone])->all(),
+            ])))) }}"
+            x-show="matches($el)"
+        >
             <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
                     <p class="rw-sm-room-number truncate">{{ $primaryName }}</p>
@@ -295,4 +307,8 @@
             <p class="text-gray-500 dark:text-gray-400">{{ __('No tenants found.') }}</p>
         </div>
     @endforelse
+
+    <div x-cloak x-show="noMatches()" class="rw-sm-empty-state rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 p-8 text-center">
+        <p class="text-gray-500 dark:text-gray-400">{{ __('No tenants found.') }}</p>
+    </div>
 </div>

@@ -1,6 +1,7 @@
 <div
     class="space-y-4"
     x-data="{
+        ...rwListFilter({ filter: @js($filter) }),
         priceOpen: false,
         price: { id: null, room: '', currency: '', value: '' },
         openPrice(unit) { this.price = { ...unit }; this.priceOpen = true; },
@@ -14,7 +15,34 @@
         newPassword: null,
         resetting: false,
         copied: null,
-        openTenant(data) { this.tenant = { ...data }; this.newPassword = null; this.copied = null; this.tenantOpen = true; },
+        qr: null,
+        qrLoading: false,
+        qrError: false,
+        openTenant(data) { this.tenant = { ...data }; this.newPassword = null; this.copied = null; this.qr = null; this.qrError = false; this.tenantOpen = true; },
+        showLoginQr() {
+            this.qrLoading = true;
+            this.qrError = false;
+            $wire.tenantLoginQr(this.tenant.id)
+                .then(r => {
+                    if (! r || ! r.url) { this.qrError = true; return; }
+                    this.qr = r;
+                    this.renderQr();
+                })
+                .catch(() => { this.qrError = true; })
+                .finally(() => { this.qrLoading = false; });
+        },
+        renderQr() {
+            const draw = () => this.$nextTick(() => {
+                if (! this.$refs.qrCanvas || ! this.qr) return;
+                new QRious({ element: this.$refs.qrCanvas, value: this.qr.url, size: 240, level: 'M', padding: 12, foreground: '#0f172a', background: '#ffffff' });
+            });
+            if (window.QRious) { draw(); return; }
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js';
+            s.onload = draw;
+            s.onerror = () => { this.qrError = true; };
+            document.head.appendChild(s);
+        },
         resetLogin() {
             if (this.tenant.username && ! confirm(@js(__('This replaces the current password — the tenant will need the new one to sign in. Continue?')))) return;
             this.resetting = true;
@@ -34,13 +62,15 @@
 >
     <style>[x-cloak] { display: none !important; }</style>
 
-    {{-- ── Filters ── --}}
+    {{-- ── Filters (client-side: every room is rendered, so a tap needs no request) ── --}}
     <div class="rw-sm-filter-bar flex gap-2 overflow-x-auto pb-1">
         @foreach(['all' => __('All'), 'available' => __('Vacant'), 'occupied' => __('Occupied'), 'maintenance' => __('Maintenance')] as $val => $label)
             <button
-                wire:click="$set('filter', '{{ $val }}')"
+                type="button"
+                @click="filter = '{{ $val }}'"
                 id="room-filter-{{ $val }}"
-                class="rw-sm-filter-pill {{ $filter === $val ? 'rw-sm-filter-active' : '' }}"
+                class="rw-sm-filter-pill"
+                :class="{ 'rw-sm-filter-active': filter === '{{ $val }}' }"
             >{{ $label }}</button>
         @endforeach
     </div>
@@ -49,7 +79,7 @@
     <div class="relative">
         <input
             type="search"
-            wire:model.live.debounce.400ms="search"
+            x-model="q"
             placeholder="{{ __('Room or tenant name…') }}"
             class="rw-sm-search-input"
             id="room-search"
@@ -258,6 +288,29 @@
                     </div>
                 </template>
 
+                {{-- Login QR: the tenant scans it on their own phone and lands
+                     signed-in on the portal — single use, expires in minutes. --}}
+                <div x-show="qr" x-cloak class="rw-sm-qr mt-3">
+                    <canvas x-ref="qrCanvas" width="240" height="240" class="rw-sm-qr-canvas"></canvas>
+                    <p class="rw-sm-qr-hint">{{ __('Ask the tenant to scan this with their phone camera to sign in.') }}</p>
+                    <p class="rw-sm-qr-expiry">
+                        {{ __('Single use — expires at') }} <span x-text="qr && qr.expires"></span>
+                    </p>
+                </div>
+
+                <p x-show="qrError" x-cloak class="rw-sm-error mt-2">{{ __('Could not create the login QR code. Please try again.') }}</p>
+
+                <button
+                    type="button"
+                    @click="showLoginQr()"
+                    :disabled="qrLoading"
+                    class="rw-sm-btn-primary text-sm mt-2 w-full"
+                    id="tenant-view-login-qr"
+                >
+                    <span x-show="! qrLoading" x-text="qr ? @js(__('New QR code')) : @js(__('Show login QR code'))"></span>
+                    <span x-show="qrLoading" x-cloak>{{ __('Loading…') }}</span>
+                </button>
+
                 <template x-if="! newPassword">
                     <button
                         type="button"
@@ -327,7 +380,22 @@
             ] : null;
         @endphp
 
-        <div class="rw-sm-invoice-card" id="room-card-{{ $room->id }}">
+        @php
+            $statusKey = match($room->status) {
+                \App\Enums\UnitStatus::Available => 'available',
+                \App\Enums\UnitStatus::Occupied => 'occupied',
+                \App\Enums\UnitStatus::Maintenance, \App\Enums\UnitStatus::Unavailable => 'maintenance',
+                default => 'other',
+            };
+        @endphp
+        <div
+            class="rw-sm-invoice-card"
+            id="room-card-{{ $room->id }}"
+            data-rw-item
+            data-status="{{ $statusKey }}"
+            data-q="{{ mb_strtolower(trim($room->room_number.' '.($rental?->occupant_name ?? '').' '.($rental?->tenant?->name ?? ''))) }}"
+            x-show="matches($el)"
+        >
             <div class="flex items-start justify-between gap-2">
                 <div>
                     <p class="rw-sm-room-number">{{ $room->room_number }}</p>
@@ -409,4 +477,8 @@
             <p class="text-gray-500 dark:text-gray-400">{{ __('No rooms found.') }}</p>
         </div>
     @endforelse
+
+    <div x-cloak x-show="noMatches()" class="rw-sm-empty-state rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 p-8 text-center">
+        <p class="text-gray-500 dark:text-gray-400">{{ __('No rooms found.') }}</p>
+    </div>
 </div>

@@ -20,9 +20,7 @@ use Livewire\Component;
  */
 class SimpleTenantList extends Component
 {
-    public string $search = '';
-
-    /** active | due | ended | all */
+    /** active | due | ended | all (server-side: ended/history rows aren't rendered until asked for). */
     public string $filter = 'active';
 
     protected $queryString = ['filter'];
@@ -182,16 +180,6 @@ class SimpleTenantList extends Component
                     InvoiceStatus::Partial->value,
                     InvoiceStatus::Overdue->value,
                 ])))
-                ->when($this->search !== '', function ($q) {
-                    $s = '%'.trim($this->search).'%';
-                    $q->where(function ($q) use ($s) {
-                        $q->where('occupant_name', 'like', $s)
-                            ->orWhere('occupant_phone', 'like', $s)
-                            ->orWhereHas('tenant', fn ($tq) => $tq->where('name', 'like', $s))
-                            ->orWhereHas('occupants', fn ($oq) => $oq->where('occupant_name', 'like', $s)->orWhere('occupant_phone', 'like', $s))
-                            ->orWhereHas('unit', fn ($uq) => $uq->where('room_number', 'like', $s));
-                    });
-                })
                 ->get()
                 ->sortBy(fn (Rental $rental) => mb_strtolower($rental->occupant_name ?: ($rental->tenant?->name ?? '')))
                 ->values()

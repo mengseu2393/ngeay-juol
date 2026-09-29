@@ -1,10 +1,10 @@
-<div class="space-y-4">
+<div class="space-y-4" x-data="rwListFilter()">
 
     {{-- ── Search ── --}}
     <div class="relative">
         <input
             type="search"
-            wire:model.live.debounce.400ms="search"
+            x-model="q"
             placeholder="{{ __('Room number…') }}"
             class="rw-sm-search-input"
             id="utility-usage-search"
@@ -89,6 +89,9 @@
             @click="$dispatch('rw-popup-open', { name: 'utility-reading', call: () => $wire.openUtilityReading({{ $room->id }}) })"
             class="rw-sm-room-row w-full text-left"
             id="utility-usage-room-{{ $room->id }}"
+            data-rw-item
+            data-q="{{ mb_strtolower($room->room_number) }}"
+            x-show="matches($el)"
         >
             <div class="flex items-center justify-between">
                 <div>
@@ -122,4 +125,8 @@
             <p class="text-gray-500 dark:text-gray-400">{{ __('No rooms found.') }}</p>
         </div>
     @endforelse
+
+    <div x-cloak x-show="noMatches()" class="rw-sm-empty-state rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 p-8 text-center">
+        <p class="text-gray-500 dark:text-gray-400">{{ __('No rooms found.') }}</p>
+    </div>
 </div>

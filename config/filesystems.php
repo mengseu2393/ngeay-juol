@@ -41,7 +41,11 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Host-relative on purpose: media URLs are only ever used in the browser (<img>/<a>), and
+            // an absolute APP_URL-based one breaks whenever the request host differs from APP_URL
+            // (127.0.0.1 vs a LAN IP locally; www/apex, http/https or a proxy in production).
+            // Set FILESYSTEM_PUBLIC_URL to a full URL only when files are served from another origin/CDN.
+            'url' => rtrim(env('FILESYSTEM_PUBLIC_URL', '/storage'), '/'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

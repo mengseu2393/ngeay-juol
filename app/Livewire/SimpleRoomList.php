@@ -3,14 +3,16 @@
 namespace App\Livewire;
 
 use App\Enums\ReadingType;
-use App\Enums\UnitStatus;
+use App\Enums\UserStatus;
 use App\Models\PropertyUtility;
 use App\Models\Rental;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
+use App\Services\QrLoginTokenService;
 use App\Services\RoomAccountService;
 use App\Support\ActiveProperty;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 /**
@@ -19,9 +21,11 @@ use Livewire\Component;
  */
 class SimpleRoomList extends Component
 {
-    public string $search = '';
-
-    /** Filter: 'all' | 'available' (vacant) | 'occupied' | 'maintenance' */
+    /**
+     * Initial filter pill only ('all' | 'available' | 'occupied' | 'maintenance'), read from
+     * ?filter= so deep links keep working. Every room is always rendered and the pills +
+     * search filter them in the browser (see rwListFilter) — no request per tap.
+     */
     public string $filter = 'all';
 
     protected $queryString = ['filter'];
@@ -113,6 +117,40 @@ class SimpleRoomList extends Component
 
         // Returned to the client-side popup (Alpine) that shows it once.
         return ['username' => $result['username'], 'password' => $result['password']];
+    }
+
+    /**
+     * Mints a single-use, short-lived QR login link for the tenant — shown on
+     * the landlord's screen for the tenant to scan, signing them straight into
+     * the portal with no password. Reuses the admin QR Code Login machinery
+     * (QrLoginTokenService), so the QR holds only an opaque signed token.
+     *
+     * @return array{url: string, expires: string}
+     */
+    public function tenantLoginQr(int $rentalId): array
+    {
+        $rental = $this->scopedRental($rentalId);
+
+        abort_unless($rental, 404);
+        abort_unless(Auth::user()?->can('update', $rental), 403);
+
+        $tenant = $rental->tenant;
+
+        // Never mint a QR that signs into anything but a tenant account.
+        abort_unless($tenant?->hasRole('tenant'), 403);
+
+        if ($tenant->status !== UserStatus::Active) {
+            throw ValidationException::withMessages([
+                'tenantLoginQr' => __('This account is not active, so it cannot be signed in.'),
+            ]);
+        }
+
+        $issued = app(QrLoginTokenService::class)->issue($tenant, Auth::user());
+
+        return [
+            'url' => $issued['url'],
+            'expires' => $issued['token']->expires_at->timezone(config('app.timezone'))->format('H:i'),
+        ];
     }
 
     public function editTenant(int $rentalId): void
@@ -301,17 +339,6 @@ class SimpleRoomList extends Component
                 ->with(['activeRental.tenant', 'activeRental.media', 'property'])
                 ->withCount('utilityUsages')
                 ->where('property_id', $propertyId)
-                ->when($this->filter === 'available', fn ($q) => $q->where('status', UnitStatus::Available))
-                ->when($this->filter === 'occupied', fn ($q) => $q->where('status', UnitStatus::Occupied))
-                ->when($this->filter === 'maintenance', fn ($q) => $q->whereIn('status', [UnitStatus::Maintenance, UnitStatus::Unavailable]))
-                ->when($this->search !== '', function ($q) {
-                    $s = '%'.trim($this->search).'%';
-                    // Grouped so the status filter above still applies to every OR branch.
-                    $q->where(fn ($sq) => $sq->where('room_number', 'like', $s)
-                        ->orWhereHas('activeRental', fn ($rq) => $rq->where('occupant_name', 'like', $s)
-                            ->orWhereHas('tenant', fn ($tq) => $tq->where('name', 'like', $s))
-                        ));
-                })
                 ->orderBy('room_number')
                 ->get()
             : collect();

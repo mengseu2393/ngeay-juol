@@ -173,7 +173,9 @@ class SimpleInvoiceList extends Component
         $baseQuery = $this->filteredQuery()->orderByDesc('issue_date');
 
         $invoices = (clone $baseQuery)
-            ->with(['rental.unit', 'tenant'])
+            // property.settings: the row's money formatting reads the property's currency
+            // per invoice — without this it lazy-loads 2 queries for every row.
+            ->with(['rental.unit', 'tenant', 'property.settings'])
             ->paginate(15);
 
         // Everything the current filter matches (not just this page) — feeds the

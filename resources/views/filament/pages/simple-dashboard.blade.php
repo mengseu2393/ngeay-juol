@@ -1,6 +1,19 @@
 <x-filament-panels::page>
     @php
         $propertyId = $this->getPropertyId();
+
+        // Only the screen being opened is rendered with the page; every other screen is a
+        // lazy Livewire component that loads after first paint. Mounting all nine up front
+        // (250KB of HTML, ~60 queries) is what made Simple Mode slow to open.
+        //  - main tabs (invoices/rooms/tenants): 'on-load' — fetched right after paint, so
+        //    the bottom-nav tap is instant;
+        //  - everything else: loaded the first time its (x-show hidden) container is shown.
+        // ?unit_id= deep links (add-tenant / end-tenancy / utility) always arrive as the
+        // initial screen, so their mount() still sees the query string.
+        $initialScreen = request()->query('screen') ?: 'invoices';
+        $lazyScreen = fn (string $screen): array => $screen === $initialScreen
+            ? []
+            : ['lazy' => in_array($screen, ['invoices', 'rooms', 'tenants'], true) ? 'on-load' : true];
     @endphp
 
     {{-- ─────────────────────────────────────────────────────────── --}}
@@ -9,7 +22,7 @@
     <div
         class="rw-simple rw-simple--billing mx-auto space-y-5 px-4 py-4 transition-all duration-350 {{ $propertyId ? 'rw-simple--with-bottom-nav' : '' }}"
         x-data="{
-            screen: new URLSearchParams(window.location.search).get('screen') || 'invoices',
+            screen: @js($initialScreen),
             setScreen(s) {
                 this.screen = s;
                 history.replaceState(null, '', window.location.pathname + '?screen=' + s);
@@ -40,7 +53,7 @@
                     </button>
                 </div>
                 <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    @livewire('simple-invoice-list', key('simple-invoice-list'))
+                    @livewire('simple-invoice-list', $lazyScreen('invoices'), key('simple-invoice-list'))
                 </div>
             </div>
 
@@ -53,7 +66,7 @@
                     <h2 class="rw-sm-screen-title">{{ __('Create invoices') }}</h2>
                 </div>
                 <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    @livewire(\App\Livewire\SimpleBillingInvoice::class, key('simple-billing-invoice'))
+                    @livewire(\App\Livewire\SimpleBillingInvoice::class, $lazyScreen('billing-invoice'), key('simple-billing-invoice'))
                 </div>
             </div>
 
@@ -66,7 +79,7 @@
                     <h2 class="rw-sm-screen-title">{{ __('Add tenant') }}</h2>
                 </div>
                 <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    @livewire('simple-add-tenant', key('simple-add-tenant'))
+                    @livewire('simple-add-tenant', $lazyScreen('add-tenant'), key('simple-add-tenant'))
                 </div>
             </div>
 
@@ -79,7 +92,7 @@
                     <h2 class="rw-sm-screen-title">{{ __('End tenancy') }}</h2>
                 </div>
                 <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    @livewire('simple-end-tenancy', key('simple-end-tenancy'))
+                    @livewire('simple-end-tenancy', $lazyScreen('end-tenancy'), key('simple-end-tenancy'))
                 </div>
             </div>
 
@@ -89,7 +102,7 @@
                     <h2 class="rw-sm-screen-title flex-1">{{ __('Rooms') }}</h2>
                 </div>
                 <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    @livewire('simple-room-list', key('simple-room-list'))
+                    @livewire('simple-room-list', $lazyScreen('rooms'), key('simple-room-list'))
                 </div>
             </div>
 
@@ -99,7 +112,7 @@
                     <h2 class="rw-sm-screen-title flex-1">{{ __('Tenants') }}</h2>
                 </div>
                 <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    @livewire('simple-tenant-list', key('simple-tenant-list'))
+                    @livewire('simple-tenant-list', $lazyScreen('tenants'), key('simple-tenant-list'))
                 </div>
             </div>
 
@@ -110,19 +123,35 @@
             <div x-show="screen === 'utility'" x-cloak>
                 <div class="rw-sm-screen-header">
                     <h2 class="rw-sm-screen-title flex-1">{{ __('Utility') }}</h2>
-                    {{-- Rate/price setup is a desktop-shaped form (see PropertyUtilityResource) —
-                         "add new" jumps there directly rather than rebuilding it as a mobile screen. --}}
-                    <a href="{{ \App\Filament\Resources\PropertyUtilityResource::getUrl('create', ['from' => 'simple']) }}" class="rw-sm-create-invoice-btn">
+                    <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'utility-rates']) }}" @click.prevent="setScreen('utility-rates')" class="rw-sm-create-invoice-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                         <span>{{ __('Add utility') }}</span>
                     </a>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 -mt-3 mb-1">
                     {{ __('Setting up rates & prices?') }}
-                    <a href="{{ \App\Filament\Resources\PropertyUtilityResource::getUrl('index', ['from' => 'simple']) }}" class="font-semibold text-primary-600 dark:text-primary-400 underline">{{ __('Manage utility rates') }}</a>
+                    <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'utility-rates']) }}" @click.prevent="setScreen('utility-rates')" class="font-semibold text-primary-600 dark:text-primary-400 underline">{{ __('Manage utility rates') }}</a>
                 </p>
                 <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    @livewire('simple-utility-usage', key('simple-utility-usage'))
+                    @livewire('simple-utility-usage', $lazyScreen('utility'), key('simple-utility-usage'))
+                </div>
+            </div>
+
+            {{-- ── Utility rates screen (replaces the ?from=simple detour through
+                 PropertyUtilityResource's list page) ── --}}
+            <div x-show="screen === 'utility-rates'" x-cloak>
+                <div class="rw-sm-screen-header">
+                    <button @click="setScreen('settings')" class="rw-sm-back-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+                    </button>
+                    <h2 class="rw-sm-screen-title flex-1">{{ __('Utility Rates') }}</h2>
+                    <button type="button" @click="$dispatch('rw-utility-rate-add')" class="rw-sm-create-invoice-btn" id="utility-rates-add-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                        <span>{{ __('Add utility') }}</span>
+                    </button>
+                </div>
+                <div class="rw-sm-panel overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                    @livewire(\App\Livewire\SimpleUtilityRates::class, $lazyScreen('utility-rates'), key('simple-utility-rates'))
                 </div>
             </div>
 
@@ -134,7 +163,7 @@
                     </button>
                     <h2 class="rw-sm-screen-title">{{ __('Profile') }}</h2>
                 </div>
-                @livewire('simple-profile', key('simple-profile'))
+                @livewire('simple-profile', $lazyScreen('profile'), key('simple-profile'))
             </div>
 
             {{-- ── Settings screen ── --}}

@@ -69,4 +69,77 @@
             },
         };
     };
+
+    /**
+     * Instant, request-free filter/search over cards the server already rendered.
+     *
+     * Rooms, tenants and utility rows are property-bounded and fully rendered, so a filter
+     * pill tap or a search keystroke needs no server round-trip (each used to cost one).
+     * Cards opt in with `data-rw-item`, `data-status` (matched against the active pill) and
+     * `data-q` (pre-lowercased searchable text), and hide via `x-show="matches($el)"`.
+     * The paginated invoice list keeps its server-side search — it isn't fully loaded.
+     */
+    window.rwListFilter = function (config) {
+        config = config || {};
+
+        return {
+            q: '',
+            filter: config.filter || 'all',
+
+            matches(el) {
+                return this.test(el.dataset);
+            },
+
+            test(data) {
+                const q = this.q.trim().toLowerCase();
+
+                return (this.filter === 'all' || data.status === this.filter)
+                    && (q === '' || (data.q || '').includes(q));
+            },
+
+            /** True when cards exist but the current filter/search hides every one. */
+            noMatches() {
+                const items = this.$root.querySelectorAll('[data-rw-item]');
+
+                return items.length > 0 && ! Array.from(items).some((el) => this.test(el.dataset));
+            },
+        };
+    };
+
+    /**
+     * Downscale a picked photo in the browser before it is uploaded.
+     *
+     * A phone photo is 3–12MB, which a default server rejects outright (nginx
+     * client_max_body_size 1M, PHP upload_max_filesize 2M) before Laravel sees it — the upload
+     * "works on local" and fails in production. An avatar needs ~800px, so this sends a few
+     * hundred KB instead. Resolves the original file when the browser can't decode/encode it
+     * (or the result isn't smaller), so it can only ever help.
+     */
+    window.rwResizeImage = async function (file, maxSide, quality) {
+        maxSide = maxSide || 800;
+        quality = quality || 0.85;
+
+        if (! file || ! file.type || ! file.type.startsWith('image/') || file.type === 'image/gif') {
+            return file;
+        }
+
+        try {
+            const bitmap = await createImageBitmap(file);
+            const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+            canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+
+            if (! blob || blob.size >= file.size) {
+                return file;
+            }
+
+            return new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+        } catch (e) {
+            return file;
+        }
+    };
 </script>

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Database\Connectors\RdsPostgresConnector;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Invoice;
@@ -11,9 +12,9 @@ use App\Models\MaintenanceMessage;
 use App\Models\MaintenanceRequest;
 use App\Models\Payment;
 use App\Models\Property;
-use App\Models\Rental;
 use App\Models\PropertySetting;
 use App\Models\PropertyUtility;
+use App\Models\Rental;
 use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\SubscriptionHistory;
@@ -25,22 +26,28 @@ use App\Models\User;
 use App\Models\UtilityMeter;
 use App\Models\UtilityUsage;
 use App\Models\UtilityWaiver;
+use App\Policies\RolePolicy;
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
 use Filament\Tables\Filters\BaseFilter;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind('db.connector.pgsql', \App\Database\Connectors\RdsPostgresConnector::class);
+        $this->app->bind('db.connector.pgsql', RdsPostgresConnector::class);
     }
 
     public function boot(): void
     {
+        // Every lazy Livewire component in this app is a Simple Mode screen (see
+        // simple-dashboard.blade.php); give them all the shared skeleton while they load.
+        config(['livewire.lazy_placeholder' => 'livewire.simple-skeleton']);
+
         // Stable polymorphic aliases so *_type columns never store FQCNs
         // (refactor-safe; replaces the old app's no-morph-map footgun). enforceMorphMap
         // requires every model that participates in a morph (activitylog subject/causer,
@@ -74,7 +81,7 @@ class AppServiceProvider extends ServiceProvider
         // Spatie's Role model lives outside App\Models, so policy auto-discovery
         // misses it — register explicitly so the Shield Role resource is gated
         // (otherwise Filament defaults to "allow" for it).
-        Gate::policy(\Spatie\Permission\Models\Role::class, \App\Policies\RolePolicy::class);
+        Gate::policy(Role::class, RolePolicy::class);
 
         // Centralized super-admin elevation across web, Livewire and Filament —
         // replaces the implicit admin auto-elevation hidden in the old CheckRole.

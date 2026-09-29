@@ -45,6 +45,82 @@ class SimpleModeTest extends TestCase
         ActiveProperty::clear();
     }
 
+    // ── Performance: what the dashboard mounts up front ────────────────────────
+
+    /**
+     * Regression: the dashboard used to mount all nine screens on every load (~250KB of
+     * HTML, ~60 queries), only to hide eight of them with x-show. Only the screen being
+     * opened may render with the page; the rest are lazy Livewire components that load
+     * after first paint, so the page must not carry their markup.
+     */
+    public function test_simple_dashboard_renders_only_the_open_screen_eagerly(): void
+    {
+        [$landlord, $property] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        $this->get('/app/simple')
+            ->assertSuccessful()
+            // Every other screen ships as a lazy placeholder, not as rendered markup.
+            ->assertSee('&quot;lazyLoaded&quot;:false', false)
+            ->assertSee('rw-sm-skeleton', false)
+            ->assertDontSee('id="tenant-search"', false);
+    }
+
+    /**
+     * The lazy split must follow ?screen=: a deep link (e.g. the room list's
+     * ?screen=end-tenancy&unit_id=) has to render its target screen with the page, because
+     * mount() reads unit_id from the query string — a lazy follow-up request would not.
+     */
+    public function test_simple_dashboard_renders_the_requested_screen_eagerly(): void
+    {
+        [$landlord, $property] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        $this->get('/app/simple?screen=tenants')
+            ->assertSuccessful()
+            ->assertSee('id="tenant-search"', false);
+    }
+
+    /**
+     * ActiveProperty::id() validates the session id by loading the property, and the
+     * switcher/topbar/every screen then ask for model(). That used to be one query each.
+     */
+    public function test_active_property_model_is_loaded_once_per_request(): void
+    {
+        [$landlord, $property] = $this->landlordSetup();
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        \DB::enableQueryLog();
+        ActiveProperty::id();
+        ActiveProperty::model();
+        ActiveProperty::model();
+
+        $propertyQueries = collect(\DB::getQueryLog())
+            ->filter(fn ($q) => preg_match('/from [`"]properties[`"]/', $q['query']))
+            ->count();
+
+        $this->assertSame(1, $propertyQueries);
+    }
+
+    /**
+     * Logging in with Simple Mode on used to bounce /login → /app → /app/simple (an extra
+     * full panel request just to be redirected). It must land on Simple Mode directly.
+     */
+    public function test_login_sends_a_simple_mode_landlord_straight_to_simple_mode(): void
+    {
+        $landlord = $this->makeLandlord();
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+
+        $this->post(route('login'), ['login' => $landlord->email, 'password' => 'password'])
+            ->assertRedirect(route('filament.landlord.pages.simple'));
+    }
+
     // ── Access control ─────────────────────────────────────────────────────────
 
     public function test_landlord_can_access_simple_mode_page(): void
@@ -465,7 +541,13 @@ class SimpleModeTest extends TestCase
 
     // ── Simple room list filter ───────────────────────────────────────────────
 
-    public function test_room_list_filter_pills_narrow_rooms_by_status(): void
+    /**
+     * The pills and search box filter in the browser (rwListFilter) so a tap costs no request.
+     * That only works if the server always renders every room and stamps each card with the
+     * status and searchable text the client matches on — that contract is what this locks in.
+     * ?filter= still seeds the initially active pill, so old deep links keep working.
+     */
+    public function test_room_list_renders_every_room_with_client_filter_attributes(): void
     {
         [$landlord, $property, $vacant] = $this->landlordSetup(createRental: false);
         $occupied = Unit::create([
@@ -483,11 +565,16 @@ class SimpleModeTest extends TestCase
         Livewire::actingAs($landlord)
             ->test(SimpleRoomList::class)
             ->assertSee('101')->assertSee('202')
-            ->set('filter', 'available')
-            ->assertSee('101')->assertDontSee('202')
-            ->set('filter', 'occupied')
-            ->assertDontSee('101')->assertSee('202')
-            ->set('filter', 'all')
+            ->assertSeeHtml('data-status="available"')
+            ->assertSeeHtml('data-status="occupied"')
+            ->assertSeeHtml('data-q="101"')
+            ->assertSeeHtml('data-q="202"');
+
+        // A deep link only seeds the active pill; it never hides rooms server-side.
+        Livewire::actingAs($landlord)
+            ->withQueryParams(['filter' => 'occupied'])
+            ->test(SimpleRoomList::class)
+            ->assertSet('filter', 'occupied')
             ->assertSee('101')->assertSee('202');
     }
 

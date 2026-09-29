@@ -12,7 +12,7 @@
  * Financial data is NEVER cached for offline reads or writes.
  */
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const SHELL_CACHE   = `ngeay-juol-shell-${CACHE_VERSION}`;
 const FONT_CACHE    = `ngeay-juol-fonts-${CACHE_VERSION}`;
 
@@ -74,6 +74,19 @@ self.addEventListener('activate', (event) => {
 
 function isNetworkOnly(url) {
     return NETWORK_ONLY_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
+}
+
+/**
+ * Panel assets (rentwise-admin.css, Filament's compiled css/js, our loader). They are
+ * versioned by ?v=<mtime> / Filament's own hash, so a changed file is a new cache key
+ * and cache-first is safe — the app shell no longer re-downloads ~300KB on every launch.
+ */
+function isPanelAsset(url) {
+    return (
+        url.pathname.startsWith('/css/') ||
+        url.pathname.startsWith('/js/')  ||
+        url.pathname.startsWith('/fonts/')
+    );
 }
 
 function isStaticAsset(url) {
@@ -150,6 +163,12 @@ self.addEventListener('fetch', (event) => {
 
     // 4. Static assets: cache-first
     if (isStaticAsset(url)) {
+        event.respondWith(cacheFirst(event.request, SHELL_CACHE));
+        return;
+    }
+
+    // 4b. Versioned panel css/js: cache-first (a new ?v= is a new key)
+    if (isPanelAsset(url)) {
         event.respondWith(cacheFirst(event.request, SHELL_CACHE));
         return;
     }

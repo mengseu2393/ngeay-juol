@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth\Concerns;
 
 use App\Providers\Filament\LandlordPanelProvider;
+use App\Support\SimpleLandlordMode;
 
 /**
  * Post-authentication panel routing, shared by every way into the app
@@ -34,7 +35,11 @@ trait RedirectsAuthenticatedUsers
         }
 
         if ($user->hasAnyRole(['landlord', 'landlord_manager'])) {
-            return redirect()->intended(route('filament.landlord.pages.dashboard'));
+            // Straight to Simple Mode when it's on: landing on /app first costs a whole
+            // extra panel request just to be redirected here by RedirectToSimpleLandlordMode.
+            return redirect()->intended(route(
+                SimpleLandlordMode::enabledFor($user) ? 'filament.landlord.pages.simple' : 'filament.landlord.pages.dashboard'
+            ));
         }
 
         if ($user->hasRole('tenant')) {

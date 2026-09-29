@@ -1,4 +1,23 @@
-<div class="space-y-4" x-data x-on:avatar-updated.window="window.location.reload()">
+<div
+    class="space-y-4"
+    x-data="{
+        uploading: false,
+        async pickAvatar(event) {
+            const input = event.target;
+            const file = input.files && input.files[0];
+            if (! file) return;
+
+            this.uploading = true;
+            const done = () => { this.uploading = false; };
+            // Shrunk in the browser first (see rwResizeImage): full-size phone photos exceed
+            // a default server's upload limits.
+            const upload = await window.rwResizeImage(file, 800);
+            $wire.upload('avatarPhoto', upload, done, done);
+            input.value = '';
+        },
+    }"
+    x-on:avatar-updated.window="window.location.reload()"
+>
 
     {{-- ── Avatar ── --}}
     <div class="rw-sm-panel rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
@@ -23,21 +42,15 @@
                      mobile, skipping the OS picker's "Photo Library" option
                      entirely. Leaving it off lets the native sheet offer both
                      "Take Photo" and "Choose Photo". --}}
-                <input type="file" id="profile-avatar" wire:model="avatarPhoto" accept="image/*" class="hidden">
+                <input type="file" id="profile-avatar" @change="pickAvatar($event)" accept="image/*" class="hidden">
             </label>
 
-            <div wire:loading wire:target="avatarPhoto" class="text-xs text-gray-500 dark:text-gray-400">
+            <div x-show="uploading" x-cloak class="text-xs text-gray-500 dark:text-gray-400">
                 {{ __('Uploading…') }}
             </div>
 
             @error('avatarPhoto') <p class="rw-sm-error">{{ $message }}</p> @enderror
 
-            @if($avatarPhoto)
-                <button type="button" wire:click="saveAvatar" wire:loading.attr="disabled" wire:target="saveAvatar" class="rw-sm-btn-primary w-full" id="profile-save-photo">
-                    <span wire:loading.remove wire:target="saveAvatar">{{ __('Save photo') }}</span>
-                    <span wire:loading wire:target="saveAvatar">{{ __('Saving…') }}</span>
-                </button>
-            @endif
         </div>
     </div>
 

@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Billing;
+use App\Filament\Pages\LandlordSetup;
 use App\Filament\Pages\MonthlyBilling;
 use App\Filament\Pages\PropertySettings;
 use App\Filament\Pages\SimpleDashboard;
@@ -30,6 +31,7 @@ use App\Filament\Widgets\UtilityAnomalyWidget;
 use App\Filament\Widgets\UtilityUsageWidget;
 use App\Http\Middleware\EnsureActiveSubscription;
 use App\Http\Middleware\IdleTimeout;
+use App\Http\Middleware\RedirectToLandlordSetup;
 use App\Http\Middleware\RedirectToSimpleLandlordMode;
 use App\Http\Middleware\SetLocale;
 use App\Support\ActiveProperty;
@@ -112,7 +114,10 @@ class LandlordPanelProvider extends PanelProvider
                 PanelsRenderHook::HEAD_END,
                 fn (): string => '<link rel="preconnect" href="https://fonts.googleapis.com">'.
                     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'.
-                    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap">'.
+                    // Non-blocking: a render-blocking font stylesheet holds the first paint on the
+                    // network. display=swap + the system fallback stack cover the gap.
+                    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap" media="print" onload="this.media=\'all\'">'.
+                    '<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap"></noscript>'.
                     '<link rel="stylesheet" href="'.asset('css/rentwise-admin.css').'?v='.@filemtime(public_path('css/rentwise-admin.css')).'">'.
                     '<link rel="manifest" href="/manifest.json">'.
                     '<meta name="theme-color" content="#059669">'.
@@ -133,7 +138,7 @@ class LandlordPanelProvider extends PanelProvider
                     // the Settings hub) carries no ?from=simple of its own.
                     (SimpleLandlordMode::canUse(auth()->user()) && ! SimpleLandlordMode::hasActiveEscape(request()) ? '<script>(function(){'
                         .'var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;'
-                        .'if (standalone && ! /^\\/app\\/simple(\\/|$)/.test(location.pathname) && ! new URLSearchParams(location.search).has("from")) {'
+                        .'if (standalone && ! /^\\/app\\/(simple|setup)(\\/|$)/.test(location.pathname) && ! new URLSearchParams(location.search).has("from")) {'
                         .'location.replace("'.url('/'.self::PATH.'/simple').'");'
                         .'}'
                         .'})();</script>' : ''),
@@ -227,6 +232,7 @@ class LandlordPanelProvider extends PanelProvider
                 MonthlyBilling::class,
                 PropertySettings::class,
                 SimpleDashboard::class,
+                LandlordSetup::class,
             ])
             // Dashboard, top to bottom. AccountWidget is deliberately absent: its
             // "Hi, <name>" card occupied the first slot without telling a landlord
@@ -264,6 +270,7 @@ class LandlordPanelProvider extends PanelProvider
                 Authenticate::class,
                 IdleTimeout::class,
                 EnsureActiveSubscription::class,
+                RedirectToLandlordSetup::class,
                 RedirectToSimpleLandlordMode::class,
             ]);
     }

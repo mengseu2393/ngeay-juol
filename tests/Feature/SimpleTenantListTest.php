@@ -142,7 +142,12 @@ class SimpleTenantListTest extends TestCase
             ->assertDontSee('102');
     }
 
-    public function test_search_filters_by_tenant_name(): void
+    /**
+     * Search runs in the browser (rwListFilter): the server renders every tenant in the
+     * current filter and stamps each card with lower-cased searchable text. These two tests
+     * lock in that the stamped text covers what the old server-side LIKE search matched.
+     */
+    public function test_search_text_covers_tenant_name(): void
     {
         [$landlord, $property, $unit, $rental] = $this->landlordSetup();
 
@@ -170,12 +175,11 @@ class SimpleTenantListTest extends TestCase
         ActiveProperty::set($property->id);
 
         Livewire::test(SimpleTenantList::class)
-            ->set('search', 'Sok Dara')
-            ->assertSee('Sok Dara')
-            ->assertDontSee($rental->occupant_name);
+            ->assertSeeHtml('data-q="sok dara')
+            ->assertSeeHtml('data-q="'.mb_strtolower($rental->occupant_name));
     }
 
-    public function test_search_filters_by_room_number(): void
+    public function test_search_text_covers_room_number(): void
     {
         [$landlord, $property, $unit, $rental] = $this->landlordSetup();
 
@@ -203,9 +207,9 @@ class SimpleTenantListTest extends TestCase
         ActiveProperty::set($property->id);
 
         Livewire::test(SimpleTenantList::class)
-            ->set('search', '102')
-            ->assertSee('Sok Dara')
-            ->assertDontSee($rental->occupant_name);
+            ->assertSeeHtml('102"')
+            ->assertSeeHtml('data-q="sok dara')
+            ->assertSee('Sok Dara');
     }
 
     public function test_tapping_a_row_opens_the_tenant_detail_modal(): void
