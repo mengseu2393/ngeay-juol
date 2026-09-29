@@ -80,7 +80,11 @@ class LandlordPanelProvider extends PanelProvider
             ->path(self::PATH)
             ->brandName(__('ngeay juol'))
             ->brandLogo(fn () => view('filament.components.brand-logo'))
-            ->favicon(asset('favicon.ico'))
+            // Closures, not values: panel() runs while the app is still booting, before the
+            // TrustProxies middleware has told Laravel the request is HTTPS behind the TLS proxy,
+            // so an eager asset()/url() here is baked in as http:// (mixed-content favicon, and
+            // SPA exception patterns that never match the real https:// URLs).
+            ->favicon(fn () => asset('favicon.ico'))
             ->brandLogoHeight('2.25rem')
             ->font('Plus Jakarta Sans')
             ->sidebarCollapsibleOnDesktop()
@@ -89,7 +93,7 @@ class LandlordPanelProvider extends PanelProvider
             // No ->unsavedChangesAlerts(): Filament guards navigation with a synchronous
             // window.confirm(), and a Chrome that defers painting that dialog leaves the page
             // frozen on a prompt nobody can see — indistinguishable from a hung request.
-            ->spaUrlExceptions([
+            ->spaUrlExceptions(fn (): array => [
                 url('/locale/*'),
                 url('/locale/en'),
                 url('/locale/km'),

@@ -32,6 +32,7 @@ use Filament\Tables\Columns\Column;
 use Filament\Tables\Filters\BaseFilter;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\Models\Role;
 
@@ -39,6 +40,13 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Behind a TLS-terminating proxy the request only looks HTTPS once TrustProxies has run,
+        // but URLs are also generated earlier (panel/provider boot). When APP_URL is https, make
+        // every generated URL https from the start instead of depending on that ordering.
+        if (str_starts_with((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
+
         $this->app->bind('db.connector.pgsql', RdsPostgresConnector::class);
     }
 
