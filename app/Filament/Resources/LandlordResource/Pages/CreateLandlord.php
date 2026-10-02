@@ -5,6 +5,7 @@ namespace App\Filament\Resources\LandlordResource\Pages;
 use App\Enums\UserStatus;
 use App\Filament\Resources\LandlordResource;
 use App\Models\SubscriptionPlan;
+use App\Services\ErrorLogService;
 use App\Services\SubscriptionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -75,6 +76,8 @@ class CreateLandlord extends CreateRecord
         try {
             $subscription = SubscriptionService::assign($this->record, $plan, $options);
         } catch (\Throwable $e) {
+            ErrorLogService::recordHandled($e, 'Landlord was not created');
+
             Notification::make()
                 ->danger()
                 ->title(__('Landlord was not created'))

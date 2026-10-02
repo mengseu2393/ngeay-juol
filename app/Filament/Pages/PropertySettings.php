@@ -6,6 +6,7 @@ use App\Enums\BillingType;
 use App\Enums\FirstMonthBillingMode;
 use App\Models\PropertySetting;
 use App\Models\PropertyUtility;
+use App\Services\ErrorLogService;
 use App\Services\ExchangeRateService;
 use App\Services\MoveInRuleService;
 use App\Services\OpeningReadingService;
@@ -469,6 +470,8 @@ class PropertySettings extends Page implements HasForms
         try {
             $exchangeRate = app(ExchangeRateService::class)->fetchUsdToKhr();
         } catch (Throwable $exception) {
+            ErrorLogService::recordHandled($exception, 'Could not fetch exchange rate');
+
             Notification::make()
                 ->danger()
                 ->title(__('Could not fetch exchange rate'))

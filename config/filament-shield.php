@@ -87,6 +87,10 @@ return [
             // generating for it would mint a dead `*_tenant` set and regenerate
             // UserPolicy from this resource.
             'TenantResource',
+
+            // Hardcoded isSuperAdmin() gate (traces + submitted form data are too
+            // sensitive for support) — see ErrorLogResource.
+            'ErrorLogResource',
         ],
     ],
 

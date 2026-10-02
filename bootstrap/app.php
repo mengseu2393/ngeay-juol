@@ -1,9 +1,13 @@
 <?php
 
 use App\Http\Middleware\SetLocale;
+use App\Services\ErrorLogService;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -32,5 +36,23 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // /admin → Error Log (ErrorLogService). report() only sees reportable
+        // exceptions — validation/HTTP ones are in the default dontReport list —
+        // so those two are caught at render time instead. Each callback returns
+        // nothing, so Laravel's normal logging/rendering still runs.
+        $exceptions->report(function (Throwable $e) {
+            ErrorLogService::recordException($e);
+        });
+
+        // Livewire/Filament validation never reaches the handler (Livewire shows it
+        // inline); this is plain HTTP forms — register, login, the tenant portal.
+        $exceptions->render(function (ValidationException $e, Request $request) {
+            ErrorLogService::recordValidation($e, $request);
+        });
+
+        $exceptions->render(function (HttpExceptionInterface $e) {
+            if (in_array($e->getStatusCode(), [419, 429], true)) {
+                ErrorLogService::recordBlocked($e);
+            }
+        });
     })->create();

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ErrorLog;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
@@ -14,3 +15,6 @@ Schedule::command('invoices:notify-overdue')->dailyAt('08:00');
 
 // Subscription lifecycle
 Schedule::command('subscriptions:process --renew --bill-renewals --sweep --recompute --dunning')->dailyAt('00:30');
+
+// Error Log (/admin) keeps 30 days — see ErrorLog::prunable().
+Schedule::command('model:prune', ['--model' => [ErrorLog::class]])->dailyAt('03:00');

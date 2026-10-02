@@ -6,6 +6,7 @@ use App\Enums\MoveInReadinessStatus;
 use App\Enums\RentalStatus;
 use App\Models\Rental;
 use App\Services\CompleteMoveInAction;
+use App\Services\ErrorLogService;
 use App\Services\MoveInRuleService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -88,6 +89,8 @@ class CompleteMoveIn
         try {
             app(CompleteMoveInAction::class)($record, auth()->id());
         } catch (\DomainException|\RuntimeException|\InvalidArgumentException $e) {
+            ErrorLogService::recordHandled($e, 'Move-in could not be completed');
+
             Notification::make()
                 ->title(__('Move-in could not be completed'))
                 ->body(__($e->getMessage()))

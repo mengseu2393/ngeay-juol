@@ -6,6 +6,7 @@ use App\Filament\Pages\AdminSettings;
 use App\Filament\Pages\QrCodeGenerator;
 use App\Filament\Pages\Renewals;
 use App\Filament\Resources\ActivityLogResource;
+use App\Filament\Resources\ErrorLogResource;
 use App\Filament\Resources\LandlordResource;
 use App\Filament\Resources\SubscriptionPaymentResource;
 use App\Filament\Resources\SubscriptionPlanResource;
@@ -128,6 +129,7 @@ class AdminPanelProvider extends PanelProvider
                 LandlordResource::class,
                 UserResource::class,
                 ActivityLogResource::class,
+                ErrorLogResource::class,
             ])
             ->pages([
                 Dashboard::class,

@@ -27,6 +27,7 @@ use App\Models\UtilityMeter;
 use App\Models\UtilityUsage;
 use App\Models\UtilityWaiver;
 use App\Policies\RolePolicy;
+use App\Services\ErrorLogService;
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
 use Filament\Tables\Filters\BaseFilter;
@@ -34,6 +35,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
@@ -52,6 +54,14 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Panel forms validate inside Livewire, which shows the error inline and never
+        // hands it to the exception handler — record it for /admin → Error Log here.
+        \Livewire\on('exception', function ($component, $e) {
+            if ($e instanceof ValidationException) {
+                ErrorLogService::recordLivewireValidation($e, $component);
+            }
+        });
+
         // Every lazy Livewire component in this app is a Simple Mode screen (see
         // simple-dashboard.blade.php); give them all the shared skeleton while they load.
         config(['livewire.lazy_placeholder' => 'livewire.simple-skeleton']);

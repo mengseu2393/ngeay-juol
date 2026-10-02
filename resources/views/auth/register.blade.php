@@ -58,9 +58,21 @@
                 <h1 class="font-display font-bold text-2xl mb-1">{{ __('Register as Landlord') }}</h1>
                 <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">{{ __('Create your account, then add your properties, utilities and room prices step by step.') }}</p>
 
-                @error('register')
-                    <div class="mb-5 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm">{{ $message }}</div>
-                @enderror
+                {{-- 'register' plus any error without an inline slot (e.g. the honeypot,
+                     which phone autofill/password managers can fill) — otherwise the form
+                     just bounces back with nothing shown. --}}
+                @php
+                    $orphanErrors = collect($errors->getMessages())
+                        ->except(['name', 'phone_number', 'email', 'company_name', 'password'])
+                        ->flatten();
+                @endphp
+                @if ($orphanErrors->isNotEmpty())
+                    <div class="mb-5 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm">
+                        @foreach ($orphanErrors as $message)
+                            <p>{{ $message }}</p>
+                        @endforeach
+                    </div>
+                @endif
 
                 <form method="POST" action="{{ route('register') }}" class="space-y-4" novalidate>
                     @csrf

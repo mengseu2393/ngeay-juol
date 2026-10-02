@@ -67,6 +67,7 @@ class RegisterController extends Controller
             'email.unique' => __('This email is already registered. Please sign in instead.'),
             'phone_number.required_without' => __('Enter a phone number or an email.'),
             'email.required_without' => __('Enter a phone number or an email.'),
+            'website.max' => __('Your browser autofilled a hidden field. Please turn off autofill for this page and try again.'),
         ]);
 
         try {

@@ -7,6 +7,7 @@ use App\Enums\DepositDeductionCategory;
 use App\Models\PropertyUtility;
 use App\Models\Rental;
 use App\Policies\RentalPolicy;
+use App\Services\ErrorLogService;
 use App\Services\MeterReadingResolver;
 use App\Services\MoveOutService;
 use App\Support\Money;
@@ -188,6 +189,8 @@ class MoveOut
         try {
             $result = app(MoveOutService::class)->execute($record, $data, auth()->id());
         } catch (ValidationException $e) {
+            ErrorLogService::recordHandled($e, 'Move-out could not be completed');
+
             Notification::make()
                 ->title(__('Move-out could not be completed'))
                 ->body(collect($e->errors())->flatten()->implode(' '))
@@ -195,6 +198,8 @@ class MoveOut
 
             return;
         } catch (\DomainException|\RuntimeException|\InvalidArgumentException $e) {
+            ErrorLogService::recordHandled($e, 'Move-out could not be completed');
+
             Notification::make()
                 ->title(__('Move-out could not be completed'))
                 ->body(__($e->getMessage()))
