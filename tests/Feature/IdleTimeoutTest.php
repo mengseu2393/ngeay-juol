@@ -11,6 +11,7 @@ use App\Models\Property;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\QrLoginTokenService;
 use App\Support\DeviceSession;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -113,6 +114,45 @@ class IdleTimeoutTest extends TestCase
             ->get('/admin/qr-code-generator')
             ->assertRedirect(route('login'));
         $this->assertGuest();
+    }
+
+    /**
+     * Regression (found while testing on the dev server): a login keeps the
+     * browser's existing session, so the previous visit's stale idle clock came
+     * along and IdleTimeout signed the fresh login straight back out.
+     */
+    public function test_a_fresh_login_is_not_signed_out_by_the_previous_visits_idle_clock(): void
+    {
+        $landlord = $this->subscribedLandlord();
+
+        $this->withSession([IdleTimeout::SESSION_KEY => now()->subHours(2)->timestamp])
+            ->post(route('login'), ['login' => $landlord->email, 'password' => 'password']);
+
+        $this->get('/app/simple')->assertSuccessful();
+        $this->assertAuthenticatedAs($landlord);
+    }
+
+    /**
+     * Regression: a QR login on a browser where someone else was signed in kept
+     * that user's password hash in the session, so AuthenticateSession compared
+     * the new user against it and signed them out — the QR code "didn't work".
+     */
+    public function test_a_qr_login_over_another_users_session_stays_signed_in(): void
+    {
+        // UserFactory reuses one cached hash for every user — the bug needs two different ones.
+        $staff = User::factory()->create(['status' => UserStatus::Active->value, 'password' => bcrypt('staff-secret')]);
+        $staff->assignRole('super_admin');
+        $landlord = $this->subscribedLandlord();
+
+        // A panel request stores the signed-in user's password hash in the session.
+        $this->actingAs($staff)->get('/admin/qr-code-generator')->assertOk();
+        $this->assertTrue(session()->has('password_hash_web'));
+
+        $url = app(QrLoginTokenService::class)->issue($landlord)['url'];
+        $this->get($url);
+
+        $this->get('/app/simple')->assertSuccessful();
+        $this->assertAuthenticatedAs($landlord);
     }
 
     /** Subscribed, with a property — so only IdleTimeout could send them to /login. */

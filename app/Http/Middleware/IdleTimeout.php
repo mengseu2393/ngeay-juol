@@ -21,6 +21,8 @@ class IdleTimeout
 {
     public const MINUTES = 15;
 
+    public const SESSION_KEY = '_last_activity_at';
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -33,7 +35,7 @@ class IdleTimeout
             return $next($request);
         }
 
-        $lastActivity = $request->session()->get('_last_activity_at');
+        $lastActivity = $request->session()->get(self::SESSION_KEY);
 
         if ($lastActivity !== null && now()->timestamp - $lastActivity > self::MINUTES * 60) {
             auth()->logout();
@@ -45,7 +47,7 @@ class IdleTimeout
                 ->with('error', __('You were signed out after :minutes minutes of inactivity.', ['minutes' => self::MINUTES]));
         }
 
-        $request->session()->put('_last_activity_at', now()->timestamp);
+        $request->session()->put(self::SESSION_KEY, now()->timestamp);
 
         return $next($request);
     }

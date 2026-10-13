@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Database\Connectors\RdsPostgresConnector;
+use App\Http\Middleware\IdleTimeout;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Invoice;
@@ -31,7 +32,9 @@ use App\Services\ErrorLogService;
 use Filament\Forms\Components\Field;
 use Filament\Tables\Columns\Column;
 use Filament\Tables\Filters\BaseFilter;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -60,6 +63,20 @@ class AppServiceProvider extends ServiceProvider
             if ($e instanceof ValidationException) {
                 ErrorLogService::recordLivewireValidation($e, $component);
             }
+        });
+
+        // A login keeps the browser's existing session (regenerate() changes only its id), so
+        // the previous visit's idle clock and password hash would come along — and sign the
+        // fresh login straight back out: IdleTimeout reads a stale last-activity time, and
+        // AuthenticateSession compares the new user against the previous user's hash (a QR
+        // login on a phone someone else was signed in on). A new login starts both afresh.
+        Event::listen(Login::class, function (Login $event): void {
+            if (! request()->hasSession()) {
+                return;
+            }
+
+            request()->session()->put(IdleTimeout::SESSION_KEY, now()->timestamp);
+            request()->session()->forget('password_hash_'.$event->guard);
         });
 
         // Every lazy Livewire component in this app is a Simple Mode screen (see
