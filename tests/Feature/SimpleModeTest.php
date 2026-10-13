@@ -971,6 +971,21 @@ class SimpleModeTest extends TestCase
         $this->assertFileExists(public_path('manifest.json'));
     }
 
+    /**
+     * iOS zooms into any focused field under 16px and stays zoomed, which made
+     * Simple Mode look broken on iPhones after tapping the 15px search box or the
+     * 13px property picker. An iOS-only rule floors every Simple Mode field at 16px.
+     */
+    public function test_ios_focus_zoom_floor_covers_simple_mode_fields(): void
+    {
+        $css = file_get_contents(public_path('css/rentwise-admin.css'));
+
+        $this->assertMatchesRegularExpression(
+            '/@supports \(-webkit-touch-callout: none\) \{\s*\.rw-simple :is\(input[^{]*select, textarea\)[^{]*\.rw-sm-topbar-switcher select[^{]*\{\s*font-size: max\(16px, 1em\) !important;/',
+            $css,
+        );
+    }
+
     public function test_pwa_service_worker_is_accessible(): void
     {
         $this->assertFileExists(public_path('sw.js'));

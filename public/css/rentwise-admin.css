@@ -1743,6 +1743,23 @@ select.rw-sm-input {
     flex-shrink: 0;
 }
 
+/* ── iOS focus zoom ──
+   iOS Safari zooms the page into any focused input/select/textarea whose font
+   is under 16px and never zooms back out, so the whole layout looks broken
+   until the user pinches (the Rooms search box was 15px, the topbar property
+   picker 13px). iOS-only (-webkit-touch-callout), so desktop sizing is
+   untouched. Covers the Simple Mode screens plus the phone-first pages the
+   phone lock allows (room page, units manager, reading history). */
+@supports (-webkit-touch-callout: none) {
+    .rw-simple :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea),
+    .rw-sm-topbar-switcher select,
+    .rw-uo :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea),
+    .rw-um :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea),
+    .rw-rh :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea) {
+        font-size: max(16px, 1em) !important;
+    }
+}
+
 /* ── Buttons ── */
 .rw-sm-btn-primary {
     display: inline-flex;
