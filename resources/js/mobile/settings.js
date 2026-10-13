@@ -103,3 +103,67 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 });
+
+// ── Profile (livewire.mobile.profile) ────────────────────────────────────────
+
+/**
+ * Downscale a picked photo in the browser before it is uploaded — a copy of
+ * Simple Mode's helper (components/rw-simple-popup-script), which /m doesn't
+ * load. A phone photo is 3–12MB, which a default server rejects outright (nginx
+ * client_max_body_size 1M, PHP upload_max_filesize 2M) before Laravel sees it;
+ * an avatar needs ~800px, so this sends a few hundred KB instead. Resolves the
+ * original file when the browser can't decode/encode it (or the result isn't
+ * smaller), so it can only ever help.
+ */
+if (! window.rwResizeImage) {
+    window.rwResizeImage = async function (file, maxSide, quality) {
+        maxSide = maxSide || 800;
+        quality = quality || 0.85;
+
+        if (! file || ! file.type || ! file.type.startsWith('image/') || file.type === 'image/gif') {
+            return file;
+        }
+
+        try {
+            const bitmap = await createImageBitmap(file);
+            const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+            canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+
+            if (! blob || blob.size >= file.size) {
+                return file;
+            }
+
+            return new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+        } catch (e) {
+            return file;
+        }
+    };
+}
+
+document.addEventListener('alpine:init', () => {
+    window.Alpine.data('rwMobileProfile', () => ({
+        uploading: false,
+
+        /** Picking a photo uploads it; the server saves it as the avatar on arrival. */
+        async pickAvatar(event) {
+            const input = event.target;
+            const file = input.files && input.files[0];
+
+            if (! file) {
+                return;
+            }
+
+            this.uploading = true;
+            const done = () => (this.uploading = false);
+            const upload = await window.rwResizeImage(file, 800);
+
+            this.$wire.upload('avatarPhoto', upload, done, done);
+            input.value = '';
+        },
+    }));
+});
