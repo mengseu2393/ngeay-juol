@@ -137,7 +137,7 @@ class SimpleEditTenant extends Component
     }
 
     /** The rental, scoped to the active property — null if missing/foreign. */
-    private function scopedRental(): ?Rental
+    protected function scopedRental(): ?Rental
     {
         if (! $this->rentalId) {
             return null;
