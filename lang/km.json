@@ -1747,5 +1747,9 @@
     "Record meter readings": "កត់ត្រាលេខអានកុងទ័រ",
     "Delete room": "លុបបន្ទប់",
     "Delete room :room?": "លុបបន្ទប់ :room?",
-    "The room disappears from your room list. Its past invoices and readings stay in your records.": "បន្ទប់នឹងបាត់ពីបញ្ជីបន្ទប់របស់អ្នក។ វិក្កយបត្រ និងលេខអានចាស់ៗនៅតែមានក្នុងកំណត់ត្រារបស់អ្នក។"
+    "The room disappears from your room list. Its past invoices and readings stay in your records.": "បន្ទប់នឹងបាត់ពីបញ្ជីបន្ទប់របស់អ្នក។ វិក្កយបត្រ និងលេខអានចាស់ៗនៅតែមានក្នុងកំណត់ត្រារបស់អ្នក។",
+    "Profile photo": "រូបថតប្រវត្តិរូប",
+    "Profile photo updated.": "បានធ្វើបច្ចុប្បន្នភាពរូបថតប្រវត្តិរូប។",
+    "No utilities found.": "រកមិនឃើញសេវាកម្មទេ។",
+    "Every room has this month's readings.": "បន្ទប់ទាំងអស់មានលេខកុងទ័រសម្រាប់ខែនេះហើយ។"
 }
