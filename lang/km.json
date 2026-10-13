@@ -1668,5 +1668,19 @@
     "The end date cannot be before the start date.": "កាលបរិច្ឆេទបញ្ចប់មិនអាចនៅមុនកាលបរិច្ឆេទចាប់ផ្តើមបានទេ។",
     "That reading is already billed on an invoice. Use Reading history to correct it.": "លេខអាននោះត្រូវបានគិតលុយក្នុងវិក្កយបត្ររួចហើយ។ សូមប្រើ «ប្រវត្តិអានលេខកុងទ័រ» ដើម្បីកែតម្រូវ។",
     "Open room": "បើកបន្ទប់",
-    "Pick a room from Rooms to see its details.": "សូមជ្រើសរើសបន្ទប់ពី «បន្ទប់» ដើម្បីមើលព័ត៌មានលម្អិត។"
+    "Pick a room from Rooms to see its details.": "សូមជ្រើសរើសបន្ទប់ពី «បន្ទប់» ដើម្បីមើលព័ត៌មានលម្អិត។",
+    ":count selected": "បានជ្រើស :count",
+    "Back to review": "ត្រឡប់ទៅពិនិត្យ",
+    "Change the billing date, or choose rooms by hand.": "សូមប្តូរកាលបរិច្ឆេទចេញវិក្កយបត្រ ឬជ្រើសរើសបន្ទប់ដោយខ្លួនឯង។",
+    "Charges": "ការគិតថ្លៃ",
+    "Choose rooms": "ជ្រើសរើសបន្ទប់",
+    "Creating…": "កំពុងបង្កើត…",
+    "e.g. Meter replaced": "ឧ. បានប្តូរកុងទ័រថ្មី",
+    "Enter numbers only, e.g. 1250.5": "សូមបញ្ចូលតែលេខ ឧ. 1250.5",
+    "Lower than previous reading — add a reason to bill it": "ទាបជាងលេខអានមុន — សូមបញ្ចូលមូលហេតុដើម្បីគិតថ្លៃ",
+    "Needs attention": "ត្រូវពិនិត្យ",
+    "Not billed this time.": "មិនគិតថ្លៃលើកនេះទេ។",
+    "Open property settings": "បើកការកំណត់អចលនទ្រព្យ",
+    "Progress": "វឌ្ឍនភាព",
+    "Start billing (:count rooms)": "ចាប់ផ្តើមចេញវិក្កយបត្រ (:count បន្ទប់)"
 }
