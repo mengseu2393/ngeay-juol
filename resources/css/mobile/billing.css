@@ -1,1 +1,30 @@
 /* /m billing screens — prefer Tailwind utilities and the shared rw-m-* classes; screen-specific rules only. */
+
+@layer components {
+    /* The wizard's action bar: sticks just above the fixed tab bar (and the home indicator). */
+    .rw-m-billing-bar {
+        position: sticky;
+        bottom: calc(var(--spacing-tabbar) + env(safe-area-inset-bottom) + 0.75rem);
+        z-index: 20;
+        @apply mt-4 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur dark:border-slate-800 dark:bg-slate-900/95;
+    }
+
+    /* Meter readings line up digit by digit. */
+    .rw-m-reading-input {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Invisible field that keeps the keyboard up between two rooms (rwMobileBilling.go). */
+    .rw-m-billing-proxy {
+        position: fixed;
+        top: 50%;
+        left: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+        font-size: 16px;
+        border: 0;
+        padding: 0;
+    }
+}

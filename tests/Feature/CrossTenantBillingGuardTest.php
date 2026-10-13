@@ -12,6 +12,7 @@ use App\Enums\UnitStatus;
 use App\Filament\Pages\MonthlyBilling;
 use App\Filament\Resources\InvoiceResource\Pages\CreateInvoice;
 use App\Filament\Resources\InvoiceResource\Pages\EditInvoice;
+use App\Livewire\Mobile\Billing as MobileBilling;
 use App\Livewire\SimpleBillingInvoice;
 use App\Models\Invoice;
 use App\Models\InvoiceLine;
@@ -39,7 +40,8 @@ use Tests\TestCase;
  * `property_id`, so the scope cannot be in force while reading it. The ids fed
  * to those lookups, however, are client-controlled:
  *
- *  - `MonthlyBilling::$rooms` and `SimpleBillingInvoice::$rooms` are public
+ *  - `MonthlyBilling::$rooms`, `SimpleBillingInvoice::$rooms` and
+ *    `Mobile\Billing::$rooms` (same wizard, /m) are public
  *    Livewire array properties, round-tripped to the browser and writable via a
  *    normal `updates` payload (`rooms.0.rental_id`); the snapshot checksum
  *    signs the state, it does not forbid legitimate updates to it.
@@ -189,6 +191,67 @@ class CrossTenantBillingGuardTest extends TestCase
             ->call('startBilling')
             ->set('rooms.0.utilities.0.new_reading', '150')
             ->call('createInvoices');
+
+        $this->assertDatabaseHas('invoices', [
+            'rental_id' => $rentalA->id,
+            'landlord_id' => $landlordA->id,
+        ]);
+    }
+
+    // --- Mobile\Billing (/m) -------------------------------------------------
+
+    /**
+     * The /m screen runs the same wizard (Concerns\BuildsMonthlyBilling) with
+     * its own public `$rooms`, so the same forged `rental_id` must be refused.
+     */
+    public function test_mobile_billing_rejects_a_rental_belonging_to_another_landlord(): void
+    {
+        [$landlordA, $propertyA] = $this->createLandlordWithRoom('A');
+        [, , $rentalB] = $this->createLandlordWithRoom('B');
+
+        $this->actingAs($landlordA);
+        ActiveProperty::set($propertyA->id);
+
+        Livewire::test(MobileBilling::class)
+            ->call('startBilling')
+            ->set('rooms.0.utilities.0.new_reading', '150')
+            ->set('rooms.0.rental_id', $rentalB->id)
+            ->call('createInvoices')
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('invoices', ['rental_id' => $rentalB->id]);
+        $this->assertSame(0, Invoice::withoutGlobalScopes()->count());
+    }
+
+    /** Changing a period on /m re-prices the rental — never a foreign one. */
+    public function test_mobile_billing_rent_recalculation_rejects_a_foreign_rental(): void
+    {
+        [$landlordA, $propertyA] = $this->createLandlordWithRoom('A');
+        [, , $rentalB] = $this->createLandlordWithRoom('B', monthlyRent: 999);
+
+        $this->actingAs($landlordA);
+        ActiveProperty::set($propertyA->id);
+
+        Livewire::test(MobileBilling::class)
+            ->call('startBilling')
+            ->set('rooms.0.rental_id', $rentalB->id)
+            ->set('rooms.0.period_end', '2026-07-04')
+            ->assertForbidden();
+    }
+
+    /** The same-landlord /m run must keep working. */
+    public function test_mobile_billing_still_bills_the_acting_landlords_own_rental(): void
+    {
+        [$landlordA, $propertyA, $rentalA] = $this->createLandlordWithRoom('A');
+
+        $this->actingAs($landlordA);
+        ActiveProperty::set($propertyA->id);
+
+        Livewire::test(MobileBilling::class)
+            ->call('startBilling')
+            ->set('rooms.0.utilities.0.new_reading', '150')
+            ->call('createInvoices')
+            ->assertSet('resultSummary.created', 1);
 
         $this->assertDatabaseHas('invoices', [
             'rental_id' => $rentalA->id,
