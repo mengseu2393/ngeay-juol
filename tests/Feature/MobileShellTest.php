@@ -144,6 +144,32 @@ class MobileShellTest extends MobileTestCase
         $this->get(route('mobile.rooms'))->assertOk()->assertDontSee('id="rw-m-install"', false);
     }
 
+    /**
+     * Regression: with no property yet, the switcher's "Create your first property" link
+     * asked a Filament page for its URL outside the panel — a route that doesn't exist
+     * there — so every /m screen was a 500 for a brand-new landlord.
+     */
+    public function test_a_landlord_without_properties_is_offered_the_mobile_add_property_screen(): void
+    {
+        $landlord = $this->landlord();
+
+        $this->signIn($landlord)
+            ->get('/m')
+            ->assertOk()
+            ->assertSee('id="rw-m-first-property"', false)
+            ->assertSee(route('mobile.add-property'), false);
+    }
+
+    public function test_the_switchers_add_property_option_opens_the_mobile_screen(): void
+    {
+        $landlord = $this->landlord();
+        $this->signIn($landlord, $this->property($landlord));
+
+        Livewire::test(PropertySwitcher::class)
+            ->set('propertyId', PropertySwitcher::ADD)
+            ->assertRedirect(route('mobile.add-property'));
+    }
+
     /** No Filament panel to go back to: a switch reloads the current /m screen. */
     public function test_switching_property_reloads_the_screen_instead_of_opening_the_panel(): void
     {

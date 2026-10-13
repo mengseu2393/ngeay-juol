@@ -6,7 +6,7 @@
 
         @if ($properties->isEmpty())
             @if ($this->canAddProperty())
-                <a href="{{ \App\Filament\Pages\AddProperty::getUrl() }}" class="inline-flex items-center gap-1.5 font-semibold" id="rw-m-first-property">
+                <a href="{{ route('mobile.add-property') }}" wire:navigate class="inline-flex items-center gap-1.5 font-semibold" id="rw-m-first-property">
                     <span aria-hidden="true">＋</span> {{ __('Create your first property') }}
                 </a>
             @else

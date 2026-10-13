@@ -3,6 +3,8 @@
 namespace App\Livewire\Mobile;
 
 use App\Livewire\PropertySwitcher as BasePropertySwitcher;
+use App\Services\PropertySetupService;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * The property switcher in the /m top bar. Same rules as the panel's
@@ -19,6 +21,17 @@ class PropertySwitcher extends BasePropertySwitcher
     protected function afterSwitch(): void
     {
         $this->dispatch('rw-m-property-switched');
+    }
+
+    /** Same rule as the panel's Add property page, without going through a Filament page class. */
+    public function canAddProperty(): bool
+    {
+        return PropertySetupService::canAdd(Auth::user());
+    }
+
+    protected function addPropertyUrl(): string
+    {
+        return route('mobile.add-property');
     }
 
     public function render()
