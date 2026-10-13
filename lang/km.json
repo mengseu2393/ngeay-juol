@@ -1591,7 +1591,7 @@
     "Reopen": "បើកឡើងវិញ",
     "Marked as resolved": "បានសម្គាល់ថាបានដោះស្រាយ",
     "No errors.": "គ្មានកំហុស។",
-    "Server errors, rejected forms and blocked requests show up here.": "កំហុសម៉ាស៊ីនមេ ទម្រង់ដែលត្រូវបានបដិសេធ និងសំណើដែលត្រូវបានរារាំង នឹងបង្ហាញនៅទីនេះ។",
+    "Server errors, rejected forms, blocked requests and browser errors show up here.": "កំហុសម៉ាស៊ីនមេ ទម្រង់ដែលត្រូវបានបដិសេធ សំណើដែលត្រូវបានរារាំង និងកំហុសកម្មវិធីរុករក នឹងបង្ហាញនៅទីនេះ។",
     "IP address": "អាសយដ្ឋាន IP",
     "Device": "ឧបករណ៍",
     "Validation errors": "កំហុសផ្ទៀងផ្ទាត់",

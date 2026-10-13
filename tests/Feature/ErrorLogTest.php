@@ -105,6 +105,15 @@ class ErrorLogTest extends TestCase
         $this->assertSame('Move-in could not be completed: Unit is already occupied.', $log->message);
     }
 
+    /** Browser-side failures (ClientErrorReportTest) land here too — the empty state says so. */
+    public function test_the_empty_log_mentions_browser_errors(): void
+    {
+        $this->actingAs($this->createStaff('super_admin'));
+
+        Livewire::test(ListErrorLogs::class)
+            ->assertSee(__('Server errors, rejected forms, blocked requests and browser errors show up here.'));
+    }
+
     public function test_only_super_admins_can_see_the_log(): void
     {
         $this->actingAs($this->createStaff('support'));

@@ -194,7 +194,7 @@ class ErrorLogResource extends Resource
                 ]),
             ])
             ->emptyStateHeading(__('No errors.'))
-            ->emptyStateDescription(__('Server errors, rejected forms and blocked requests show up here.'))
+            ->emptyStateDescription(__('Server errors, rejected forms, blocked requests and browser errors show up here.'))
             ->emptyStateIcon('heroicon-o-check-circle');
     }
 
