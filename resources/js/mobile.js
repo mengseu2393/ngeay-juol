@@ -283,6 +283,106 @@ document.addEventListener('alpine:init', () => {
     }));
 });
 
+// ── Pull to refresh ──────────────────────────────────────────────────────────
+//
+// The installed app has no browser reload, so a pull from the top of a screen
+// re-renders that screen's Livewire component in place: fresh data, no page
+// load, no history entry. The browser's own pull-to-refresh is switched off in
+// mobile.css (overscroll-behavior) so the two never fire together.
+
+(() => {
+    const THRESHOLD = 70;
+    const MAX = 110;
+    let startY = null;
+    let pull = 0;
+    let refreshing = false;
+
+    const indicator = () => document.getElementById('rw-m-ptr');
+
+    const reset = (el) => {
+        el.classList.remove('is-refreshing');
+        el.style.transform = '';
+        el.style.opacity = '0';
+    };
+
+    document.addEventListener('touchstart', (event) => {
+        startY = null;
+
+        if (refreshing || openSheet || window.scrollY > 0 || event.touches.length !== 1) {
+            return;
+        }
+
+        if (event.target.closest('input, textarea, select, [data-no-ptr]')) {
+            return;
+        }
+
+        startY = event.touches[0].clientY;
+        pull = 0;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (event) => {
+        const el = indicator();
+
+        if (startY === null || ! el) {
+            return;
+        }
+
+        pull = Math.min(MAX, Math.max(0, (event.touches[0].clientY - startY) * 0.5));
+        el.style.transition = 'none';
+        el.style.opacity = String(Math.min(1, pull / THRESHOLD));
+        el.style.transform = `translate(-50%, ${pull}px) rotate(${pull * 3}deg)`;
+    }, { passive: true });
+
+    document.addEventListener('touchend', async () => {
+        const el = indicator();
+
+        if (startY === null || ! el) {
+            return;
+        }
+
+        startY = null;
+        el.style.transition = 'transform 200ms ease, opacity 200ms ease';
+
+        if (pull < THRESHOLD) {
+            reset(el);
+
+            return;
+        }
+
+        refreshing = true;
+        el.classList.add('is-refreshing');
+        el.style.transform = `translate(-50%, ${THRESHOLD * 0.6}px)`;
+        navigator.vibrate?.(10);
+
+        try {
+            const root = document.querySelector('main [wire\\:id]');
+
+            if (root) {
+                await window.Livewire.find(root.getAttribute('wire:id')).$refresh();
+            }
+        } finally {
+            refreshing = false;
+            reset(el);
+        }
+    });
+})();
+
+// ── Screen transitions ───────────────────────────────────────────────────────
+// <main> is replaced on every wire:navigate (only the bars persist); the new one
+// fades and rises in, so moving between screens doesn't read as a page load.
+
+let firstLoad = true;
+
+document.addEventListener('livewire:navigated', () => {
+    if (firstLoad) {
+        firstLoad = false;
+
+        return;
+    }
+
+    document.querySelector('main')?.classList.add('rw-m-enter');
+});
+
 // ── Toast ────────────────────────────────────────────────────────────────────
 
 window.rwMobileToast = function (text) {

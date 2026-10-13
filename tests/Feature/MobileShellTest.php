@@ -118,6 +118,17 @@ class MobileShellTest extends MobileTestCase
             ->assertSee('x-on:touchend="dragEnd()"', false);
     }
 
+    /** The installed app has no browser reload: every screen gets pull-to-refresh. */
+    public function test_every_screen_has_a_pull_to_refresh_indicator(): void
+    {
+        $landlord = $this->landlord();
+
+        $this->signIn($landlord, $this->property($landlord))
+            ->get('/m')
+            ->assertOk()
+            ->assertSee('id="rw-m-ptr"', false);
+    }
+
     /** No Filament panel to go back to: a switch reloads the current /m screen. */
     public function test_switching_property_reloads_the_screen_instead_of_opening_the_panel(): void
     {
