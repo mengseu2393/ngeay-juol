@@ -12,6 +12,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Js;
 use Tests\TestCase;
 
 /**
@@ -19,7 +20,8 @@ use Tests\TestCase;
  * so /livewire/update comes back 419) is to surface the failure directly —
  * a confirm() prompt or raw error HTML, neither of which means anything to a
  * landlord/tenant. components.rw-session-expired-redirect intercepts that and
- * sends them to the login page instead, silently.
+ * sends them to the login page instead, silently. Any other failure shows a
+ * short translated toast rather than the raw error page.
  */
 class SessionExpiredRedirectTest extends TestCase
 {
@@ -67,6 +69,13 @@ class SessionExpiredRedirectTest extends TestCase
         $response->assertSuccessful();
         $response->assertSee("Livewire.hook('request'", false);
         $response->assertSee('status === 419', false);
+
+        // Every other failure (5xx, a proxy's 502 on a flaky connection, no
+        // response at all) gets a translated toast instead of Livewire's raw
+        // error page in a full-screen overlay, which looked like a corrupted app.
+        $response->assertSee('preventDefault();', false);
+        $response->assertSee(Js::from(__('Something went wrong. Please try again.'))->toHtml(), false);
+        $response->assertSee(Js::from(__('No internet connection. Please try again.'))->toHtml(), false);
     }
 
     public function test_admin_panel_renders_the_session_expired_redirect_script(): void
