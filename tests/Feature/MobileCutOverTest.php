@@ -159,4 +159,29 @@ class MobileCutOverTest extends MobileTestCase
         $this->assertStringNotContainsString("'/manifest.json'", $sw);
         $this->assertStringContainsString('evictOtherVersions', $sw);
     }
+
+    // ── Android app (Trusted Web Activity) ───────────────────────────────────
+
+    public function test_asset_links_are_empty_until_the_android_app_is_configured(): void
+    {
+        config(['mobile.twa' => ['package' => null, 'fingerprints' => []]]);
+
+        $this->get('/.well-known/assetlinks.json')->assertOk()->assertExactJson([]);
+    }
+
+    public function test_asset_links_publish_the_configured_android_app(): void
+    {
+        config(['mobile.twa' => ['package' => 'app.ngeayjuol.twa', 'fingerprints' => ['AA:BB', 'CC:DD']]]);
+
+        $this->get('/.well-known/assetlinks.json')
+            ->assertOk()
+            ->assertExactJson([[
+                'relation' => ['delegate_permission/common.handle_all_urls'],
+                'target' => [
+                    'namespace' => 'android_app',
+                    'package_name' => 'app.ngeayjuol.twa',
+                    'sha256_cert_fingerprints' => ['AA:BB', 'CC:DD'],
+                ],
+            ]]);
+    }
 }

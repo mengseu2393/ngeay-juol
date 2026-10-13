@@ -32,6 +32,21 @@ Route::view('info', 'info')->name('info');
 // The web app manifest follows the mobile shell's flag (start_url, shortcuts).
 Route::get('manifest.json', ManifestController::class)->name('manifest');
 
+// Digital Asset Links for the Android app (docs/TWA.md): empty until configured.
+Route::get('.well-known/assetlinks.json', function () {
+    $package = config('mobile.twa.package');
+    $fingerprints = config('mobile.twa.fingerprints');
+
+    return response()->json($package && $fingerprints ? [[
+        'relation' => ['delegate_permission/common.handle_all_urls'],
+        'target' => [
+            'namespace' => 'android_app',
+            'package_name' => $package,
+            'sha256_cert_fingerprints' => $fingerprints,
+        ],
+    ]] : [], 200, [], JSON_UNESCAPED_SLASHES);
+})->name('assetlinks');
+
 Route::get('login', [LoginController::class, 'showLogin'])->name('login');
 // throttle:login is the limiter defined in FortifyServiceProvider (5/min keyed by
 // username + IP). This app authenticates through its own LoginController rather
