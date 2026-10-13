@@ -58,7 +58,7 @@ class PropertySwitcher extends Component
             $this->propertyId = (string) (ActiveProperty::id() ?? '');
             abort_unless($this->canAddProperty(), 403);
 
-            $this->redirect(AddProperty::getUrl(), navigate: false);
+            $this->redirect($this->addPropertyUrl(), navigate: false);
 
             return;
         }
@@ -68,9 +68,22 @@ class PropertySwitcher extends Component
 
         ActiveProperty::set($value);
 
-        // Full reload so server-computed navigation (visibility + the context
-        // group) is rebuilt for the new context. Land on the panel home.
+        $this->afterSwitch();
+    }
+
+    /**
+     * Full reload so server-computed navigation (visibility + the context group)
+     * is rebuilt for the new context. Land on the panel home. The mobile shell's
+     * switcher overrides this — it has no Filament panel to go back to.
+     */
+    protected function afterSwitch(): void
+    {
         $this->redirect(Filament::getUrl(), navigate: false);
+    }
+
+    protected function addPropertyUrl(): string
+    {
+        return AddProperty::getUrl();
     }
 
     /** Whether this user gets a switcher at all (landlords, managers, staff). */
