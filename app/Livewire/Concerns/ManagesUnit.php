@@ -206,6 +206,9 @@ trait ManagesUnit
         ];
         $this->notice = __('Agreement created.');
         $this->panel = null;
+
+        // Other screens of the same page (room list, tenants, ...) stay mounted.
+        $this->dispatch('tenancy-started');
     }
 
     public function endAgreement(): void
@@ -235,6 +238,8 @@ trait ManagesUnit
 
         $this->notice = __('Agreement ended.');
         $this->panel = null;
+
+        $this->dispatch('tenancy-ended');
     }
 
     // ---------------------------------------------------------------------

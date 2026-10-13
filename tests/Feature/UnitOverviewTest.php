@@ -95,7 +95,9 @@ class UnitOverviewTest extends TestCase
             ->call('startAgreement')
             ->assertHasNoErrors()
             ->assertSet('panel', null)
-            ->assertSee(__('Agreement created.'));
+            ->assertSee(__('Agreement created.'))
+            // Simple Mode's other screens are mounted on the same page and listen for this.
+            ->assertDispatched('tenancy-started');
 
         $this->assertDatabaseHas('rentals', ['unit_id' => $vacant->id, 'occupant_name' => 'New Tenant', 'status' => RentalStatus::Active->value]);
         $usage = UtilityUsage::where('new_reading', 500)->firstOrFail();
@@ -117,7 +119,8 @@ class UnitOverviewTest extends TestCase
         $c = $this->page($landlord, $occupied)->call('openPanel', 'end')->call('endAgreement')->assertHasErrors('confirmEnd');
         $this->assertSame(UnitStatus::Occupied, $occupied->fresh()->status);
 
-        $c->set('confirmEnd', true)->call('endAgreement')->assertHasNoErrors()->assertSee(__('Agreement ended.'));
+        $c->set('confirmEnd', true)->call('endAgreement')->assertHasNoErrors()->assertSee(__('Agreement ended.'))
+            ->assertDispatched('tenancy-ended');
 
         $this->assertSame(UnitStatus::Available, $occupied->fresh()->status);
         $this->assertDatabaseHas('rentals', ['unit_id' => $occupied->id, 'status' => RentalStatus::Vacated->value]);

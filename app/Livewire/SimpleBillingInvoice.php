@@ -917,6 +917,11 @@ class SimpleBillingInvoice extends Component
         $this->step = 'result';
         $this->creatingInvoices = false;
 
+        if ($created > 0) {
+            // The Invoices screen is already mounted on the same page.
+            $this->dispatch('invoices-created');
+        }
+
         Notification::make()
             ->title(__('Billing complete'))
             ->body($this->billingCompleteBody($created))

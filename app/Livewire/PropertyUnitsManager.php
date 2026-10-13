@@ -24,6 +24,12 @@ class PropertyUnitsManager extends Component
     /** 'all' | 'vacant' | 'occupied' */
     public string $filter = 'all';
 
+    /** Sibling Simple Mode screens stay mounted on one page; re-render when they change shared data. */
+    protected $listeners = [
+        'tenancy-started' => '$refresh',
+        'tenancy-ended' => '$refresh',
+    ];
+
     public function mount(int $propertyId): void
     {
         // Property is LandlordScope-filtered: another landlord's id 404s.

@@ -33,6 +33,12 @@ class SimpleUtilityUsage extends Component
 
     /** Deep-linked here from a room card's "Set Utility" button — same
      *  ?unit_id= shortcut pattern SimpleAddTenant/SimpleEndTenancy use. */
+    /** Sibling Simple Mode screens stay mounted on one page; re-render when they change shared data. */
+    protected $listeners = [
+        'tenancy-started' => '$refresh',
+        'tenancy-ended' => '$refresh',
+    ];
+
     public function mount(): void
     {
         $unitId = (int) request()->query('unit_id');

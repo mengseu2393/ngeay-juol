@@ -74,6 +74,9 @@ class SimpleAddTenant extends Component
     /** Result from creation */
     public ?array $result = null;
 
+    /** Sibling Simple Mode screens stay mounted on one page; re-render when they change shared data. */
+    protected $listeners = ['tenancy-ended' => '$refresh'];
+
     public function mount(?int $unitId = null): void
     {
         $this->startDate = now()->toDateString();
@@ -203,6 +206,10 @@ class SimpleAddTenant extends Component
         ];
 
         $this->step = 'done';
+
+        // The Rooms/Tenants screens are already mounted on the same page and
+        // would otherwise still show this room as vacant.
+        $this->dispatch('tenancy-started');
     }
 
     public function reset_form(): void

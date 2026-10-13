@@ -30,6 +30,9 @@ class SimpleEndTenancy extends Component
 
     public ?array $result = null;
 
+    /** Sibling Simple Mode screens stay mounted on one page; re-render when they change shared data. */
+    protected $listeners = ['tenancy-started' => '$refresh'];
+
     public function mount(?int $unitId = null): void
     {
         $this->endDate = now()->toDateString();

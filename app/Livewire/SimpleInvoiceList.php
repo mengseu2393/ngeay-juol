@@ -40,6 +40,9 @@ class SimpleInvoiceList extends Component
 
     protected $queryString = ['filter', 'search'];
 
+    /** Sibling Simple Mode screens stay mounted on one page; re-render when they change shared data. */
+    protected $listeners = ['invoices-created' => '$refresh'];
+
     public function updatingFilter(): void
     {
         $this->resetPage();

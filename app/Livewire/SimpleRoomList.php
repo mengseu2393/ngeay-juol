@@ -58,6 +58,9 @@ class SimpleRoomList extends Component
 
     protected $listeners = [
         'tenant-updated' => 'handleTenantUpdated',
+        // Rooms are rendered fresh in render(); a re-render is all that's needed.
+        'tenancy-started' => '$refresh',
+        'tenancy-ended' => '$refresh',
     ];
 
     public function updatingSearch(): void

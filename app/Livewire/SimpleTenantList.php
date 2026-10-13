@@ -45,6 +45,10 @@ class SimpleTenantList extends Component
     protected $listeners = [
         'tenant-updated' => 'handleTenantUpdated',
         'tenancy-ended' => 'handleTenancyEnded',
+        // Tenants and their balances are rendered fresh in render().
+        'tenancy-started' => '$refresh',
+        'invoices-created' => '$refresh',
+        'pay-saved' => '$refresh',
     ];
 
     public function updatingSearch(): void
