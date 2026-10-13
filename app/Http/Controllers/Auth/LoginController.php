@@ -6,6 +6,7 @@ use App\Enums\UserStatus;
 use App\Http\Controllers\Auth\Concerns\RedirectsAuthenticatedUsers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\DeviceSession;
 use App\Support\PhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -35,6 +36,12 @@ class LoginController extends Controller
         $user = $this->findLoginUser($credentials['login'], $credentials['password']);
 
         if ($user instanceof User) {
+            // A phone / the installed app is remembered for ~30 days instead of
+            // the framework's 400; desktop keeps the default.
+            if (DeviceSession::wantsLongSession($request)) {
+                Auth::guard()->setRememberDuration(DeviceSession::REMEMBER_MINUTES);
+            }
+
             Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
 

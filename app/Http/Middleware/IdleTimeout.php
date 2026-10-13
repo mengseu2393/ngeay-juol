@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\DeviceSession;
 use Closure;
+use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -10,6 +12,10 @@ use Symfony\Component\HttpFoundation\Response;
  * Logs out an authenticated staff/landlord user after 15 minutes of
  * inactivity, regardless of SESSION_LIFETIME (which only governs how long
  * the session cookie/store entry survives, not idle activity within it).
+ *
+ * Desktop only in the landlord panel: a phone or the installed app is a daily
+ * tool that stays signed in like a native app (DeviceSession). The platform
+ * staff panel (/admin) keeps the idle logout on every device.
  */
 class IdleTimeout
 {
@@ -20,6 +26,10 @@ class IdleTimeout
         $user = $request->user();
 
         if (! $user) {
+            return $next($request);
+        }
+
+        if (Filament::getCurrentPanel()?->getId() !== 'admin' && DeviceSession::wantsLongSession($request)) {
             return $next($request);
         }
 

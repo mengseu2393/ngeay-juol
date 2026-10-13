@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\SetLocale;
 use App\Services\ErrorLogService;
+use App\Support\DeviceSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SetLocale::class,
         ]);
+
+        // Written by JavaScript (components.rw-display-mode-cookie), so it can't be encrypted.
+        $middleware->encryptCookies(except: [DeviceSession::DISPLAY_MODE_COOKIE]);
 
         // Behind a TLS-terminating proxy, url()/asset() emit http:// and the
         // login rate limiter keys on the proxy's IP instead of the client's,

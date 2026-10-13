@@ -26,6 +26,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
         @include('components.rw-loader-head')
+        @include('components.rw-display-mode-cookie')
         
         <style>
             body {
@@ -161,9 +162,15 @@
                         <!-- Remember Me -->
                         <div class="flex items-center justify-between">
                             <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
-                                <input type="checkbox" name="remember" class="w-4.5 h-4.5 rounded border-slate-200 dark:border-slate-800 text-emerald-600 focus:ring-emerald-500/20 bg-slate-50 dark:bg-slate-950">
+                                <input type="checkbox" name="remember" id="login-remember" @checked(\App\Support\DeviceSession::wantsLongSession(request())) class="w-4.5 h-4.5 rounded border-slate-200 dark:border-slate-800 text-emerald-600 focus:ring-emerald-500/20 bg-slate-50 dark:bg-slate-950">
                                 <span class="select-none">{{ __('Remember me') }}</span>
                             </label>
+                            {{-- The installed app stays signed in by default; on a phone the server already ticks it. --}}
+                            <script>
+                                if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                                    document.getElementById('login-remember').checked = true;
+                                }
+                            </script>
                         </div>
 
                         <!-- Submit -->
