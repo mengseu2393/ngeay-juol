@@ -4,5 +4,6 @@
     "This room is not available for a new tenant.": "បន្ទប់នេះមិនទំនេរសម្រាប់អ្នកជួលថ្មីទេ។",
     "Room status: :status": "ស្ថានភាពបន្ទប់៖ :status",
     "Listed rent: :amount": "ថ្លៃជួលបន្ទប់៖ :amount",
-    "Please check the highlighted fields.": "សូមពិនិត្យព័ត៌មានដែលបានសម្គាល់។"
+    "Please check the highlighted fields.": "សូមពិនិត្យព័ត៌មានដែលបានសម្គាល់។",
+    "End the tenancy for :tenant?": "បញ្ចប់ការជួលរបស់ :tenant មែនទេ?"
 }
