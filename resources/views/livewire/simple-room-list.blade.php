@@ -249,7 +249,7 @@
                     <p class="rw-sm-detail-label mb-2">{{ __('ID card photos') }}</p>
                     <div class="flex flex-wrap gap-2">
                         <template x-for="url in tenant.idCards" :key="url">
-                            <a :href="url" target="_blank" rel="noopener" class="block h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                            <a :href="url" target="_blank" rel="noopener" class="rw-sm-photo-thumb block h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                                 <img :src="url" class="h-full w-full object-cover" alt="{{ __('ID card photo') }}">
                             </a>
                         </template>

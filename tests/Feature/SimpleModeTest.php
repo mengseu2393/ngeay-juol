@@ -1012,6 +1012,26 @@ class SimpleModeTest extends TestCase
         }
     }
 
+    /**
+     * Filament's precompiled Tailwind lacks h-20 / top-0.5 / right-0.5 / bg-black/60,
+     * so ID-card photo tiles collapsed to the photo's height and their remove (×)
+     * button was invisible. The tiles carry hand-written rw-sm-photo-* rules now.
+     */
+    public function test_id_card_photo_tiles_have_their_own_size_and_remove_button_rules(): void
+    {
+        $css = file_get_contents(public_path('css/rentwise-admin.css'));
+
+        $this->assertStringContainsString('.rw-sm-photo-thumb { width: 5rem; height: 5rem; }', $css);
+        $this->assertStringContainsString('.rw-sm-photo-remove { top: 0.125rem; right: 0.125rem; }', $css);
+        $this->assertStringContainsString('.rw-simple .bg-black\/60 { background-color: rgba(0, 0, 0, 0.6); }', $css);
+
+        foreach (['simple-add-tenant', 'simple-edit-tenant'] as $view) {
+            $blade = file_get_contents(resource_path("views/livewire/{$view}.blade.php"));
+            $this->assertStringContainsString('rw-sm-photo-thumb relative', $blade, $view);
+            $this->assertStringContainsString('rw-sm-photo-remove absolute', $blade, $view);
+        }
+    }
+
     public function test_pwa_service_worker_is_accessible(): void
     {
         $this->assertFileExists(public_path('sw.js'));

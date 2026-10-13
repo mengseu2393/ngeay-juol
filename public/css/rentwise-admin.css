@@ -3324,6 +3324,7 @@ select.rw-sm-input {
 /* Light */
 .rw-simple .bg-amber-50 { background-color: rgb(var(--warning-50)); }
 .rw-simple .bg-amber-50\/50 { background-color: rgba(var(--warning-50), 0.5); }
+.rw-simple .bg-black\/60 { background-color: rgba(0, 0, 0, 0.6); }
 .rw-simple .bg-emerald-50 { background-color: rgb(var(--success-50)); }
 .rw-simple .bg-gray-50\/50 { background-color: rgba(var(--gray-50), 0.5); }
 .rw-simple .bg-gray-50\/70 { background-color: rgba(var(--gray-50), 0.7); }
@@ -3343,6 +3344,7 @@ select.rw-sm-input {
 .rw-simple .ring-primary-500\/10 { --tw-ring-color: rgba(var(--primary-500), 0.1); }
 .rw-simple .text-amber-600 { color: rgb(var(--warning-600)); }
 .rw-simple .text-amber-700 { color: rgb(var(--warning-700)); }
+.rw-simple .text-amber-800 { color: rgb(var(--warning-800)); }
 .rw-simple .text-amber-900 { color: rgb(var(--warning-900)); }
 .rw-simple .text-emerald-600 { color: rgb(var(--success-600)); }
 .rw-simple .text-emerald-700 { color: rgb(var(--success-700)); }
@@ -3365,6 +3367,7 @@ select.rw-sm-input {
 .dark .rw-simple .dark\:bg-primary-500\/10 { background-color: rgba(var(--primary-500), 0.1); }
 .dark .rw-simple .dark\:bg-red-950\/10 { background-color: rgba(var(--danger-950), 0.1); }
 .dark .rw-simple .dark\:bg-red-950\/20 { background-color: rgba(var(--danger-950), 0.2); }
+.dark .rw-simple .dark\:border-amber-700 { border-color: rgb(var(--warning-700)); }
 .dark .rw-simple .dark\:border-amber-900\/30 { border-color: rgba(var(--warning-900), 0.3); }
 .dark .rw-simple .dark\:border-amber-900\/40 { border-color: rgba(var(--warning-900), 0.4); }
 .dark .rw-simple .dark\:border-gray-800 { border-color: rgb(var(--gray-800)); }
@@ -3387,6 +3390,14 @@ select.rw-sm-input {
 .dark .rw-simple .dark\:text-red-200 { color: rgb(var(--danger-200)); }
 .dark .rw-simple .dark\:text-red-300 { color: rgb(var(--danger-300)); }
 .dark .rw-simple .dark\:text-red-400 { color: rgb(var(--danger-400)); }
+
+/* Simple mode ID-card photo tiles (add/edit tenant forms, tenant/room viewers).
+   Their h-20 / top-0.5 / right-0.5 utilities are not in Filament's stylesheet,
+   so the tiles collapsed to the photo's height and the remove (×) button sat
+   in the corner of nothing — invisible. Hand-written instead (see above). */
+.rw-sm-photo-thumb { width: 5rem; height: 5rem; }
+.rw-sm-photo-remove { top: 0.125rem; right: 0.125rem; }
+.rw-sm-photo-add-label { font-size: 0.65rem; }
 
 /* ----------------------------------------------------------------------------
  | Property setup checklist (PropertySetupChecklistWidget)
