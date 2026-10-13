@@ -4,9 +4,10 @@ namespace App\Livewire;
 
 use App\Enums\RentalStatus;
 use App\Enums\UnitStatus;
-use App\Models\Rental;
 use App\Models\Unit;
+use App\Services\EndTenancyService;
 use App\Support\ActiveProperty;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 /**
@@ -74,24 +75,19 @@ class SimpleEndTenancy extends Component
             return;
         }
 
-        $rental = Rental::query()
-            ->where('unit_id', $unit->id)
-            ->where('status', RentalStatus::Active->value)
-            ->first();
-
-        if (! $rental) {
-            $this->addError('unitId', __('This room has no active tenancy.'));
+        try {
+            $rental = app(EndTenancyService::class)->end(
+                $unit,
+                $this->endDate,
+                RentalStatus::from((int) $this->status),
+                $this->freeRoom,
+            );
+        } catch (ValidationException $e) {
+            foreach ($e->errors() as $field => $messages) {
+                $this->addError($field, $messages[0]);
+            }
 
             return;
-        }
-
-        $rental->update([
-            'status' => (int) $this->status,
-            'end_date' => $this->endDate,
-        ]);
-
-        if ($this->freeRoom) {
-            $unit->update(['status' => UnitStatus::Available]);
         }
 
         $unit->refresh();

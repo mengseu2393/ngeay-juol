@@ -161,6 +161,7 @@ class UnitResource extends Resource implements HasShieldPermissions
                 RowActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     static::meterReadingsAction(),
+                    static::readingHistoryAction(),
                     static::accountAction(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
@@ -274,6 +275,20 @@ class UnitResource extends Resource implements HasShieldPermissions
      * baseline (old_reading = new_reading, amount_used = 0) — i.e. the starting
      * meter value the user asked to seed when a room has no utility data yet.
      */
+    protected static function readingHistoryAction(): Tables\Actions\Action
+    {
+        return Tables\Actions\Action::make('readingHistory')
+            ->label(__('Reading history'))
+            ->icon('heroicon-o-clock')
+            ->visible(fn () => auth()->user()?->can('viewAny', UtilityUsage::class))
+            ->slideOver()
+            ->modalWidth('lg')
+            ->modalHeading(fn (Unit $record) => __('Reading history — Room :room', ['room' => $record->room_number]))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Close'))
+            ->modalContent(fn (Unit $record) => view('filament.unit-reading-history', ['unitId' => $record->getKey()]));
+    }
+
     protected static function meterReadingsAction(): Tables\Actions\Action
     {
         return Tables\Actions\Action::make('meterReadings')

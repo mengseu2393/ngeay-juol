@@ -2,21 +2,24 @@
     use App\Enums\OnboardingStep;
 
     $current = $this->currentStep();
-    $percent = (int) round($current->value / OnboardingStep::TOTAL * 100);
+    $adding = $this->isAddingProperty(); // single-property "Add property" screen: no account step
+    $offset = $adding ? 1 : 0;
+    $total = OnboardingStep::TOTAL - $offset;
+    $percent = (int) round(($current->value - $offset) / $total * 100);
 @endphp
 
 <div class="rw-setup" x-data x-on:rw-setup-step-changed.window="window.scrollTo({ top: 0, behavior: 'smooth' })">
     {{-- ── Progress ── --}}
     <div class="rw-setup-progress">
         <div class="rw-setup-progress__meta">
-            <span>{{ __('Step :current of :total', ['current' => $current->value, 'total' => OnboardingStep::TOTAL]) }}</span>
+            <span>{{ __('Step :current of :total', ['current' => $current->value - $offset, 'total' => $total]) }}</span>
             <span class="rw-setup-progress__label">{{ $current->getLabel() }}</span>
         </div>
         <div class="rw-setup-progress__track">
             <div class="rw-setup-progress__bar" style="width: {{ $percent }}%"></div>
         </div>
         <ol class="rw-setup-steps">
-            <li class="is-done">{{ __('Account') }}</li>
+            @unless ($adding)<li class="is-done">{{ __('Account') }}</li>@endunless
             @foreach (OnboardingStep::cases() as $case)
                 <li @class(['is-done' => $case->value < $current->value, 'is-current' => $case === $current])>{{ $case->getLabel() }}</li>
             @endforeach
@@ -29,14 +32,14 @@
 
     {{-- ═══════════════════ Step 2 — Properties ═══════════════════ --}}
     @if ($current === OnboardingStep::Properties)
-        <h1 class="rw-setup-title">{{ __('Your properties') }}</h1>
-        <p class="rw-setup-lead">{{ __('Add every building or house you rent out. You can add more later.') }}</p>
+        <h1 class="rw-setup-title">{{ $adding ? __('Add property') : __('Your properties') }}</h1>
+        <p class="rw-setup-lead">{{ $adding ? __('Tell us about the new building or house. You will add its utilities and rooms next.') : __('Add every building or house you rent out. You can add more later.') }}</p>
 
         @foreach ($properties as $i => $property)
             <section class="rw-setup-card" wire:key="property-{{ $i }}-{{ $property['id'] ?? 'new' }}">
                 <div class="rw-setup-card__head">
-                    <h2 class="rw-setup-card__title">{{ __('Property :number', ['number' => $i + 1]) }}</h2>
-                    @if (count($properties) > 1)
+                    <h2 class="rw-setup-card__title">{{ $adding ? __('Property details') : __('Property :number', ['number' => $i + 1]) }}</h2>
+                    @if (! $adding && count($properties) > 1)
                         <button type="button" class="rw-setup-link rw-setup-link--danger" wire:click="removeProperty({{ $i }})">{{ __('Remove') }}</button>
                     @endif
                 </div>
@@ -102,7 +105,9 @@
             </section>
         @endforeach
 
-        <button type="button" class="rw-setup-add" wire:click="addProperty">+ {{ __('Add another property') }}</button>
+        @unless ($adding)
+            <button type="button" class="rw-setup-add" wire:click="addProperty">+ {{ __('Add another property') }}</button>
+        @endunless
     @endif
 
     {{-- ═══════════════════ Step 3 — Utilities ═══════════════════ --}}
@@ -121,7 +126,16 @@
                         <div class="rw-setup-utility__row">
                             <div class="rw-setup-utility__name">
                                 <label class="rw-sm-label" for="u-{{ $propertyId }}-{{ $j }}-name">{{ __('Name') }}</label>
-                                <input id="u-{{ $propertyId }}-{{ $j }}-name" type="text" class="rw-sm-input" wire:model="utilities.{{ $propertyId }}.{{ $j }}.name" placeholder="{{ __('e.g. Trash') }}">
+                                @if (array_key_exists($utility['name'] ?? '', $utilityNames))
+                                    {{-- Standard utility: the stored key stays English (billing looks it up), the label is translated. --}}
+                                    <select id="u-{{ $propertyId }}-{{ $j }}-name" class="rw-sm-input" wire:model="utilities.{{ $propertyId }}.{{ $j }}.name">
+                                        @foreach ($utilityNames as $key => $label)
+                                            <option value="{{ $key }}">{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                @else
+                                    <input id="u-{{ $propertyId }}-{{ $j }}-name" type="text" class="rw-sm-input" wire:model="utilities.{{ $propertyId }}.{{ $j }}.name" placeholder="{{ __('e.g. Trash') }}">
+                                @endif
                             </div>
                             <div class="rw-setup-utility__price">
                                 <label class="rw-sm-label" for="u-{{ $propertyId }}-{{ $j }}-rate">{{ __('Price') }}</label>
@@ -278,7 +292,7 @@
             @endif
 
             @if ($current === OnboardingStep::Review)
-                <button type="button" class="rw-setup-btn rw-setup-btn--primary" wire:click="finish" wire:loading.attr="disabled">{{ __('Finish & go to dashboard') }}</button>
+                <button type="button" class="rw-setup-btn rw-setup-btn--primary" wire:click="finish" wire:loading.attr="disabled">{{ $adding ? __('Finish') : __('Finish & go to dashboard') }}</button>
             @else
                 <button type="button" class="rw-setup-btn rw-setup-btn--primary" wire:click="next" wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="next">{{ __('Save & continue') }}</span>
@@ -286,6 +300,6 @@
                 </button>
             @endif
         </div>
-        <button type="button" class="rw-setup-later" wire:click="skip">{{ __('Finish later') }}</button>
+        <button type="button" class="rw-setup-later" wire:click="skip">{{ $adding ? __('Cancel') : __('Finish later') }}</button>
     </div>
 </div>

@@ -6,6 +6,7 @@ use App\Enums\BillingType;
 use App\Enums\OnboardingStep;
 use App\Enums\PropertyType;
 use App\Enums\UnitStatus;
+use App\Filament\Resources\PropertyUtilityResource;
 use App\Models\LandlordProfile;
 use App\Models\Property;
 use App\Models\PropertySetting;
@@ -17,6 +18,7 @@ use App\Support\ActiveProperty;
 use App\Support\Money;
 use Filament\Pages\Page;
 use Filament\Support\Enums\MaxWidth;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -133,9 +135,49 @@ class LandlordSetup extends Page
     {
         $this->resetValidation();
         $this->step = $step->value;
-        $this->profile()->update(['onboarding_step' => $step]);
+        $this->persistStep($step);
         $this->loadState();
         $this->dispatch('rw-setup-step-changed');
+    }
+
+    /** Remember the step so the next sign-in resumes here (the add-property subclass doesn't). */
+    protected function persistStep(OnboardingStep $step): void
+    {
+        $this->profile()->update(['onboarding_step' => $step]);
+    }
+
+    /** The properties this wizard run works on. */
+    protected function wizardProperties(): Builder
+    {
+        return Property::query();
+    }
+
+    /** A saved property by id, scoped to this run (LandlordScope already blocks other landlords). */
+    protected function findProperty(mixed $id): ?Property
+    {
+        return filled($id) ? $this->wizardProperties()->find($id) : null;
+    }
+
+    /** Cards removed in the wizard. Only still-empty setups are deleted — real data stays. */
+    protected function removeUnlistedProperties(array $keptIds): void
+    {
+        Property::query()
+            ->whereNotIn('id', $keptIds)
+            ->whereDoesntHave('rentals')
+            ->get()
+            ->each(function (Property $property) {
+                $property->units()->get()->each->delete();
+                $property->propertyUtilities()->get()->each->delete();
+                $property->delete();
+            });
+    }
+
+    protected function afterPropertySaved(Property $property): void {}
+
+    /** True for the single-property "Add property" screen (see AddProperty). */
+    public function isAddingProperty(): bool
+    {
+        return false;
     }
 
     // ---------------------------------------------------------------------
@@ -205,7 +247,7 @@ class LandlordSetup extends Page
                 ];
 
                 // LandlordScope makes a tampered id resolve to nothing → treated as new.
-                $property = filled($row['id'] ?? null) ? Property::query()->find($row['id']) : null;
+                $property = $this->findProperty($row['id'] ?? null);
 
                 if ($property) {
                     $property->update($attributes);
@@ -215,22 +257,13 @@ class LandlordSetup extends Page
 
                 $this->properties[$index]['id'] = $property->id;
                 $keptIds[] = $property->id;
+                $this->afterPropertySaved($property);
 
                 $this->syncCurrency($property, $row['currency']);
                 app(DefaultPropertyUtilitiesService::class)->seed($property);
             }
 
-            // Cards removed in the wizard. Only still-empty setups are deleted —
-            // anything with a tenancy is real data and stays.
-            Property::query()
-                ->whereNotIn('id', $keptIds)
-                ->whereDoesntHave('rentals')
-                ->get()
-                ->each(function (Property $property) {
-                    $property->units()->get()->each->delete();
-                    $property->propertyUtilities()->get()->each->delete();
-                    $property->delete();
-                });
+            $this->removeUnlistedProperties($keptIds);
         });
     }
 
@@ -435,7 +468,7 @@ class LandlordSetup extends Page
 
     protected function loadState(): void
     {
-        $properties = Property::query()->with('settings')->orderBy('id')->get();
+        $properties = $this->wizardProperties()->with('settings')->orderBy('id')->get();
 
         $this->properties = $properties->map(fn (Property $p) => [
             'id' => $p->id,
@@ -501,7 +534,7 @@ class LandlordSetup extends Page
     /** @return list<int> the saved properties' ids — from the DB, never the client. */
     protected function ownedPropertyIds(): array
     {
-        return Property::query()->orderBy('id')->pluck('id')->all();
+        return $this->wizardProperties()->orderBy('id')->pluck('id')->all();
     }
 
     protected function profile(): LandlordProfile
@@ -533,6 +566,7 @@ class LandlordSetup extends Page
         return [
             'propertyTypes' => PropertyType::options(),
             'billingTypes' => BillingType::options(),
+            'utilityNames' => PropertyUtilityResource::utilityOptions(),
         ];
     }
 }

@@ -2,11 +2,13 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\AddProperty;
 use App\Filament\Pages\Billing;
 use App\Filament\Pages\LandlordSetup;
 use App\Filament\Pages\MonthlyBilling;
 use App\Filament\Pages\PropertySettings;
 use App\Filament\Pages\SimpleDashboard;
+use App\Filament\Pages\UnitOverview;
 use App\Filament\Resources\InvoiceResource;
 use App\Filament\Resources\MaintenanceRequestResource;
 use App\Filament\Resources\PropertyResource;
@@ -135,14 +137,10 @@ class LandlordPanelProvider extends PanelProvider
                     // Running as the installed PWA (home-screen icon) is hard-locked to
                     // Simple Mode — display-mode:standalone is only knowable client-side,
                     // so this redirects before paint rather than in RedirectToSimpleLandlordMode.
-                    // ?from=simple pages (Property Settings, Utility Rates, ...) are Simple
-                    // Mode's own sanctioned exits and must stay reachable, not bounced back —
-                    // and so is any page reached WITHIN that same errand (hasActiveEscape()),
-                    // since a follow-on click (e.g. "Edit" from a Properties list opened via
-                    // the Settings hub) carries no ?from=simple of its own.
-                    (SimpleLandlordMode::canUse(auth()->user()) && ! SimpleLandlordMode::hasActiveEscape(request()) ? '<script>(function(){'
+                    // Same whitelist as SimpleLandlordMode::LOCKED_ALLOWED_PATHS — keep in sync.
+                    (SimpleLandlordMode::canUse(auth()->user()) ? '<script>(function(){'
                         .'var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;'
-                        .'if (standalone && ! /^\\/app\\/(simple|setup)(\\/|$)/.test(location.pathname) && ! new URLSearchParams(location.search).has("from")) {'
+                        .'if (standalone && ! /^\\/app\\/(simple|setup|add-property|billing|property-settings|properties|property-utilities|rentals)(\\/|$)/.test(location.pathname)) {'
                         .'location.replace("'.url('/'.self::PATH.'/simple').'");'
                         .'}'
                         .'})();</script>' : ''),
@@ -167,6 +165,21 @@ class LandlordPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
                 fn (): string => Blade::render('@livewire(\'property-switcher\')'),
+            )
+            // Phone lock: on any page other than Simple Mode itself, drop the
+            // sidebar/hamburger (CSS keyed on .rw-locked-marker) and show a fixed
+            // "Back to Simple Mode" bar — the only way out of a full-mode errand.
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                fn (): string => SimpleLandlordMode::isSimpleErrand(request())
+                    ? '<span class="rw-locked-marker" hidden></span>'
+                    : '',
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => SimpleLandlordMode::isSimpleErrand(request()) && ! request()->routeIs('filament.landlord.pages.simple')
+                    ? Blade::render('<a href="{{ route(\'filament.landlord.pages.simple\') }}" class="rw-locked-back">← {{ __(\'Return\') }}</a>')
+                    : '',
             )
             // Simple Mode hides the sidebar entirely (see rentwise-admin.css'
             // .fi-layout:has(.rw-simple--with-bottom-nav) rule), so the property
@@ -199,7 +212,8 @@ class LandlordPanelProvider extends PanelProvider
                         ? 'heroicon-o-squares-2x2'
                         : 'heroicon-o-device-phone-mobile')
                     ->postAction(fn () => route('landlord.simple-mode.toggle'))
-                    ->visible(fn () => SimpleLandlordMode::canUse(auth()->user())),
+                    ->visible(fn () => SimpleLandlordMode::canUse(auth()->user())
+                        && ! SimpleLandlordMode::isLocked(request())),
                 // Platform staff drill into a landlord's properties from /admin;
                 // give them a way back to the staff panel.
                 MenuItem::make()
@@ -237,6 +251,8 @@ class LandlordPanelProvider extends PanelProvider
                 PropertySettings::class,
                 SimpleDashboard::class,
                 LandlordSetup::class,
+                AddProperty::class,
+                UnitOverview::class,
             ])
             // Dashboard, top to bottom. AccountWidget is deliberately absent: its
             // "Hi, <name>" card occupied the first slot without telling a landlord

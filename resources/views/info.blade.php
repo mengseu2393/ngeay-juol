@@ -219,7 +219,7 @@
 
             <!-- Title -->
             <h1 class="font-display font-extrabold text-4xl sm:text-6xl md:text-7.5xl tracking-tight text-slate-900 dark:text-white max-w-5xl leading-[1.1] mb-6">
-                {{ __('Rental management made simple for Cambodian landlords') }}
+                {{ __('Rental management made simple for landlords in Cambodia') }}
             </h1>
 
             <!-- Subtitle -->

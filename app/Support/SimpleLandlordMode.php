@@ -23,10 +23,63 @@ class SimpleLandlordMode
 
     private const ESCAPE_MINUTES = 20;
 
+    /**
+     * Panel-relative paths a locked (phone) device may open besides Simple Mode
+     * itself: the full pages Simple Mode links out to, plus setup/subscription
+     * pages other middleware redirects to (bouncing those would loop).
+     */
+    private const LOCKED_ALLOWED_PATHS = [
+        'simple', 'simple/*', 'setup', 'add-property', 'unit-overview/*', 'billing',
+        'property-settings',
+        'properties', 'properties/*',
+        'property-utilities', 'property-utilities/*',
+        'rentals', 'rentals/*',
+        'units/*', // the room's own edit page, linked from the unit page
+    ];
+
+    /**
+     * Phones are hard-locked to Simple Mode: no preference toggle, no ?from=simple
+     * or escape window, no sidebar. The installed PWA gets the same lock
+     * client-side (see LandlordPanelProvider's HEAD_END script).
+     */
+    public static function isLocked(Request $request): bool
+    {
+        return self::canUse($request->user()) && self::isMobileUserAgent($request);
+    }
+
+    /**
+     * Whether this page is part of a Simple Mode errand (phone lock, ?from=simple,
+     * or the escape window after it) and so must render without the sidebar and
+     * with a way back — on any device.
+     */
+    public static function isSimpleErrand(Request $request): bool
+    {
+        if (self::isLocked($request)) {
+            return true;
+        }
+
+        return self::canUse($request->user())
+            && ($request->query('from') === 'simple' || self::hasActiveEscape($request));
+    }
+
+    private static function isLockedAllowedPath(Request $request): bool
+    {
+        $panel = LandlordPanelProvider::PATH;
+
+        return $request->is(array_map(fn (string $p) => $panel.'/'.$p, self::LOCKED_ALLOWED_PATHS));
+    }
+
     public static function shouldRedirectToSimple(Request $request): bool
     {
         if (! $request->isMethodSafe()) {
             return false;
+        }
+
+        if (self::isLocked($request)) {
+            $panel = LandlordPanelProvider::PATH;
+
+            return ($request->is($panel) || $request->is($panel.'/*'))
+                && ! self::isLockedAllowedPath($request);
         }
 
         if (! self::enabledFor($request->user())) {
@@ -62,7 +115,7 @@ class SimpleLandlordMode
             && ! $request->is($panel.'/simple', $panel.'/simple/*')
             // The setup wizard is already phone-first; bouncing it to Simple Mode
             // would loop with RedirectToLandlordSetup.
-            && ! $request->is($panel.'/setup');
+            && ! $request->is($panel.'/setup', $panel.'/add-property', $panel.'/unit-overview/*');
     }
 
     /** Start/extend the full-mode escape window from this request. */
@@ -110,7 +163,8 @@ class SimpleLandlordMode
 
         $user = $request->user();
 
-        if (! self::canUse($user) || self::enabledFor($user)) {
+        // Phones are covered by the hard lock in shouldRedirectToSimple().
+        if (! self::canUse($user) || self::enabledFor($user) || self::isLocked($request)) {
             return false;
         }
 
@@ -132,6 +186,6 @@ class SimpleLandlordMode
             && ! $request->is($panel.'/simple', $panel.'/simple/*')
             // The setup wizard is already phone-first; bouncing it to Simple Mode
             // would loop with RedirectToLandlordSetup.
-            && ! $request->is($panel.'/setup');
+            && ! $request->is($panel.'/setup', $panel.'/add-property', $panel.'/unit-overview/*');
     }
 }

@@ -78,10 +78,15 @@ class UtilityUsageResource extends Resource
             Forms\Components\Select::make('reading_type')
                 ->options(ReadingType::class)
                 ->default(ReadingType::Actual),
-            Forms\Components\DatePicker::make('reading_date'),
-            Forms\Components\TextInput::make('old_reading')->numeric(),
-            Forms\Components\TextInput::make('new_reading')->numeric(),
-            Forms\Components\TextInput::make('amount_used')->numeric()->required(),
+            Forms\Components\DatePicker::make('reading_date')
+                ->disabled(fn (?UtilityUsage $record) => $record !== null),
+            Forms\Components\TextInput::make('old_reading')->numeric()
+                ->disabled(fn (?UtilityUsage $record) => $record !== null),
+            Forms\Components\TextInput::make('new_reading')->numeric()
+                ->disabled(fn (?UtilityUsage $record) => $record !== null),
+            Forms\Components\TextInput::make('amount_used')->numeric()->required()
+                ->disabled(fn (?UtilityUsage $record) => $record !== null)
+                ->helperText(fn (?UtilityUsage $record) => $record ? __('To correct a reading, use "Reading history" on the Rooms page — it recalculates later readings safely.') : null),
             Forms\Components\Toggle::make('is_waived'),
         ])->columns(2);
     }

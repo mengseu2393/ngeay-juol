@@ -5,6 +5,8 @@ namespace App\Livewire;
 use App\Enums\BillingType;
 use App\Filament\Resources\PropertyUtilityResource;
 use App\Models\PropertyUtility;
+use App\Models\Unit;
+use App\Models\UtilityUsage;
 use App\Support\ActiveProperty;
 use App\Support\Money;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +29,40 @@ class SimpleUtilityRates extends Component
     public ?string $successMessage = null;
 
     protected $queryString = ['filter'];
+
+    /** Reading-history popup: which utility, and which room's readings. */
+    public ?int $historyUtilityId = null;
+
+    public ?int $historyUnitId = null;
+
+    public function openHistory(int $utilityId): void
+    {
+        $utility = $this->scoped($utilityId);
+        abort_unless($utility, 404);
+        abort_unless(Auth::user()?->can('viewAny', UtilityUsage::class), 403);
+
+        $this->historyUtilityId = $utility->getKey();
+        $this->historyUnitId = $this->historyRooms()->first()?->getKey();
+    }
+
+    public function selectHistoryRoom(int $unitId): void
+    {
+        abort_unless($this->historyRooms()->contains('id', $unitId), 404);
+        $this->historyUnitId = $unitId;
+    }
+
+    public function closeHistory(): void
+    {
+        $this->historyUtilityId = null;
+        $this->historyUnitId = null;
+    }
+
+    private function historyRooms()
+    {
+        return ActiveProperty::id()
+            ? Unit::query()->where('property_id', ActiveProperty::id())->orderBy('room_number')->get(['id', 'room_number'])
+            : collect();
+    }
 
     /**
      * One-shot create/update from the client-side popup. $data carries name,
@@ -147,6 +183,8 @@ class SimpleUtilityRates extends Component
             'nameOptions' => $nameOptions,
             'nameDefaults' => $nameDefaults,
             'billingTypes' => BillingType::options(),
+            'historyUtility' => $this->historyUtilityId ? $utilities->firstWhere('id', $this->historyUtilityId) ?? $this->scoped($this->historyUtilityId) : null,
+            'historyRooms' => $this->historyUtilityId ? $this->historyRooms() : collect(),
             'currency' => $propertyId ? Money::forPropertyId($propertyId) : 'USD',
         ]);
     }

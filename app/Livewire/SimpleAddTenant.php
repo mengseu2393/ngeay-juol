@@ -2,12 +2,12 @@
 
 namespace App\Livewire;
 
-use App\Enums\RentalStatus;
 use App\Enums\UnitStatus;
-use App\Models\Rental;
+use App\Filament\Resources\UnitResource;
 use App\Models\Unit;
-use App\Services\RoomAccountService;
+use App\Services\StartTenancyService;
 use App\Support\ActiveProperty;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -60,17 +60,26 @@ class SimpleAddTenant extends Component
 
     public string $securityDeposit = '';
 
+    /**
+     * Optional move-in meter readings, [property_utility_id => reading]. They
+     * become the tenant's starting point, so billing measures from them.
+     *
+     * @var array<int|string, mixed>
+     */
+    public array $moveInReadings = [];
+
     /** @var array<int, TemporaryUploadedFile> */
     public array $idCardPhotos = [];
 
     /** Result from creation */
     public ?array $result = null;
 
-    public function mount(): void
+    public function mount(?int $unitId = null): void
     {
         $this->startDate = now()->toDateString();
 
-        $unitId = (int) request()->query('unit_id');
+        // An explicit unit (embedded in the property's Units & agreements tab) wins over the ?unit_id= deep link.
+        $unitId = $unitId ?? (int) request()->query('unit_id');
         $unit = $unitId ? $this->loadUnit($unitId) : null;
 
         if ($unit && $unit->status === UnitStatus::Available) {
@@ -106,6 +115,7 @@ class SimpleAddTenant extends Component
         $this->monthlyRent = '';
         $this->securityDeposit = '';
         $this->idCardPhotos = [];
+        $this->moveInReadings = [];
         $this->result = null;
     }
 
@@ -133,6 +143,7 @@ class SimpleAddTenant extends Component
             'monthlyRent' => 'required|numeric|min:0',
             'securityDeposit' => 'nullable|numeric|min:0',
             'unitId' => 'required|integer',
+            'moveInReadings.*' => 'nullable|numeric|min:0|max:999999999',
             'idCardPhotos' => 'nullable|array|max:2',
             'idCardPhotos.*' => 'image|max:5120', // 5MB — front/back of an ID card
         ]);
@@ -145,43 +156,37 @@ class SimpleAddTenant extends Component
             return;
         }
 
-        // Check for existing active tenancy on the room
-        $hasActive = Rental::query()
-            ->where('unit_id', $unit->id)
-            ->where('status', RentalStatus::Active->value)
-            ->exists();
-
-        if ($hasActive) {
-            $this->addError('unitId', __('This room already has an active tenancy.'));
+        try {
+            $started = app(StartTenancyService::class)->start(
+                $unit,
+                [
+                    'occupant_name' => trim($this->occupantName),
+                    'occupant_phone' => trim($this->occupantPhone) ?: null,
+                    'occupant_id_card' => trim($this->occupantIdCard) ?: null,
+                    'occupant_gender' => $this->occupantGender ?: null,
+                    'occupant_dob' => $this->occupantDob ?: null,
+                    'occupant_nationality' => trim($this->occupantNationality) ?: null,
+                    'occupant_workplace' => trim($this->occupantWorkplace) ?: null,
+                    'occupant_address' => trim($this->occupantAddress) ?: null,
+                    'emergency_contact_name' => trim($this->emergencyContactName) ?: null,
+                    'emergency_contact_phone' => trim($this->emergencyContactPhone) ?: null,
+                    'emergency_contact_relationship' => trim($this->emergencyContactRelationship) ?: null,
+                ],
+                $this->startDate,
+                (float) $this->monthlyRent,
+                $this->securityDeposit !== '' ? (float) $this->securityDeposit : 0,
+                $this->moveInReadings,
+            );
+        } catch (ValidationException $e) {
+            foreach ($e->errors() as $field => $messages) {
+                $this->addError($field, $messages[0]);
+            }
 
             return;
         }
 
-        $rental = new Rental([
-            'landlord_id' => $unit->landlord_id,
-            'unit_id' => $unit->id,
-            'occupant_name' => trim($this->occupantName),
-            'occupant_phone' => trim($this->occupantPhone) ?: null,
-            'occupant_id_card' => trim($this->occupantIdCard) ?: null,
-            'occupant_gender' => $this->occupantGender ?: null,
-            'occupant_dob' => $this->occupantDob ?: null,
-            'occupant_nationality' => trim($this->occupantNationality) ?: null,
-            'occupant_workplace' => trim($this->occupantWorkplace) ?: null,
-            'occupant_address' => trim($this->occupantAddress) ?: null,
-            'emergency_contact_name' => trim($this->emergencyContactName) ?: null,
-            'emergency_contact_phone' => trim($this->emergencyContactPhone) ?: null,
-            'emergency_contact_relationship' => trim($this->emergencyContactRelationship) ?: null,
-            'monthly_rent' => (float) $this->monthlyRent,
-            'monthly_rent_currency' => $unit->rent_currency ?: 'USD',
-            'security_deposit' => $this->securityDeposit !== '' ? (float) $this->securityDeposit : 0,
-            'security_deposit_currency' => $unit->rent_currency ?: 'USD',
-            'status' => RentalStatus::Active,
-            'start_date' => $this->startDate,
-        ]);
-        $rental->setRelation('unit', $unit);
-
-        // Create/reset tenant login account (which sets tenant_id and saves the rental)
-        $accountResult = app(RoomAccountService::class)->createForRental($rental);
+        $rental = $started['rental'];
+        $accountResult = $started['account'];
 
         foreach ($this->idCardPhotos as $photo) {
             $rental->addMedia($photo->getRealPath())
@@ -206,7 +211,7 @@ class SimpleAddTenant extends Component
             'unitId', 'occupantName', 'occupantPhone', 'occupantIdCard', 'occupantGender',
             'occupantDob', 'occupantNationality', 'occupantWorkplace', 'occupantAddress',
             'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelationship',
-            'startDate', 'monthlyRent', 'securityDeposit', 'idCardPhotos', 'result',
+            'startDate', 'monthlyRent', 'securityDeposit', 'idCardPhotos', 'moveInReadings', 'result',
         ]);
         $this->startDate = now()->toDateString();
         $this->step = 'pick';
@@ -240,6 +245,8 @@ class SimpleAddTenant extends Component
 
         $selectedUnit = $this->unitId ? $this->loadUnit($this->unitId) : null;
 
-        return view('livewire.simple-add-tenant', compact('vacantRooms', 'selectedUnit'));
+        $meteredUtilities = $selectedUnit ? UnitResource::meterUtilitiesFor($selectedUnit) : collect();
+
+        return view('livewire.simple-add-tenant', compact('vacantRooms', 'selectedUnit', 'meteredUtilities'));
     }
 }

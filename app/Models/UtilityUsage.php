@@ -8,10 +8,13 @@ use App\Services\MeterReadingResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class UtilityUsage extends Model
 {
     use BelongsToLandlord;
+    use LogsActivity;
 
     protected $fillable = [
         'property_utility_id',
@@ -26,6 +29,7 @@ class UtilityUsage extends Model
         'new_reading',
         'amount_used',
         'is_waived',
+        'is_reset',
     ];
 
     protected function casts(): array
@@ -37,6 +41,7 @@ class UtilityUsage extends Model
             'new_reading' => 'decimal:3',
             'amount_used' => 'decimal:3',
             'is_waived' => 'boolean',
+            'is_reset' => 'boolean',
         ];
     }
 
@@ -57,6 +62,14 @@ class UtilityUsage extends Model
                 ->activeMeter((int) $usage->unit_id, (int) $usage->property_utility_id)
                 ?->getKey();
         });
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['reading_date', 'old_reading', 'new_reading', 'amount_used', 'reading_type', 'is_reset'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     public function resolveLandlordId(): ?int

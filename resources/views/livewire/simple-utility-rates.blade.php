@@ -158,6 +158,28 @@
         </div>
     </div>
 
+    {{-- ── Reading history: pick a room, then view / correct its readings ── --}}
+    <x-rw-simple-popup name="reading-history" close="closeHistory">
+        @if($historyUtility)
+            <div class="rw-sm-modal w-full">
+                <h3 class="rw-sm-modal-title">{{ __('Reading history') }} · {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel((string) $historyUtility->name) }}</h3>
+                @if($historyRooms->isEmpty())
+                    <p class="rw-sm-modal-sub">{{ __('No rooms found.') }}</p>
+                @else
+                    <label class="rw-sm-label" for="reading-history-room">{{ __('Room') }}</label>
+                    <select id="reading-history-room" class="rw-sm-input mb-3" wire:change="selectHistoryRoom($event.target.value)">
+                        @foreach($historyRooms as $room)
+                            <option value="{{ $room->id }}" @selected($room->id === $historyUnitId)>{{ $room->room_number }}</option>
+                        @endforeach
+                    </select>
+                    @if($historyUnitId)
+                        @livewire(\App\Livewire\UnitReadingHistory::class, ['unitId' => $historyUnitId, 'utilityId' => $historyUtilityId], key('history-'.$historyUnitId.'-'.$historyUtilityId))
+                    @endif
+                @endif
+            </div>
+        @endif
+    </x-rw-simple-popup>
+
     {{-- ── Cards ── --}}
     @forelse($utilities as $utility)
         @php
@@ -193,6 +215,9 @@
                         </button>
                         <div x-show="open" x-cloak x-transition.opacity class="rw-sm-menu-panel">
                             <button type="button" @click="open = false; openEdit(@js($editData))" class="rw-sm-menu-item" id="utility-rate-edit-btn-{{ $utility->id }}">{{ __('Edit') }}</button>
+                            @if(in_array($utility->billing_type, [\App\Enums\BillingType::Metered, \App\Enums\BillingType::Shared], true))
+                                <button type="button" @click="open = false; $dispatch('rw-popup-open', { name: 'reading-history', call: () => $wire.openHistory({{ $utility->id }}) })" class="rw-sm-menu-item" id="utility-rate-history-btn-{{ $utility->id }}">{{ __('Reading history') }}</button>
+                            @endif
                             <button type="button" @click="open = false" wire:click="toggleActive({{ $utility->id }})" class="rw-sm-menu-item" id="utility-rate-toggle-btn-{{ $utility->id }}">
                                 {{ $utility->is_active ? __('Deactivate') : __('Activate') }}
                             </button>

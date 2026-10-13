@@ -445,6 +445,12 @@
 
             {{-- Quick actions --}}
             <div class="mt-3 flex flex-wrap gap-2">
+                {{-- Everything about this room on one screen --}}
+                <a href="{{ route('filament.landlord.pages.simple', ['screen' => 'unit', 'unit_id' => $room->id]) }}"
+                   class="rw-sm-btn-ghost text-sm"
+                   id="room-open-{{ $room->id }}"
+                >{{ __('Open room') }}</a>
+
                 @if($room->utility_usages_count === 0)
                     {{-- No utility reading recorded yet for this unit — set the
                          initial (baseline) meter reading before billing can start --}}

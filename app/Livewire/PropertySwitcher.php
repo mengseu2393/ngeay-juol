@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Filament\Pages\AddProperty;
 use App\Models\Property;
 use App\Models\User;
 use App\Support\ActiveProperty;
@@ -17,18 +18,55 @@ use Livewire\Component;
  */
 class PropertySwitcher extends Component
 {
-    /** Bound to the <select>; '' means the landlord-wide "All properties" view. */
+    /** Sentinel <option> value: "+ Add property" lives inside the dropdown. */
+    public const ADD = '__add__';
+
+    /** Bound to the <select>; '' only for platform staff who haven't picked a property yet. */
     public string $propertyId = '';
 
     public function mount(): void
     {
+        // There is no "All properties" choice any more: a landlord/manager who
+        // is still on the old landlord-wide view (or has no pick yet) lands in
+        // their first property. Platform staff are unscoped, so they pick one.
+        if (ActiveProperty::id() === null && $this->isEligible() && ! Auth::user()->isPlatformStaff()) {
+            $first = $this->properties()->first();
+
+            if ($first) {
+                ActiveProperty::set($first->id);
+            }
+        }
+
         $this->propertyId = (string) (ActiveProperty::id() ?? '');
+    }
+
+    /** "Add property" is offered only to users the PropertyPolicy lets create one. */
+    public function canAddProperty(): bool
+    {
+        return AddProperty::canAccess();
     }
 
     /** Fired by wire:model.live when the landlord picks a property. */
     public function updatedPropertyId(string $value): void
     {
-        ActiveProperty::set($value === '' ? null : $value);
+        if ($value === '') {
+            return;
+        }
+
+        if ($value === self::ADD) {
+            // Restore the visible pick, then go to the create page — only if allowed.
+            $this->propertyId = (string) (ActiveProperty::id() ?? '');
+            abort_unless($this->canAddProperty(), 403);
+
+            $this->redirect(AddProperty::getUrl(), navigate: false);
+
+            return;
+        }
+
+        // Fails closed: only a property this user can see (LandlordScope) is accepted.
+        abort_unless(Property::query()->whereKey($value)->exists(), 404);
+
+        ActiveProperty::set($value);
 
         // Full reload so server-computed navigation (visibility + the context
         // group) is rebuilt for the new context. Land on the panel home.

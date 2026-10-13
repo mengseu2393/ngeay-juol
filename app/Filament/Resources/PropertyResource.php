@@ -7,6 +7,7 @@ use App\Enums\PropertyType;
 use App\Enums\UnitStatus;
 use App\Filament\Resources\PropertyResource\Pages;
 use App\Filament\Tables\RowActionGroup;
+use App\Livewire\PropertyUnitsManager;
 use App\Models\Property;
 use App\Support\Money;
 use App\Support\SimpleLandlordMode;
@@ -54,38 +55,63 @@ class PropertyResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Section::make(__('Property'))
-                ->schema([
-                    Forms\Components\Select::make('landlord_id')
-                        ->relationship('landlord', 'name', fn ($query) => $query->role('landlord'))
-                        ->searchable()
-                        ->preload()
-                        // Hidden inside a relation manager: the owning landlord is
-                        // already fixed by the relationship there.
-                        ->visible(fn ($livewire) => auth()->user()?->isPlatformStaff()
+            Forms\Components\Tabs::make('property_tabs')
+                ->id('property_tabs')
+                ->tabs([
+                    Forms\Components\Tabs\Tab::make(__('Details'))
+                        ->id('details')
+                        ->icon('heroicon-o-building-office-2')
+                        ->schema([
+                            Forms\Components\Section::make(__('Property'))
+                                ->schema([
+                                    Forms\Components\Select::make('landlord_id')
+                                        ->relationship('landlord', 'name', fn ($query) => $query->role('landlord'))
+                                        ->searchable()
+                                        ->preload()
+                                        // Hidden inside a relation manager: the owning landlord is
+                                        // already fixed by the relationship there.
+                                        ->visible(fn ($livewire) => auth()->user()?->isPlatformStaff()
+                                            && ! $livewire instanceof RelationManager)
+                                        ->required(fn ($livewire) => auth()->user()?->isPlatformStaff()
+                                            && ! $livewire instanceof RelationManager),
+                                    Forms\Components\TextInput::make('name')->required()->maxLength(255),
+                                    Forms\Components\Select::make('property_type')
+                                        ->options(PropertyType::class)
+                                        ->default(PropertyType::Apartment)
+                                        ->required(),
+                                    Forms\Components\Textarea::make('description')->columnSpanFull(),
+                                ])->columns(2),
+
+                            Forms\Components\Section::make(__('Address'))
+                                ->schema([
+                                    Forms\Components\TextInput::make('address_line'),
+                                    Forms\Components\TextInput::make('street'),
+                                    Forms\Components\TextInput::make('village')->label(__('Village')),
+                                    Forms\Components\TextInput::make('commune')->label(__('Commune')),
+                                    Forms\Components\TextInput::make('district')->label(__('District')),
+                                    Forms\Components\TextInput::make('city')->label(__('Province / City')),
+                                    Forms\Components\TextInput::make('postal_code'),
+                                ])->columns(2),
+
+                            Forms\Components\TagsInput::make('amenities')->columnSpanFull(),
+
+                        ]),
+                    // Rooms and their agreements, readings and resets. Only for an existing
+                    // property, and not inside the admin's landlord relation manager.
+                    Forms\Components\Tabs\Tab::make(__('Units'))
+                        ->id('units')
+                        ->icon('heroicon-o-key')
+                        ->visible(fn ($livewire, ?Property $record) => $record?->exists
                             && ! $livewire instanceof RelationManager)
-                        ->required(fn ($livewire) => auth()->user()?->isPlatformStaff()
-                            && ! $livewire instanceof RelationManager),
-                    Forms\Components\TextInput::make('name')->required()->maxLength(255),
-                    Forms\Components\Select::make('property_type')
-                        ->options(PropertyType::class)
-                        ->default(PropertyType::Apartment)
-                        ->required(),
-                    Forms\Components\Textarea::make('description')->columnSpanFull(),
-                ])->columns(2),
-
-            Forms\Components\Section::make(__('Address'))
-                ->schema([
-                    Forms\Components\TextInput::make('address_line'),
-                    Forms\Components\TextInput::make('street'),
-                    Forms\Components\TextInput::make('village')->label(__('Village')),
-                    Forms\Components\TextInput::make('commune')->label(__('Commune')),
-                    Forms\Components\TextInput::make('district')->label(__('District')),
-                    Forms\Components\TextInput::make('city')->label(__('Province / City')),
-                    Forms\Components\TextInput::make('postal_code'),
-                ])->columns(2),
-
-            Forms\Components\TagsInput::make('amenities')->columnSpanFull(),
+                        ->schema([
+                            Forms\Components\Livewire::make(
+                                PropertyUnitsManager::class,
+                                fn (Property $record) => ['propertyId' => $record->getKey()],
+                            )->key('property-units-manager'),
+                        ]),
+                ])
+                ->persistTabInQueryString()
+                ->columnSpanFull(),
 
             // Billing & lease settings moved to the dedicated, sidebar-level
             // PropertySettings page (App\Filament\Pages\PropertySettings), scoped

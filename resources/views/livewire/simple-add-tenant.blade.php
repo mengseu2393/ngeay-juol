@@ -197,6 +197,30 @@
                 </div>
             </div>
 
+            @if($meteredUtilities->isNotEmpty())
+                <div class="rw-sm-invoice-card" id="move-in-readings">
+                    <p class="rw-sm-label mb-1">{{ __('Move-in meter readings') }} <span class="text-gray-400 font-normal">({{ __('optional') }})</span></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{ __('Read the meters now so the tenant is only billed from this point.') }}</p>
+
+                    <div class="space-y-3">
+                        @foreach($meteredUtilities as $utility)
+                            <div>
+                                <label class="rw-sm-label" for="at-reading-{{ $utility->id }}">
+                                    {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($utility->name) }}
+                                    @if($utility->unit_of_measure)<span class="text-gray-400">({{ $utility->unit_of_measure }})</span>@endif
+                                </label>
+                                <input type="number" id="at-reading-{{ $utility->id }}" wire:model="moveInReadings.{{ $utility->id }}"
+                                    class="rw-sm-input" inputmode="decimal" step="0.001" min="0" placeholder="0.000">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {{ \App\Filament\Resources\UnitResource::readingHint($selectedUnit->id, $utility->id, $utility->unit_of_measure) }}
+                                </p>
+                                @error("moveInReadings.{$utility->id}") <p class="rw-sm-error">{{ $message }}</p> @enderror
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             @error('unitId')
                 <div class="rw-sm-error-banner">{{ $message }}</div>
             @enderror

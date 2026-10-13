@@ -106,6 +106,30 @@
                 </div>
             </div>
 
+            {{-- ── Units screen: every room of the active property (reached from Settings → Units);
+                 each card opens the room screen. ── --}}
+            <div x-show="screen === 'units'" x-cloak>
+                <div class="rw-sm-screen-header">
+                    <button @click="setScreen('settings')" class="rw-sm-back-btn" aria-label="{{ __('Settings') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+                    </button>
+                    <h2 class="rw-sm-screen-title flex-1">{{ __('Units') }}</h2>
+                </div>
+                @livewire(\App\Livewire\PropertyUnitsManager::class, ['propertyId' => $propertyId] + $lazyScreen('units'), key('simple-units'))
+            </div>
+
+            {{-- ── Room screen: one room start to finish (agreement, readings, history, reset).
+                 Deep-linked from a room card with ?screen=unit&unit_id=N. ── --}}
+            <div x-show="screen === 'unit'" x-cloak>
+                <div class="rw-sm-screen-header">
+                    <button @click="setScreen('rooms')" class="rw-sm-back-btn" aria-label="{{ __('Rooms') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+                    </button>
+                    <h2 class="rw-sm-screen-title flex-1">{{ __('Room') }}</h2>
+                </div>
+                @livewire(\App\Livewire\SimpleUnitDetail::class, $lazyScreen('unit'), key('simple-unit-detail'))
+            </div>
+
             {{-- ── Tenants screen ── --}}
             <div x-show="screen === 'tenants'" x-cloak>
                 <div class="rw-sm-screen-header">

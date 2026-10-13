@@ -124,7 +124,7 @@ class AdminPlatformUsageWidget extends StatsOverviewWidget
     {
         $outstanding = Receivables::outstanding();
 
-        return Stat::make(__('Rent outstanding'), Receivables::format($outstanding))
+        return Stat::make(__('Rent outstanding'), Receivables::format($outstanding, 'USD'))
             ->description(trans_choice(
                 '{0} no open invoices|{1} :count open invoice|[2,*] :count open invoices',
                 $outstanding['count'],

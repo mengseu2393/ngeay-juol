@@ -7,10 +7,14 @@
 
         @if ($properties->isEmpty())
             {{-- 0 properties: onboarding CTA instead of an empty dropdown. --}}
-            <a href="{{ \App\Filament\Resources\PropertyResource::getUrl('create') }}" class="rw-switcher__cta">
-                <x-filament::icon icon="heroicon-m-plus-circle" class="rw-switcher__cta-icon" />
-                <span>{{ __('Create your first property') }}</span>
-            </a>
+            @if ($this->canAddProperty())
+                <a href="{{ \App\Filament\Pages\AddProperty::getUrl() }}" class="rw-switcher__cta">
+                    <x-filament::icon icon="heroicon-m-plus-circle" class="rw-switcher__cta-icon" />
+                    <span>{{ __('Create your first property') }}</span>
+                </a>
+            @else
+                <p class="rw-switcher__notice">{{ __('No property assigned — contact your administrator.') }}</p>
+            @endif
         @else
             <label class="rw-switcher__label" for="rw-property-select">
                 <x-filament::icon icon="heroicon-m-building-office-2" class="rw-switcher__label-icon" />
@@ -24,10 +28,15 @@
                     wire:loading.attr="disabled"
                     class="rw-switcher__select"
                 >
-                    <option value="">{{ __('All properties') }}</option>
+                    @if ($propertyId === '')
+                        <option value="" disabled>{{ __('Select a property') }}</option>
+                    @endif
                     @foreach ($properties as $property)
                         <option value="{{ $property->id }}">{{ $property->name }}</option>
                     @endforeach
+                    @if ($this->canAddProperty())
+                        <option value="{{ \App\Livewire\PropertySwitcher::ADD }}" id="rw-add-property-option">＋ {{ __('Add property') }}</option>
+                    @endif
                 </select>
 
                 <x-filament::loading-indicator class="rw-switcher__spinner" wire:loading wire:target="propertyId" />

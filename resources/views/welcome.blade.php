@@ -79,8 +79,7 @@
         <header class="fixed top-0 left-0 right-0 z-50 w-full glass border-b border-slate-200/50 dark:border-slate-800/50 transition-all duration-300">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
                 <!-- Logo -->
-                <a href="{{ url('/') }}" class="flex items-center gap-1.5 sm:gap-2 group">
-                    <img src="{{ asset('Khmer%20House%20Key.svg') }}" alt="{{ __('ngeay juol') }}" class="h-8 w-8 sm:h-10 sm:w-10 rounded-xl shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-300">
+                <a href="{{ url('/') }}" class="flex items-center gap-1.5 sm:gap-2 group<img src="{{ asset('Khmer%20House%20Key.svg') }}" alt="{{ __('ngeay juol') }}" class="h-8 w-8 sm:h-10 sm:w-10 rounded-xl shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-300">
                     <span class="font-display font-extrabold text-xl sm:text-2xl tracking-tight text-slate-900 dark:text-white">{{ __('ngeay juol') }}</span>
                 </a>
 
@@ -208,7 +207,7 @@
 
         <main class="min-h-screen px-6 pt-28 pb-16 flex flex-col items-center justify-center text-center max-w-4xl mx-auto relative z-10">
             <h1 class="font-display font-extrabold text-4xl sm:text-6xl tracking-tight text-slate-900 dark:text-white leading-[1.15] mb-6">
-                {{ __('Rental management made simple for Cambodian landlords') }}
+                {{ __('Rental management made simple for landlords in Cambodia') }}
             </h1>
 
             <p class="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed mb-10">

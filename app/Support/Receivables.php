@@ -97,10 +97,10 @@ final class Receivables
         return Money::normalize($currency) === 'KHR' ? $bucket['khr'] : $bucket['usd'];
     }
 
-    /** "$120.00 / ៛480,000" — the project's standing way to show a mixed-currency total. */
-    public static function format(array $bucket): string
+    /** Balance in the property's currency only (both currencies when no property is selected). */
+    public static function format(array $bucket, ?string $currency = null): string
     {
-        return Money::format($bucket['usd'], 'USD').' / '.Money::format($bucket['khr'], 'KHR');
+        return Money::formatPair($bucket['usd'], $bucket['khr'], true, $currency);
     }
 
     /**

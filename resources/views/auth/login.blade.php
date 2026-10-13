@@ -105,6 +105,13 @@
                     <h1 class="font-display font-bold text-3xl mb-2">{{ __('Welcome Back') }}</h1>
                     <p class="text-slate-500 dark:text-slate-400 text-sm mb-8">{{ __('Please enter your credentials to access your ngeay juol account.') }}</p>
 
+                    <!-- Why a signed-in user was sent back here (subscription ended, idle timeout) -->
+                    @if (session('error') && ! $errors->any())
+                        <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm" role="alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     <!-- Alert message for errors -->
                     @if ($errors->any())
                         <div class="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-start gap-2.5">

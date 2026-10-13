@@ -42,6 +42,37 @@ class Money
         return self::symbol($currency).number_format((float) $value, $decimals);
     }
 
+    /**
+     * Show a USD/KHR pair in the reporting currency only.
+     *
+     * $twin = both figures are the same amount converted (invoice balances,
+     * payments) — show just the property's currency. Otherwise they are
+     * genuinely separate native-currency totals — drop whichever side is zero.
+     * With no property selected (portfolio / platform view) twins keep both.
+     */
+    public static function formatPair(float $usd, float $khr, bool $twin = true, ?string $currency = null): string
+    {
+        $currency ??= ActiveProperty::id() ? self::activeCurrency() : null;
+
+        if ($twin) {
+            if ($currency === null) {
+                return self::format($usd, 'USD').' / '.self::format($khr, 'KHR');
+            }
+
+            return self::format($currency === 'KHR' ? $khr : $usd, $currency);
+        }
+
+        $parts = [];
+        if ($usd != 0.0) {
+            $parts[] = self::format($usd, 'USD');
+        }
+        if ($khr != 0.0) {
+            $parts[] = self::format($khr, 'KHR');
+        }
+
+        return $parts ? implode(' / ', $parts) : self::format(0, $currency ?? 'USD');
+    }
+
     public static function activeCurrency(): string
     {
         return self::forPropertyId(ActiveProperty::id());
@@ -74,26 +105,26 @@ class Money
 
     public static function forRecord(mixed $record): string
     {
-        if ($record instanceof Unit && !empty($record->rent_currency)) {
+        if ($record instanceof Unit && ! empty($record->rent_currency)) {
             return self::normalize($record->rent_currency);
         }
-        if ($record instanceof Rental && !empty($record->monthly_rent_currency)) {
+        if ($record instanceof Rental && ! empty($record->monthly_rent_currency)) {
             return self::normalize($record->monthly_rent_currency);
         }
-        if ($record instanceof PropertyUtility && !empty($record->currency)) {
+        if ($record instanceof PropertyUtility && ! empty($record->currency)) {
             return self::normalize($record->currency);
         }
-        if ($record instanceof Payment && !empty($record->currency)) {
+        if ($record instanceof Payment && ! empty($record->currency)) {
             return self::normalize($record->currency);
         }
         if ($record instanceof Model) {
-            if (isset($record->currency) && !empty($record->currency)) {
+            if (isset($record->currency) && ! empty($record->currency)) {
                 return self::normalize($record->currency);
             }
-            if (isset($record->rent_currency) && !empty($record->rent_currency)) {
+            if (isset($record->rent_currency) && ! empty($record->rent_currency)) {
                 return self::normalize($record->rent_currency);
             }
-            if (isset($record->monthly_rent_currency) && !empty($record->monthly_rent_currency)) {
+            if (isset($record->monthly_rent_currency) && ! empty($record->monthly_rent_currency)) {
                 return self::normalize($record->monthly_rent_currency);
             }
         }
@@ -187,11 +218,13 @@ class Money
 
         if ($from === 'USD' && $to === 'KHR') {
             $decimals ??= 0;
+
             return round($amount * $rate, $decimals);
         }
 
         if ($from === 'KHR' && $to === 'USD') {
             $decimals ??= 2;
+
             return $rate > 0 ? round($amount / $rate, $decimals) : 0.0;
         }
 
@@ -222,6 +255,7 @@ class Money
             $amount = (float) ($line->amount ?? 0);
             $sum += self::convert($amount, $currency, $targetCurrency, $rate);
         }
+
         return $sum;
     }
 
@@ -233,12 +267,14 @@ class Money
             $amount = (float) ($payment->amount ?? 0);
             $sum += self::convert($amount, $currency, $targetCurrency, $rate);
         }
+
         return $sum;
     }
 
     public static function resolveRemainingBalance(float $total, float $paid, string $currency): float
     {
         $decimals = self::decimals($currency);
+
         return round(max(0.0, $total - $paid), $decimals);
     }
 
@@ -256,6 +292,7 @@ class Money
                 'paid' => $invoice->amount_paid,
                 'balance' => $invoice->balance,
             };
+
             return self::formatForRecord($amount, $invoice);
         }
 

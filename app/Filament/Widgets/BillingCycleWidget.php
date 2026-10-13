@@ -134,16 +134,20 @@ class BillingCycleWidget extends StatsOverviewWidget
             ->whereBetween('issue_date', [now()->startOfMonth(), now()->endOfMonth()])
             ->sum('total_usd');
 
+        $billedKhr = $this->scopeToActiveProperty(Invoice::query())
+            ->whereBetween('issue_date', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('total_khr');
+
         $rate = $billedUsd > 0 ? (int) round($collectedUsd / $billedUsd * 100) : null;
 
         return Stat::make(
             __('Collected'),
-            Money::format($collectedUsd, 'USD').' / '.Money::format($collectedKhr, 'KHR'),
+            Money::formatPair($collectedUsd, $collectedKhr),
         )
             ->description($rate !== null
                 ? __(':rate% of :billed billed this month', [
                     'rate' => $rate,
-                    'billed' => Money::format($billedUsd, 'USD'),
+                    'billed' => Money::formatPair($billedUsd, (float) $billedKhr),
                 ])
                 : __('nothing billed this month'))
             ->descriptionIcon('heroicon-o-arrow-trending-up')

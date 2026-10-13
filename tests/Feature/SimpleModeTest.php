@@ -304,37 +304,91 @@ class SimpleModeTest extends TestCase
             ->assertRedirect(route('filament.landlord.pages.simple'));
     }
 
+    private const PHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
+
     /**
-     * A landlord who has never opted into Simple Mode gets nudged into it on a
-     * phone-sized user agent — a suggestion, not a persisted preference change.
+     * Phones are hard-locked to Simple Mode (not merely nudged): a landlord who
+     * never opted in is still bounced away from the dashboard and every other
+     * full-mode page, with no preference change persisted.
      */
-    public function test_mobile_user_agent_is_auto_switched_to_simple_mode(): void
+    public function test_phone_user_agent_is_locked_to_simple_mode(): void
     {
         $landlord = $this->makeLandlord();
 
-        $this->actingAs($landlord)
-            ->withHeaders(['User-Agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15'])
-            ->get('/app/properties')
-            ->assertRedirect(route('filament.landlord.pages.simple'));
+        foreach (['/app', '/app/units', '/app/tenants'] as $path) {
+            $this->actingAs($landlord)
+                ->withHeaders(['User-Agent' => self::PHONE_UA])
+                ->get($path)
+                ->assertRedirect(route('filament.landlord.pages.simple'));
+        }
 
         $this->assertFalse($landlord->fresh()->prefersSimpleLandlordMode());
     }
 
-    public function test_mobile_auto_switch_does_not_repeat_within_the_same_session(): void
+    /**
+     * The lock must not honour ?from=simple or the escape window for anything
+     * outside the whitelist, otherwise appending the marker defeats it.
+     */
+    public function test_phone_lock_ignores_from_simple_outside_the_whitelist(): void
     {
         $landlord = $this->makeLandlord();
-        $agent = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36';
 
         $this->actingAs($landlord)
-            ->withHeaders(['User-Agent' => $agent])
-            ->get('/app/properties')
-            ->assertRedirect(route('filament.landlord.pages.simple'));
-
-        // Same session: a manual "switch to full mode" should stick, not bounce
-        // straight back to Simple Mode on the very next mobile request.
-        $this->withHeaders(['User-Agent' => $agent])
-            ->get('/app/properties')
+            ->withHeaders(['User-Agent' => self::PHONE_UA])
+            ->get('/app/properties?from=simple')
             ->assertSuccessful();
+
+        // Escape window is now active, but must not open non-whitelisted pages.
+        $this->withHeaders(['User-Agent' => self::PHONE_UA])
+            ->get('/app/units?from=simple')
+            ->assertRedirect(route('filament.landlord.pages.simple'));
+    }
+
+    public function test_phone_lock_allows_the_pages_simple_mode_links_to_and_shows_back_bar(): void
+    {
+        $landlord = $this->makeLandlord();
+
+        $this->actingAs($landlord)
+            ->withHeaders(['User-Agent' => self::PHONE_UA])
+            ->get('/app/properties')
+            ->assertSuccessful()
+            ->assertSee('rw-locked-back', false)
+            ->assertSee('rw-locked-marker', false);
+
+        $this->withHeaders(['User-Agent' => self::PHONE_UA])
+            ->get('/app/simple')
+            ->assertSuccessful()
+            ->assertDontSee('rw-locked-back', false);
+    }
+
+    /** `?from=simple` pages (and the follow-on clicks) never show the sidebar, on any device. */
+    public function test_from_simple_pages_hide_the_sidebar_on_desktop_too(): void
+    {
+        $landlord = $this->makeLandlord();
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+
+        $this->actingAs($landlord)
+            ->get('/app/properties?from=simple')
+            ->assertSuccessful()
+            ->assertSee('rw-locked-marker', false)
+            ->assertSee('rw-locked-back', false);
+
+        $this->get('/app/properties/create')
+            ->assertSuccessful()
+            ->assertSee('rw-locked-marker', false);
+    }
+
+    public function test_phone_cannot_switch_to_full_mode(): void
+    {
+        $landlord = $this->makeLandlord();
+        $landlord->forceFill(['prefers_simple_landlord_mode' => true])->save();
+
+        $this->actingAs($landlord)
+            ->withHeaders(['User-Agent' => self::PHONE_UA])
+            ->post('/app/simple-mode/toggle')
+            ->assertForbidden();
+
+        $this->assertTrue($landlord->fresh()->prefersSimpleLandlordMode());
     }
 
     public function test_desktop_user_agent_is_not_auto_switched_to_simple_mode(): void

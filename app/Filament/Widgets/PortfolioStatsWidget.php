@@ -77,7 +77,7 @@ class PortfolioStatsWidget extends StatsOverviewWidget
 
         $description = $vacant > 0
             ? trans_choice('{1} :count room empty|[2,*] :count rooms empty', $vacant, ['count' => $vacant])
-                .' · '.__('worth :amount/mo', ['amount' => Money::format($lostUsd, 'USD').' / '.Money::format($lostKhr, 'KHR')])
+                .' · '.__('worth :amount/mo', ['amount' => Money::formatPair($lostUsd, $lostKhr, false)])
             : __('every room is let');
 
         // Without a property selected the count is portfolio-wide — say so.
@@ -135,7 +135,7 @@ class PortfolioStatsWidget extends StatsOverviewWidget
             }
         }
 
-        return Stat::make(__('Deposits held'), Money::format($usd, 'USD').' / '.Money::format($khr, 'KHR'))
+        return Stat::make(__('Deposits held'), Money::formatPair($usd, $khr, false))
             ->description(__('refundable to :count tenancies', ['count' => $rentals->count()]))
             ->descriptionIcon('heroicon-o-lock-closed')
             ->color('gray');

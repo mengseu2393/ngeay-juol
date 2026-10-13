@@ -77,6 +77,7 @@ Route::middleware(['auth', SetLocale::class])->group(function () {
         $user = $request->user();
 
         abort_unless(SimpleLandlordMode::canUse($user), 403);
+        abort_if(SimpleLandlordMode::isLocked($request), 403);
 
         $enabled = ! SimpleLandlordMode::enabledFor($user);
 
