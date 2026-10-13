@@ -118,6 +118,68 @@ document.addEventListener('alpine:init', () => {
             this.open = false;
             lockScroll(false);
             this.$dispatch('rw-m-sheet-closed', { name: this.name });
+
+            // A drag-to-dismiss leaves the panel translated; clear it once the leave transition is over.
+            const panel = this.$refs.panel;
+            setTimeout(() => {
+                panel.style.transform = '';
+                panel.style.transition = '';
+            }, 250);
+        },
+
+        // ── Drag down to dismiss: from the handle, or anywhere while the sheet is scrolled to its top ──
+        drag: null,
+
+        dragStart(event) {
+            const panel = this.$refs.panel;
+
+            if (event.touches.length !== 1 || panel.scrollTop > 0) {
+                this.drag = null;
+
+                return;
+            }
+
+            this.drag = { startY: event.touches[0].clientY, startedAt: Date.now(), dy: 0 };
+            panel.style.transition = 'none';
+        },
+
+        dragMove(event) {
+            if (! this.drag) {
+                return;
+            }
+
+            const dy = event.touches[0].clientY - this.drag.startY;
+
+            if (dy <= 0) {
+                // Moving up: let the sheet scroll normally.
+                this.drag.dy = 0;
+                this.$refs.panel.style.transform = '';
+
+                return;
+            }
+
+            event.preventDefault();
+            this.drag.dy = dy;
+            this.$refs.panel.style.transform = `translateY(${dy}px)`;
+        },
+
+        dragEnd() {
+            if (! this.drag) {
+                return;
+            }
+
+            const { dy, startedAt } = this.drag;
+            const panel = this.$refs.panel;
+            const flick = dy / Math.max(1, Date.now() - startedAt) > 0.5;
+            this.drag = null;
+            panel.style.transition = 'transform 160ms ease-out';
+
+            if (dy > 120 || (flick && dy > 40)) {
+                panel.style.transform = 'translateY(100%)';
+                setTimeout(() => this.hide(), 140);
+            } else {
+                panel.style.transform = '';
+            }
         },
 
         destroy() {

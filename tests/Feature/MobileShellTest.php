@@ -105,6 +105,19 @@ class MobileShellTest extends MobileTestCase
         $this->assertGuest();
     }
 
+    /** Sheets close like native ones: drag down from the handle (or the top of the content). */
+    public function test_bottom_sheets_can_be_dragged_down_to_dismiss(): void
+    {
+        $landlord = $this->landlord();
+
+        $this->signIn($landlord, $this->property($landlord))
+            ->get('/m')
+            ->assertOk()
+            ->assertSee('x-on:touchstart="dragStart($event)"', false)
+            ->assertSee('x-on:touchmove="dragMove($event)"', false)
+            ->assertSee('x-on:touchend="dragEnd()"', false);
+    }
+
     /** No Filament panel to go back to: a switch reloads the current /m screen. */
     public function test_switching_property_reloads_the_screen_instead_of_opening_the_panel(): void
     {
