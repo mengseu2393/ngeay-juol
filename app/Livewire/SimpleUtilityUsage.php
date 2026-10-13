@@ -163,6 +163,17 @@ class SimpleUtilityUsage extends Component
 
     public function render()
     {
+        return view('livewire.simple-utility-usage', $this->utilityUsageData());
+    }
+
+    /**
+     * The rooms, and the open room's metered utilities. Shared with the /m
+     * mobile shell's Meter readings screen (Mobile\Readings).
+     *
+     * @return array<string, mixed>
+     */
+    protected function utilityUsageData(): array
+    {
         $propertyId = ActiveProperty::id();
 
         $rooms = $propertyId
@@ -179,9 +190,9 @@ class SimpleUtilityUsage extends Component
             ? MeterUtilities::forUnit($recordingUnit)
             : collect();
 
-        return view('livewire.simple-utility-usage', [
+        return [
             'rooms' => $rooms,
             'meteredUtilities' => $meteredUtilities,
-        ]);
+        ];
     }
 }
