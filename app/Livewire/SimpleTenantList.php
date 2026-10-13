@@ -2,13 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Enums\InvoiceStatus;
-use App\Enums\RentalStatus;
-use App\Models\Rental;
-use App\Services\RoomAccountService;
-use App\Support\ActiveProperty;
-use App\Support\Money;
-use Illuminate\Support\Facades\Auth;
+use App\Livewire\Concerns\ListsTenancies;
 use Livewire\Component;
 
 /**
@@ -17,21 +11,19 @@ use Livewire\Component;
  * opens the same tenant-detail popup SimpleRoomList uses (duplicated here
  * rather than shared — a third copy would be the signal to extract a
  * partial, per this repo's convention).
+ *
+ * The list, its filters, rental scoping, the balance due and the portal-login
+ * reset are Concerns\ListsTenancies (shared with the mobile shell's
+ * Mobile\Tenants and Mobile\Tenant).
  */
 class SimpleTenantList extends Component
 {
-    /** active | due | ended | all (server-side: ended/history rows aren't rendered until asked for). */
-    public string $filter = 'active';
+    use ListsTenancies;
 
     protected $queryString = ['filter'];
 
     /** ID of the rental whose tenant-detail popup is open */
     public ?int $viewingRentalId = null;
-
-    /** One-time login credentials just (re)generated — shown once, never persisted. */
-    public ?string $newUsername = null;
-
-    public ?string $newPassword = null;
 
     /** Whether the "Add tenant" popup is open */
     public bool $showAddTenant = false;
@@ -132,94 +124,11 @@ class SimpleTenantList extends Component
         $this->viewingRentalId = null;
     }
 
-    /**
-     * Passwords are hashed at rest and can never be retrieved once set — this
-     * mints a fresh one (or a first one, if the tenancy is still on its unit's
-     * shared room account) and surfaces it once, exactly like
-     * RentalResource\Actions\TenantLogin does on the desktop panel.
-     */
-    public function resetTenantLogin(int $rentalId): void
-    {
-        $rental = $this->scopedRental($rentalId);
-
-        abort_unless($rental, 404);
-        abort_unless(Auth::user()?->can('update', $rental), 403);
-
-        $result = app(RoomAccountService::class)->createForRental($rental);
-
-        $this->newUsername = $result['username'];
-        $this->newPassword = $result['password'];
-    }
-
-    /** The rental, scoped to the active property — null if missing/foreign. */
-    public function scopedRental(?int $rentalId): ?Rental
-    {
-        if (! $rentalId) {
-            return null;
-        }
-
-        return Rental::query()
-            ->with(['tenant', 'unit.property'])
-            ->when(ActiveProperty::id(), fn ($q) => $q->whereHas('unit', fn ($uq) => $uq->where('property_id', ActiveProperty::id())))
-            ->whereKey($rentalId)
-            ->first();
-    }
-
     public function render()
     {
-        $propertyId = ActiveProperty::id();
-
-        $tenants = $propertyId
-            ? Rental::query()
-                ->with(['unit', 'tenant', 'occupants', 'invoices' => fn ($q) => $q->whereIn('payment_status', [
-                    InvoiceStatus::Pending->value,
-                    InvoiceStatus::Partial->value,
-                    InvoiceStatus::Overdue->value,
-                ])])
-                ->whereHas('unit', fn ($q) => $q->where('property_id', $propertyId))
-                ->when($this->filter === 'active' || $this->filter === 'due', fn ($q) => $q->where('status', RentalStatus::Active->value))
-                ->when($this->filter === 'ended', fn ($q) => $q->where('status', '!=', RentalStatus::Active->value))
-                ->when($this->filter === 'due', fn ($q) => $q->whereHas('invoices', fn ($iq) => $iq->whereIn('payment_status', [
-                    InvoiceStatus::Pending->value,
-                    InvoiceStatus::Partial->value,
-                    InvoiceStatus::Overdue->value,
-                ])))
-                ->get()
-                ->sortBy(fn (Rental $rental) => mb_strtolower($rental->occupant_name ?: ($rental->tenant?->name ?? '')))
-                ->values()
-            : collect();
-
         return view('livewire.simple-tenant-list', [
-            'tenants' => $tenants,
+            'tenants' => $this->tenancyList(),
             'viewingRental' => $this->scopedRental($this->viewingRentalId),
         ]);
-    }
-
-    /**
-     * Sum of every unpaid/partial/overdue invoice's balance for this tenancy,
-     * formatted for display — mirrors PropertyResource::infolist()'s
-     * "Outstanding" entry (USD + KHR twins, since a property can bill in
-     * either currency invoice-to-invoice).
-     */
-    public static function totalDueFor(Rental $rental): string
-    {
-        $usdTotal = 0.0;
-        $khrTotal = 0.0;
-
-        foreach ($rental->invoices as $invoice) {
-            $usdTotal += $invoice->balance_usd;
-            $khrTotal += $invoice->balance_khr;
-        }
-
-        if ($usdTotal <= 0 && $khrTotal <= 0) {
-            return Money::format(0, 'USD');
-        }
-
-        $parts = array_filter([
-            $usdTotal > 0 ? Money::format($usdTotal, 'USD') : null,
-            $khrTotal > 0 ? Money::format($khrTotal, 'KHR') : null,
-        ]);
-
-        return implode(' / ', $parts);
     }
 }
