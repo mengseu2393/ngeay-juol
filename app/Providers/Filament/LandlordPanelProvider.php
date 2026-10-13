@@ -37,6 +37,7 @@ use App\Http\Middleware\RedirectToLandlordSetup;
 use App\Http\Middleware\RedirectToSimpleLandlordMode;
 use App\Http\Middleware\SetLocale;
 use App\Support\ActiveProperty;
+use App\Support\MobileShell;
 use App\Support\SimpleLandlordMode;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -139,11 +140,16 @@ class LandlordPanelProvider extends PanelProvider
                     // Simple Mode — display-mode:standalone is only knowable client-side,
                     // so this redirects before paint rather than in RedirectToSimpleLandlordMode.
                     // The whitelist is generated from SimpleLandlordMode::LOCKED_ALLOWED_PATHS.
+                    // With the mobile shell available the installed app belongs in /m: only the
+                    // subscription billing page and the onboarding wizard stay in the panel.
                     (SimpleLandlordMode::canUse(auth()->user()) ? '<script>(function(){'
                         .'var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;'
                         .'var path = location.pathname.replace(/^\\/+|\\/+$/g, "");'
-                        .'if (standalone && ! new RegExp('.json_encode(SimpleLandlordMode::lockedAllowedPathsRegex(), JSON_UNESCAPED_SLASHES).').test(path)) {'
-                        .'location.replace("'.url('/'.self::PATH.'/simple').'");'
+                        .(MobileShell::isAvailableFor(auth()->user())
+                            ? 'if (standalone && ! /^'.self::PATH.'\\/(setup|billing)(\\/|$)/.test(path)) {'
+                                .'location.replace("'.route('mobile.invoices').'");'
+                            : 'if (standalone && ! new RegExp('.json_encode(SimpleLandlordMode::lockedAllowedPathsRegex(), JSON_UNESCAPED_SLASHES).').test(path)) {'
+                                .'location.replace("'.url('/'.self::PATH.'/simple').'");')
                         .'}'
                         .'})();</script>' : ''),
             )

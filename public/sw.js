@@ -12,7 +12,7 @@
  * Financial data is NEVER cached for offline reads or writes.
  */
 
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const SHELL_CACHE   = `ngeay-juol-shell-${CACHE_VERSION}`;
 const FONT_CACHE    = `ngeay-juol-fonts-${CACHE_VERSION}`;
 
@@ -21,8 +21,7 @@ const PRECACHE_ASSETS = [
     '/offline.html',
     '/favicon.ico',
     '/icons/icon-192.png',
-    '/icons/icon-512.png',
-    '/manifest.json'
+    '/icons/icon-512.png'
 ];
 
 /** Routes that must ALWAYS go to the network — no cache reads or writes */
@@ -93,8 +92,9 @@ function isStaticAsset(url) {
     return (
         url.pathname.startsWith('/build/')   ||
         url.pathname.startsWith('/icons/')   ||
-        url.pathname === '/favicon.ico'      ||
-        url.pathname === '/manifest.json'
+        url.pathname === '/favicon.ico'
+        // Not /manifest.json: it is served by the app and follows the mobile
+        // shell's flag (start_url), so it must come from the network.
     );
 }
 
@@ -117,8 +117,26 @@ async function cacheFirst(request, cacheName) {
     if (response.ok) {
         const cache = await caches.open(cacheName);
         cache.put(request, response.clone());
+        evictOtherVersions(cache, request);
     }
     return response;
+}
+
+/**
+ * Panel assets are versioned by query string (?v=<mtime>): a new version is a new
+ * cache key, and the old one would otherwise stay cached forever. Drop every other
+ * copy of the same file once the new one is in.
+ */
+async function evictOtherVersions(cache, request) {
+    const url = new URL(request.url);
+    if (! url.search) return;
+    const keys = await cache.keys();
+    await Promise.all(keys
+        .filter((key) => {
+            const other = new URL(key.url);
+            return other.pathname === url.pathname && other.search !== url.search;
+        })
+        .map((key) => cache.delete(key)));
 }
 
 async function staleWhileRevalidate(request, cacheName) {

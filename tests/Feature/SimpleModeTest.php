@@ -968,7 +968,13 @@ class SimpleModeTest extends TestCase
 
     public function test_pwa_manifest_is_accessible(): void
     {
-        $this->assertFileExists(public_path('manifest.json'));
+        config(['mobile.enabled' => false]);
+
+        $this->get('/manifest.json')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/manifest+json')
+            ->assertJsonPath('start_url', '/login')
+            ->assertJsonPath('display', 'standalone');
     }
 
     /**

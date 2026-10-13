@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ClientErrorController;
 use App\Http\Controllers\InvoiceDocumentController;
+use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\TenantPortalController;
 use App\Http\Controllers\UtilityExportController;
@@ -27,6 +28,9 @@ Route::get('/', function () {
 });
 
 Route::view('info', 'info')->name('info');
+
+// The web app manifest follows the mobile shell's flag (start_url, shortcuts).
+Route::get('manifest.json', ManifestController::class)->name('manifest');
 
 Route::get('login', [LoginController::class, 'showLogin'])->name('login');
 // throttle:login is the limiter defined in FortifyServiceProvider (5/min keyed by

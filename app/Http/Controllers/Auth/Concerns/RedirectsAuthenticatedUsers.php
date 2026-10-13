@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth\Concerns;
 
 use App\Providers\Filament\LandlordPanelProvider;
+use App\Support\MobileShell;
 use App\Support\SimpleLandlordMode;
 
 /**
@@ -24,7 +25,7 @@ trait RedirectsAuthenticatedUsers
                 }
             } elseif ($user->hasRole('tenant')) {
                 $panel = '/'.LandlordPanelProvider::PATH;
-                if ($path === '/admin' || str_starts_with($path, '/admin/') || $path === $panel || str_starts_with($path, $panel.'/')) {
+                if ($path === '/admin' || str_starts_with($path, '/admin/') || $path === $panel || str_starts_with($path, $panel.'/') || $path === '/m' || str_starts_with($path, '/m/')) {
                     session()->forget('url.intended');
                 }
             }
@@ -32,6 +33,10 @@ trait RedirectsAuthenticatedUsers
 
         if ($user->isPlatformStaff()) {
             return redirect()->intended(route('filament.admin.pages.dashboard'));
+        }
+
+        if ($user->hasAnyRole(['landlord', 'landlord_manager']) && MobileShell::takesOver(request())) {
+            return redirect()->intended(route('mobile.invoices'));
         }
 
         if ($user->hasAnyRole(['landlord', 'landlord_manager'])) {

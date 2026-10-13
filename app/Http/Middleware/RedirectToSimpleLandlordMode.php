@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Providers\Filament\LandlordPanelProvider;
+use App\Support\MobileShell;
 use App\Support\SimpleLandlordMode;
 use Closure;
 use Illuminate\Http\Request;
@@ -12,6 +13,12 @@ class RedirectToSimpleLandlordMode
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // A phone / the installed app with the mobile shell gets /m instead of the
+        // panel — the matching /m screen for wherever it was headed.
+        if ($request->isMethodSafe() && MobileShell::takesOver($request) && ($url = MobileShell::urlFor($request))) {
+            return redirect()->to($url);
+        }
+
         if (SimpleLandlordMode::shouldRedirectToSimple($request)) {
             return redirect()->route('filament.landlord.pages.simple');
         }
