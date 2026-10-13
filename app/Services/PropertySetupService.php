@@ -9,6 +9,7 @@ use App\Models\Property;
 use App\Models\PropertySetting;
 use App\Models\PropertyUtility;
 use App\Models\Unit;
+use App\Models\User;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 
@@ -29,6 +30,20 @@ use Illuminate\Support\Facades\DB;
  */
 class PropertySetupService
 {
+    /**
+     * Whether this user may add a property of their own: landlords and their
+     * managers with the create permission. Platform staff have no landlord of
+     * their own — a property made by them would have no owner (landlord_id is
+     * auto-filled from the signed-in landlord) — so they add properties for a
+     * chosen landlord in the admin panel instead.
+     */
+    public static function canAdd(?User $user): bool
+    {
+        return $user !== null
+            && $user->effectiveLandlordId() !== null
+            && $user->can('create', Property::class);
+    }
+
     /** @return list<string> the currencies a property can bill in */
     public static function currencies(): array
     {

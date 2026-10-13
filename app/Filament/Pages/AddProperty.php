@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\OnboardingStep;
 use App\Models\Property;
+use App\Services\PropertySetupService;
 use App\Support\ActiveProperty;
 use App\Support\SimpleLandlordMode;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,19 +29,10 @@ class AddProperty extends LandlordSetup
     #[Locked]
     public ?int $createdPropertyId = null;
 
-    /**
-     * Landlords and their managers only. Platform staff have no landlord of
-     * their own, so a property made here would have no owner (landlord_id is
-     * auto-filled from the signed-in landlord); they add properties for a
-     * chosen landlord in the admin panel instead.
-     */
+    /** Landlords and their managers only — see PropertySetupService::canAdd(). */
     public static function canAccess(): bool
     {
-        $user = Auth::user();
-
-        return $user !== null
-            && $user->effectiveLandlordId() !== null
-            && $user->can('create', Property::class);
+        return PropertySetupService::canAdd(Auth::user());
     }
 
     public function getTitle(): string
