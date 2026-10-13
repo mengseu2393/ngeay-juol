@@ -148,6 +148,17 @@ class SimpleUtilityRates extends Component
 
     public function render()
     {
+        return view('livewire.simple-utility-rates', $this->utilityRatesData());
+    }
+
+    /**
+     * Everything the screen shows. Shared with the /m mobile shell's Utility
+     * Rates screen (Mobile\UtilityRates), which renders it in its own view.
+     *
+     * @return array<string, mixed>
+     */
+    protected function utilityRatesData(): array
+    {
         $propertyId = ActiveProperty::id();
 
         $utilities = $propertyId
@@ -178,7 +189,7 @@ class SimpleUtilityRates extends Component
             })
             ->all();
 
-        return view('livewire.simple-utility-rates', [
+        return [
             'utilities' => $utilities,
             'nameOptions' => $nameOptions,
             'nameDefaults' => $nameDefaults,
@@ -186,6 +197,6 @@ class SimpleUtilityRates extends Component
             'historyUtility' => $this->historyUtilityId ? $utilities->firstWhere('id', $this->historyUtilityId) ?? $this->scoped($this->historyUtilityId) : null,
             'historyRooms' => $this->historyUtilityId ? $this->historyRooms() : collect(),
             'currency' => $propertyId ? Money::forPropertyId($propertyId) : 'USD',
-        ]);
+        ];
     }
 }

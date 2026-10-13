@@ -1,1 +1,41 @@
 /* /m settings screens — prefer Tailwind utilities and the shared rw-m-* classes; screen-specific rules only. */
+
+@layer components {
+    /*
+     | iOS-style on/off switch. Markup: a visually hidden checkbox directly
+     | followed by <span class="rw-m-set-switch">, both inside one <label>.
+     */
+    .rw-m-set-switch {
+        position: relative;
+        flex-shrink: 0;
+        width: 3.25rem;
+        height: 2rem;
+        border-radius: 9999px;
+        @apply bg-slate-300 transition-colors dark:bg-slate-600;
+    }
+
+    .rw-m-set-switch::after {
+        content: '';
+        position: absolute;
+        top: 0.1875rem;
+        left: 0.1875rem;
+        width: 1.625rem;
+        height: 1.625rem;
+        border-radius: 9999px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+        transition: transform 150ms ease;
+    }
+
+    input:checked + .rw-m-set-switch {
+        @apply bg-brand-600;
+    }
+
+    input:checked + .rw-m-set-switch::after {
+        transform: translateX(1.25rem);
+    }
+
+    input:focus-visible + .rw-m-set-switch {
+        @apply ring-2 ring-brand-500/40 ring-offset-2 dark:ring-offset-slate-900;
+    }
+}
