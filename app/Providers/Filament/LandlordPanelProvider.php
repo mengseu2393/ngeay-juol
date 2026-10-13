@@ -138,10 +138,11 @@ class LandlordPanelProvider extends PanelProvider
                     // Running as the installed PWA (home-screen icon) is hard-locked to
                     // Simple Mode — display-mode:standalone is only knowable client-side,
                     // so this redirects before paint rather than in RedirectToSimpleLandlordMode.
-                    // Same whitelist as SimpleLandlordMode::LOCKED_ALLOWED_PATHS — keep in sync.
+                    // The whitelist is generated from SimpleLandlordMode::LOCKED_ALLOWED_PATHS.
                     (SimpleLandlordMode::canUse(auth()->user()) ? '<script>(function(){'
                         .'var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;'
-                        .'if (standalone && ! /^\\/app\\/(simple|setup|add-property|billing|property-settings|properties|property-utilities|rentals)(\\/|$)/.test(location.pathname)) {'
+                        .'var path = location.pathname.replace(/^\\/+|\\/+$/g, "");'
+                        .'if (standalone && ! new RegExp('.json_encode(SimpleLandlordMode::lockedAllowedPathsRegex(), JSON_UNESCAPED_SLASHES).').test(path)) {'
                         .'location.replace("'.url('/'.self::PATH.'/simple').'");'
                         .'}'
                         .'})();</script>' : ''),

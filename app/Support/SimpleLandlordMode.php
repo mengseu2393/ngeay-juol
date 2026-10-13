@@ -64,9 +64,33 @@ class SimpleLandlordMode
 
     private static function isLockedAllowedPath(Request $request): bool
     {
-        $panel = LandlordPanelProvider::PATH;
+        return $request->is(self::lockedAllowedPatterns());
+    }
 
-        return $request->is(array_map(fn (string $p) => $panel.'/'.$p, self::LOCKED_ALLOWED_PATHS));
+    /** @return list<string> request()->is() patterns, e.g. "app/units/*" */
+    private static function lockedAllowedPatterns(): array
+    {
+        return array_map(fn (string $p) => LandlordPanelProvider::PATH.'/'.$p, self::LOCKED_ALLOWED_PATHS);
+    }
+
+    /**
+     * The same whitelist as a regex source for the installed-PWA lock, which can
+     * only run client-side (display-mode: standalone). Built from
+     * LOCKED_ALLOWED_PATHS with Str::is() semantics ("*" = anything) so the two
+     * can't drift apart again — a hand-copied list once missed units/* and
+     * unit-overview/*, bouncing "Edit room" to the Invoices tab in the app only.
+     *
+     * Matches a path without its leading/trailing slash, e.g. "app/units/5/edit".
+     * Plain enough to mean the same thing in PCRE and JavaScript.
+     */
+    public static function lockedAllowedPathsRegex(): string
+    {
+        $alternatives = array_map(
+            fn (string $pattern) => str_replace('\*', '.*', preg_quote($pattern, '/')),
+            self::lockedAllowedPatterns(),
+        );
+
+        return '^(?:'.implode('|', $alternatives).')$';
     }
 
     public static function shouldRedirectToSimple(Request $request): bool

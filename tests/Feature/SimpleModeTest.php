@@ -25,9 +25,11 @@ use App\Models\SubscriptionPlan;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\ActiveProperty;
+use App\Support\SimpleLandlordMode;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -988,6 +990,45 @@ class SimpleModeTest extends TestCase
             ->get('/app/simple')
             ->assertSuccessful()
             ->assertSee('display-mode: standalone', false);
+    }
+
+    /**
+     * Regression: the installed app's client-side lock used a hand-copied path list
+     * that lacked units/* and unit-overview/*, so "Edit room" (a full page load to
+     * /app/units/{id}/edit) worked in a browser tab but bounced to the Invoices tab
+     * in the installed app only. The client regex is now generated from the server
+     * whitelist — both must give the same answer for every path.
+     */
+    public function test_installed_app_lock_allows_exactly_the_paths_the_phone_lock_allows(): void
+    {
+        $landlord = $this->makeLandlord();
+        $regex = '/'.SimpleLandlordMode::lockedAllowedPathsRegex().'/';
+        $phone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
+
+        $paths = [
+            'app/simple' => true,
+            'app/units/5/edit' => true,
+            'app/unit-overview/3' => true,
+            'app/rentals/9' => true,
+            'app/properties' => true,
+            'app/property-settings' => true,
+            'app/invoices' => false,
+            'app/monthly-billing' => false,
+            'app/units' => false,
+            'app' => false,
+        ];
+
+        foreach ($paths as $path => $allowed) {
+            $request = Request::create('/'.$path, 'GET', server: ['HTTP_USER_AGENT' => $phone]);
+            $request->setUserResolver(fn () => $landlord);
+
+            $this->assertSame($allowed, preg_match($regex, $path) === 1, "client regex: {$path}");
+            $this->assertSame(! $allowed, SimpleLandlordMode::shouldRedirectToSimple($request), "server lock: {$path}");
+        }
+
+        $this->actingAs($landlord)
+            ->get('/app/simple')
+            ->assertSee(json_encode(SimpleLandlordMode::lockedAllowedPathsRegex(), JSON_UNESCAPED_SLASHES), false);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
