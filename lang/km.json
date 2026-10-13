@@ -1604,6 +1604,8 @@
     "Something went wrong. Please try again.": "មានបញ្ហាអ្វីមួយ។ សូមព្យាយាមម្តងទៀត។",
     "Filter": "តម្រង",
     "Try the new app (beta)": "សាកល្បងកម្មវិធីថ្មី (បេតា)",
+    "Enter the amount received.": "សូមបញ្ចូលចំនួនទឹកប្រាក់ដែលបានទទួល។",
+    "The amount must be more than zero.": "ចំនួនទឹកប្រាក់ត្រូវតែធំជាងសូន្យ។",
     "Reading history": "ប្រវត្តិអានលេខកុងទ័រ",
     "Reading history — Room :room": "ប្រវត្តិអានលេខកុងទ័រ — បន្ទប់ :room",
     "Reading corrected.": "បានកែតម្រូវការអានលេខរួចរាល់។",

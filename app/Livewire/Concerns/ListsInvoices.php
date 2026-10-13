@@ -90,6 +90,11 @@ trait ListsInvoices
         $this->validate([
             'payAmount' => 'required|numeric|min:0.01',
             'payMethod' => 'required|integer',
+        ], [
+            // Shown in the payment sheet in Khmer — not the framework's English "pay amount field".
+            'payAmount.required' => __('Enter the amount received.'),
+            'payAmount.numeric' => __('Enter the amount received.'),
+            'payAmount.min' => __('The amount must be more than zero.'),
         ]);
 
         $invoice = $this->loadInvoice($this->payingInvoiceId);

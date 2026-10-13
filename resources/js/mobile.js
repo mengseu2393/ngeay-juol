@@ -44,6 +44,19 @@ document.addEventListener('livewire:navigate', () => {
     sheet.closeNow();
 });
 
+// A sheet is identified by its name, not by `this`: Alpine calls a method from an
+// x-on expression through a fresh merged-scope proxy each time, so the `this` a
+// sheet saw when it opened is never === the `this` it sees when it closes.
+function isOpen(sheet) {
+    return openSheet !== null && openSheet.name === sheet.name;
+}
+
+// A reload while a sheet was open lands on the sheet's history entry with no sheet
+// on screen; make it an ordinary page entry so Back isn't a dead press.
+if (history.state && history.state.rwSheet) {
+    history.replaceState(null, '');
+}
+
 function lockScroll(locked) {
     document.documentElement.style.overflow = locked ? 'hidden' : '';
 }
@@ -59,7 +72,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (openSheet && openSheet !== this) {
+            if (openSheet && ! isOpen(this)) {
                 // One sheet at a time: the new one takes over the old one's history entry.
                 this.pageState = openSheet.pageState;
                 openSheet.closeNow();
@@ -81,7 +94,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (openSheet === this && history.state && history.state.rwSheet === this.name) {
+            if (isOpen(this) && history.state && history.state.rwSheet === this.name) {
                 history.back(); // the popstate handler above calls closeNow()
 
                 return;
@@ -91,7 +104,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         closeNow() {
-            if (openSheet === this) {
+            if (isOpen(this)) {
                 openSheet = null;
             }
 
@@ -101,10 +114,102 @@ document.addEventListener('alpine:init', () => {
         },
 
         destroy() {
-            if (openSheet === this) {
+            if (isOpen(this)) {
                 openSheet = null;
                 lockScroll(false);
             }
+        },
+    }));
+});
+
+// ── Invoices screen (livewire.mobile.invoices) ───────────────────────────────
+//
+// Tap a card → the invoice in a sheet; "Record payment" → the payment sheet.
+// The slip is a server-rendered fragment (route invoices.slip). It is fetched
+// the moment a finger touches the card, so it is usually there by the time the
+// tap lands, and kept until a payment changes it. Unlike the old Simple Mode
+// screen, nothing is prefetched for cards nobody touches: that is mobile data.
+
+document.addEventListener('alpine:init', () => {
+    window.Alpine.data('rwMobileInvoices', (cashMethod, failedMessage) => ({
+        invoice: null,
+        slipLoading: false,
+        slips: {},
+        inflight: {},
+        pay: { id: null, room: '', tenant: '', balance: '', amount: '', method: String(cashMethod), note: '' },
+
+        init() {
+            this.$wire.on('pay-saved', () => {
+                this.slips = {};
+                this.$dispatch('rw-m-sheet-close', { name: 'pay' });
+                // The success message arrives with the same response; read it once Livewire applied it.
+                requestAnimationFrame(() => this.$wire.paySuccessMessage && window.rwMobileToast(this.$wire.paySuccessMessage));
+            });
+        },
+
+        fetchSlip(card) {
+            if (this.slips[card.id]) {
+                return Promise.resolve(this.slips[card.id]);
+            }
+
+            this.inflight[card.id] ??= fetch(card.slipUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                .then((response) => {
+                    if (! response.ok) {
+                        throw new Error(String(response.status));
+                    }
+
+                    return response.text();
+                })
+                .then((html) => (this.slips[card.id] = html))
+                .finally(() => delete this.inflight[card.id]);
+
+            return this.inflight[card.id];
+        },
+
+        prefetch(card) {
+            this.fetchSlip(card).catch(() => {});
+        },
+
+        openInvoice(card) {
+            this.invoice = card;
+            this.$dispatch('rw-m-sheet-open', { name: 'invoice' });
+
+            const body = document.getElementById('rw-m-slip');
+            body.innerHTML = this.slips[card.id] || '';
+            this.slipLoading = ! this.slips[card.id];
+
+            if (! this.slipLoading) {
+                return;
+            }
+
+            this.fetchSlip(card)
+                .then((html) => {
+                    if (this.invoice?.id === card.id) {
+                        body.innerHTML = html;
+                    }
+                })
+                .catch(() => {
+                    this.$dispatch('rw-m-sheet-close', { name: 'invoice' });
+                    window.rwMobileToast(failedMessage);
+                })
+                .finally(() => (this.slipLoading = false));
+        },
+
+        openPay(card) {
+            this.pay = {
+                id: card.id,
+                room: card.room,
+                tenant: card.tenant,
+                balance: card.balanceLabel,
+                amount: card.amount,
+                method: String(cashMethod),
+                note: '',
+            };
+            this.$dispatch('rw-m-sheet-open', { name: 'pay' });
+        },
+
+        savePay() {
+            this.$wire.submitPayFor(this.pay.id, String(this.pay.amount), Number(this.pay.method), this.pay.note);
         },
     }));
 });
