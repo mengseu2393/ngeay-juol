@@ -383,6 +383,68 @@ document.addEventListener('livewire:navigated', () => {
     document.querySelector('main')?.classList.add('rw-m-enter');
 });
 
+// ── Install prompt (mobile.partials.install-prompt) ──────────────────────────
+
+const INSTALL_DISMISSED = 'rw-m-install-dismissed';
+let deferredInstall = null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault(); // we show our own, translated card instead of Chrome's mini-bar
+    deferredInstall = event;
+    window.dispatchEvent(new CustomEvent('rw-m-installable'));
+});
+
+window.addEventListener('appinstalled', () => {
+    deferredInstall = null;
+    window.dispatchEvent(new CustomEvent('rw-m-installed'));
+});
+
+document.addEventListener('alpine:init', () => {
+    window.Alpine.data('rwMobileInstall', () => ({
+        visible: false,
+        ios: /iPhone|iPad|iPod/.test(navigator.userAgent),
+
+        init() {
+            const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+            let dismissed = false;
+
+            try {
+                dismissed = localStorage.getItem(INSTALL_DISMISSED) === '1';
+            } catch (e) {}
+
+            if (standalone || dismissed) {
+                return;
+            }
+
+            this.visible = this.ios || deferredInstall !== null;
+            window.addEventListener('rw-m-installable', () => (this.visible = true));
+            window.addEventListener('rw-m-installed', () => (this.visible = false));
+        },
+
+        async install() {
+            if (! deferredInstall) {
+                return;
+            }
+
+            deferredInstall.prompt();
+            const { outcome } = await deferredInstall.userChoice;
+            deferredInstall = null;
+
+            if (outcome === 'accepted') {
+                this.visible = false;
+            }
+        },
+
+        dismiss() {
+            this.visible = false;
+
+            try {
+                localStorage.setItem(INSTALL_DISMISSED, '1');
+            } catch (e) {}
+        },
+    }));
+});
+
 // ── Toast ────────────────────────────────────────────────────────────────────
 
 window.rwMobileToast = function (text) {

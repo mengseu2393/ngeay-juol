@@ -129,6 +129,21 @@ class MobileShellTest extends MobileTestCase
             ->assertSee('id="rw-m-ptr"', false);
     }
 
+    /** A translated install card on the home screen only (the old banner was English-only). */
+    public function test_the_home_screen_offers_a_translated_install_card(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $rental = $this->rental($landlord, $property, 'A-1', 'Dara');
+        $this->signIn($landlord, $property);
+
+        $this->get('/m')->assertOk()
+            ->assertSee('id="rw-m-install"', false)
+            ->assertSee(__('Tap Share, then “Add to Home Screen”.'));
+
+        $this->get(route('mobile.rooms'))->assertOk()->assertDontSee('id="rw-m-install"', false);
+    }
+
     /** No Filament panel to go back to: a switch reloads the current /m screen. */
     public function test_switching_property_reloads_the_screen_instead_of_opening_the_panel(): void
     {

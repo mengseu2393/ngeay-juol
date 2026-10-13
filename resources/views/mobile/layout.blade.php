@@ -64,6 +64,10 @@
     </div>
 
     <main class="rw-m-main mx-auto max-w-2xl">
+        @if (request()->routeIs('mobile.invoices'))
+            @include('mobile.partials.install-prompt')
+        @endif
+
         {{ $slot }}
     </main>
 
