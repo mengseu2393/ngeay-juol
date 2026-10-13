@@ -55,7 +55,9 @@
                 @php
                     $rental = $room->activeRental;
                     $tenantName = $rental?->occupant_name ?: $rental?->tenant?->name;
-                    $currency = $room->property?->currency;
+                    // The rent's own currency (rental, else room, else the property's settings).
+                    // properties.currency is usually empty, which made riel rents show as dollars.
+                    $currency = Money::forRecord($rental ?? $room);
                     $rent = $rental?->monthly_rent ?? $room->rent_amount;
                     $card = [
                         'id' => $room->id,

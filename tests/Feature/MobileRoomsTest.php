@@ -86,6 +86,25 @@ class MobileRoomsTest extends MobileTestCase
         $this->assertStringNotContainsString('rw-sm-', $html);
     }
 
+    /**
+     * Regression: rent was formatted with properties.currency, which is usually empty,
+     * so a riel rent showed as dollars ("$650,000.00/mo") while the same tenant's
+     * invoices said ៛650,000. The amount's own currency decides now.
+     */
+    public function test_rent_is_shown_in_its_own_currency(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $rental = $this->rental($landlord, $property, 'K-1', 'Dara');
+        $rental->forceFill(['monthly_rent' => 650000, 'monthly_rent_currency' => 'KHR'])->save();
+
+        $this->signIn($landlord, $property)
+            ->get(route('mobile.rooms'))
+            ->assertOk()
+            ->assertSee('៛650,000')
+            ->assertDontSee('$650,000');
+    }
+
     public function test_another_landlords_rooms_never_show(): void
     {
         $landlord = $this->landlord();
