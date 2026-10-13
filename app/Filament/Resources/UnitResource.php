@@ -11,10 +11,10 @@ use App\Filament\Resources\UnitResource\Pages;
 use App\Filament\Tables\RowActionGroup;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
-use App\Services\MeterReadingResolver;
 use App\Services\MeterUtilities;
 use App\Services\RoomAccountService;
 use App\Services\RoomGridService;
+use App\Services\RoomMeterReadingsService;
 use App\Support\ActiveProperty;
 use App\Support\Money;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
@@ -340,62 +340,12 @@ class UnitResource extends Resource implements HasShieldPermissions
                 return $schema;
             })
             ->action(function (Unit $record, array $data): void {
-                $date = Carbon::parse($data['reading_date'] ?? now())->toDateString();
-                $type = (int) ($data['reading_type'] ?? ReadingType::Actual->value);
-                $meters = $data['meters'] ?? [];
-
-                // Whitelist the submitted utility ids against the ones we actually
-                // rendered for THIS room's property — a tampered form payload can't
-                // inject another property's (or an inactive/flat) utility id.
-                $allowed = static::meterUtilitiesFor($record)->keyBy('id');
-
-                // Link readings to the room's current tenancy (when occupied) so
-                // rental-scoped utility waivers resolve — mirrors MonthlyBilling.
-                $rentalId = $record->activeRental?->getKey();
-
-                // One transaction so a multi-utility save is all-or-nothing.
-                $saved = DB::transaction(function () use ($meters, $allowed, $record, $date, $type, $rentalId): int {
-                    $count = 0;
-                    foreach ($meters as $utilityId => $value) {
-                        $utilityId = (int) $utilityId;
-                        if ($value === null || $value === '' || ! $allowed->has($utilityId)) {
-                            continue;
-                        }
-                        $new = (float) $value;
-
-                        // Baseline = the latest reading STRICTLY BEFORE this date, so
-                        // re-recording the same day corrects (not chains off) itself.
-                        // With a meter this measures from its installed_reading, so the
-                        // first reading already bills; without one it stays a zero-usage
-                        // baseline as before. See MeterReadingResolver::baselineFor().
-                        $baseline = app(MeterReadingResolver::class)
-                            ->baselineFor($record->getKey(), $utilityId, $date, $new);
-                        $old = $baseline['old'];
-                        $amount = $baseline['amount'];
-
-                        // Idempotent per (room, utility, date): a second submit for the
-                        // same day updates the row instead of stacking duplicates.
-                        UtilityUsage::updateOrCreate(
-                            [
-                                'unit_id' => $record->getKey(),
-                                'property_utility_id' => $utilityId,
-                                'reading_date' => $date,
-                            ],
-                            [
-                                'rental_id' => $rentalId,
-                                'reading_type' => $type,
-                                'old_reading' => $old,
-                                'new_reading' => $new,
-                                'amount_used' => $amount,
-                                'recorded_by_id' => auth()->id(),
-                                // landlord_id auto-fills via BelongsToLandlord / resolveLandlordId().
-                            ],
-                        );
-                        $count++;
-                    }
-
-                    return $count;
-                });
+                $saved = app(RoomMeterReadingsService::class)->save(
+                    $record,
+                    Carbon::parse($data['reading_date'] ?? now())->toDateString(),
+                    (int) ($data['reading_type'] ?? ReadingType::Actual->value),
+                    $data['meters'] ?? [],
+                );
 
                 Notification::make()
                     ->title($saved

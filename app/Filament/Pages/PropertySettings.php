@@ -7,9 +7,8 @@ use App\Enums\FirstMonthBillingMode;
 use App\Models\PropertySetting;
 use App\Models\PropertyUtility;
 use App\Services\ErrorLogService;
-use App\Services\ExchangeRateService;
-use App\Services\MoveInRuleService;
 use App\Services\OpeningReadingService;
+use App\Services\PropertySettingsService;
 use App\Services\SubscriptionService;
 use App\Support\ActiveProperty;
 use App\Support\Money;
@@ -88,19 +87,7 @@ class PropertySettings extends Page implements HasForms
 
         $this->fromSimpleMode = request()->query('from') === 'simple';
 
-        $this->setting = PropertySetting::firstOrCreate(
-            ['property_id' => ActiveProperty::id()],
-            [
-                'currency' => 'USD',
-                'due_day_of_month' => 7,
-                'first_month_billing_mode' => FirstMonthBillingMode::FullMonth->value,
-                'proration_cutoff_day' => 15,
-                'require_first_month_upfront' => false,
-                'upfront_deposit_months' => 0,
-                'monthly_billing_enabled' => false,
-                'invoice_due_days' => 7,
-            ],
-        );
+        $this->setting = app(PropertySettingsService::class)->forProperty(ActiveProperty::id());
 
         $this->form->fill($this->setting->attributesToArray());
     }
@@ -390,13 +377,7 @@ class PropertySettings extends Page implements HasForms
 
                         Forms\Components\Select::make('move_in_preset')
                             ->label(__('Move-in requirements preset'))
-                            ->options([
-                                'flexible' => __('Flexible'),
-                                'first_last' => __('First and last month'),
-                                'first_deposit' => __('First month and deposit'),
-                                'first_last_deposit' => __('First, last, and deposit'),
-                                'custom' => __('Custom'),
-                            ])
+                            ->options(PropertySettingsService::moveInPresetOptions())
                             ->default('flexible')
                             ->helperText(__('Presets populate structured rules. Existing tenancy snapshots are never changed.')),
 
@@ -409,12 +390,7 @@ class PropertySettings extends Page implements HasForms
                         Forms\Components\Select::make('upfront_deposit_months')
                             ->label(__('Security deposit'))
                             ->helperText(__('Number of months\' rent collected as an upfront security deposit (added as a line item on the first invoice).'))
-                            ->options([
-                                0 => __('No deposit'),
-                                1 => __('1 month (1× rent)'),
-                                2 => __('2 months (2× rent)'),
-                                3 => __('3 months (3× rent)'),
-                            ])
+                            ->options(PropertySettingsService::depositMonthOptions())
                             ->default(0)
                             ->selectablePlaceholder(false)
                             ->required(),
@@ -441,10 +417,7 @@ class PropertySettings extends Page implements HasForms
 
     protected static function currencyOptions(): array
     {
-        return [
-            'USD' => __('USD - US Dollar ($)'),
-            'KHR' => __('KHR - Khmer Riel (៛)'),
-        ];
+        return PropertySettingsService::currencyOptions();
     }
 
     protected static function currencySymbol(?string $currency): string
@@ -468,7 +441,7 @@ class PropertySettings extends Page implements HasForms
         $state = $this->data ?? [];
 
         try {
-            $exchangeRate = app(ExchangeRateService::class)->fetchUsdToKhr();
+            $payload = app(PropertySettingsService::class)->fetchExchangeRate($this->setting);
         } catch (Throwable $exception) {
             ErrorLogService::recordHandled($exception, 'Could not fetch exchange rate');
 
@@ -481,16 +454,6 @@ class PropertySettings extends Page implements HasForms
             return;
         }
 
-        $payload = [
-            'usd_khr_exchange_rate' => number_format((float) $exchangeRate['rate'], 4, '.', ''),
-            'exchange_rate_date' => $exchangeRate['date'],
-            'exchange_rate_source' => $exchangeRate['source'],
-            'exchange_rate_fetched_at' => now(),
-        ];
-
-        $this->setting->update($payload);
-        $this->setting->refresh();
-
         $this->form->fill(array_replace($state, [
             'usd_khr_exchange_rate' => $payload['usd_khr_exchange_rate'],
             'exchange_rate_date' => $payload['exchange_rate_date'],
@@ -502,8 +465,8 @@ class PropertySettings extends Page implements HasForms
             ->success()
             ->title(__('Exchange rate saved'))
             ->body(__('Saved :rate KHR per 1 USD from :source.', [
-                'rate' => number_format((float) $exchangeRate['rate'], 2),
-                'source' => $exchangeRate['source'],
+                'rate' => number_format($payload['rate'], 2),
+                'source' => $payload['exchange_rate_source'],
             ]))
             ->send();
     }
@@ -521,16 +484,7 @@ class PropertySettings extends Page implements HasForms
             return;
         }
 
-        $state = $this->form->getState();
-        $previousPreset = $this->setting->move_in_preset;
-        $this->setting->update($state);
-        if (($state['move_in_preset'] ?? null) && $state['move_in_preset'] !== 'custom' && $state['move_in_preset'] !== $previousPreset) {
-            app(MoveInRuleService::class)->configurePreset(
-                $this->setting->property_id,
-                $state['move_in_preset'],
-                $state['currency'] ?? $this->setting->currency,
-            );
-        }
+        app(PropertySettingsService::class)->save($this->setting, $this->form->getState());
 
         Notification::make()
             ->success()

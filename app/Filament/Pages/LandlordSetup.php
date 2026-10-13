@@ -5,15 +5,12 @@ namespace App\Filament\Pages;
 use App\Enums\BillingType;
 use App\Enums\OnboardingStep;
 use App\Enums\PropertyType;
-use App\Enums\UnitStatus;
 use App\Filament\Resources\PropertyUtilityResource;
 use App\Models\LandlordProfile;
 use App\Models\Property;
-use App\Models\PropertySetting;
 use App\Models\PropertyUtility;
 use App\Models\Unit;
-use App\Services\DefaultPropertyUtilitiesService;
-use App\Services\RoomGridService;
+use App\Services\PropertySetupService;
 use App\Support\ActiveProperty;
 use App\Support\Money;
 use Filament\Pages\Page;
@@ -236,49 +233,16 @@ class LandlordSetup extends Page
             $keptIds = [];
 
             foreach ($this->properties as $index => $row) {
-                $attributes = [
-                    'name' => trim($row['name']),
-                    'property_type' => PropertyType::from((int) $row['property_type']),
-                    'address_line' => filled($row['address_line'] ?? null) ? trim($row['address_line']) : null,
-                    'city' => filled($row['city'] ?? null) ? trim($row['city']) : null,
-                    'district' => filled($row['district'] ?? null) ? trim($row['district']) : null,
-                    'commune' => filled($row['commune'] ?? null) ? trim($row['commune']) : null,
-                    'village' => filled($row['village'] ?? null) ? trim($row['village']) : null,
-                ];
-
                 // LandlordScope makes a tampered id resolve to nothing → treated as new.
-                $property = $this->findProperty($row['id'] ?? null);
-
-                if ($property) {
-                    $property->update($attributes);
-                } else {
-                    $property = Property::create($attributes);
-                }
+                $property = app(PropertySetupService::class)->saveProperty($row, $this->findProperty($row['id'] ?? null));
 
                 $this->properties[$index]['id'] = $property->id;
                 $keptIds[] = $property->id;
                 $this->afterPropertySaved($property);
-
-                $this->syncCurrency($property, $row['currency']);
-                app(DefaultPropertyUtilitiesService::class)->seed($property);
             }
 
             $this->removeUnlistedProperties($keptIds);
         });
-    }
-
-    /** Set the property's currency; during onboarding, carry it to its utilities and rooms too. */
-    protected function syncCurrency(Property $property, string $currency): void
-    {
-        $setting = PropertySetting::query()->firstOrNew(['property_id' => $property->id]);
-        $changed = $setting->currency !== $currency;
-        $setting->currency = $currency;
-        $setting->save();
-
-        if ($changed && ! $property->rentals()->exists()) {
-            PropertyUtility::query()->where('property_id', $property->id)->update(['currency' => $currency]);
-            Unit::query()->where('property_id', $property->id)->update(['rent_currency' => $currency]);
-        }
     }
 
     // ---------------------------------------------------------------------
@@ -317,35 +281,7 @@ class LandlordSetup extends Page
 
         DB::transaction(function () {
             foreach ($this->ownedPropertyIds() as $propertyId) {
-                $keptIds = [];
-
-                foreach ($this->utilities[$propertyId] ?? [] as $row) {
-                    $attributes = [
-                        'name' => trim($row['name']),
-                        'billing_type' => BillingType::from((int) $row['billing_type']),
-                        'unit_of_measure' => trim($row['unit_of_measure']),
-                        'rate' => $row['rate'],
-                        'is_active' => true,
-                    ];
-
-                    $utility = filled($row['id'] ?? null)
-                        ? PropertyUtility::query()->where('property_id', $propertyId)->find($row['id'])
-                        : null;
-
-                    if ($utility) {
-                        $utility->update($attributes);
-                    } else {
-                        $utility = PropertyUtility::create($attributes + ['property_id' => $propertyId]);
-                    }
-
-                    $keptIds[] = $utility->id;
-                }
-
-                PropertyUtility::query()
-                    ->where('property_id', $propertyId)
-                    ->whereNotIn('id', $keptIds)
-                    ->get()
-                    ->each->delete();
+                app(PropertySetupService::class)->saveUtilities($propertyId, $this->utilities[$propertyId] ?? []);
             }
         });
     }
@@ -368,18 +304,12 @@ class LandlordSetup extends Page
         ]);
 
         $config = $this->rooms[$propertyId];
-        $current = $config['grid'] ?? [];
 
-        $floors = [];
-        for ($floor = 1; $floor <= (int) $config['floors']; $floor++) {
-            $floors[] = ['floor' => $floor, 'rooms' => (int) $config['per_floor'], 'default_price' => $config['price']];
-        }
-
-        $idsByNumber = collect($current)->filter(fn ($row) => filled($row['id'] ?? null))->pluck('id', 'number');
-
-        $this->rooms[$propertyId]['grid'] = array_map(
-            fn (array $row) => ['id' => $idsByNumber[$row['number']] ?? null] + $row,
-            RoomGridService::build(['numbering' => 'floor_seq', 'floors' => $floors], $current),
+        $this->rooms[$propertyId]['grid'] = PropertySetupService::roomGrid(
+            (int) $config['floors'],
+            (int) $config['per_floor'],
+            $config['price'],
+            $config['grid'] ?? [],
         );
     }
 
@@ -421,43 +351,14 @@ class LandlordSetup extends Page
 
         DB::transaction(function () {
             foreach ($this->ownedPropertyIds() as $propertyId) {
-                $property = Property::query()->findOrFail($propertyId);
-                $currency = Money::normalize(PropertySetting::query()->where('property_id', $propertyId)->value('currency'));
-                $keptIds = [];
+                $ids = app(PropertySetupService::class)->saveRooms(
+                    Property::query()->findOrFail($propertyId),
+                    $this->rooms[$propertyId]['grid'],
+                );
 
-                foreach ($this->rooms[$propertyId]['grid'] as $index => $row) {
-                    $fields = [
-                        'room_number' => trim((string) $row['number']),
-                        'floor_number' => filled($row['floor'] ?? null) ? (string) $row['floor'] : null,
-                        'rent_amount' => $row['price'],
-                        'rent_currency' => $currency,
-                    ];
-
-                    $unit = filled($row['id'] ?? null)
-                        ? Unit::query()->where('property_id', $propertyId)->find($row['id'])
-                        : null;
-
-                    if ($unit) {
-                        $unit->update($fields);
-                    } else {
-                        $unit = Unit::create($fields + [
-                            'property_id' => $property->id,
-                            'landlord_id' => $property->landlord_id,
-                            'room_type' => 'Room',
-                            'status' => UnitStatus::Available,
-                        ]);
-                    }
-
-                    $this->rooms[$propertyId]['grid'][$index]['id'] = $unit->id;
-                    $keptIds[] = $unit->id;
+                foreach ($ids as $index => $id) {
+                    $this->rooms[$propertyId]['grid'][$index]['id'] = $id;
                 }
-
-                Unit::query()
-                    ->where('property_id', $propertyId)
-                    ->whereNotIn('id', $keptIds)
-                    ->whereDoesntHave('rentals')
-                    ->get()
-                    ->each->delete();
             }
         });
     }

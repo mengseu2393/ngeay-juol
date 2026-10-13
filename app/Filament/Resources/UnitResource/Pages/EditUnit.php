@@ -2,18 +2,27 @@
 
 namespace App\Filament\Resources\UnitResource\Pages;
 
-use App\Filament\Resources\UnitResource;
 use App\Enums\ReadingType;
+use App\Filament\Resources\UnitResource;
 use App\Models\UtilityUsage;
-use App\Models\Unit;
+use App\Services\RoomDetailsService;
+use App\Services\RoomMeterReadingsService;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class EditUnit extends EditRecord
 {
     protected static string $resource = UnitResource::class;
+
+    /** Same write as the /m Edit room screen. */
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        return app(RoomDetailsService::class)->update($record, $data);
+    }
 
     protected function getHeaderActions(): array
     {
@@ -66,47 +75,12 @@ class EditUnit extends EditRecord
                 })
                 ->action(function (array $data): void {
                     $record = $this->record;
-                    $date = \Illuminate\Support\Carbon::parse($data['reading_date'] ?? now())->toDateString();
-                    $type = (int) ($data['reading_type'] ?? ReadingType::Actual->value);
-                    $meters = $data['meters'] ?? [];
-
-                    $allowed = UnitResource::meterUtilitiesFor($record)->keyBy('id');
-                    $rentalId = $record->activeRental?->getKey();
-
-                    $saved = \Illuminate\Support\Facades\DB::transaction(function () use ($meters, $allowed, $record, $date, $type, $rentalId): int {
-                        $count = 0;
-                        foreach ($meters as $utilityId => $value) {
-                            $utilityId = (int) $utilityId;
-                            if ($value === null || $value === '' || ! $allowed->has($utilityId)) {
-                                continue;
-                            }
-                            $new = (float) $value;
-
-                            $baseline = app(\App\Services\MeterReadingResolver::class)
-                                ->baselineFor($record->getKey(), $utilityId, $date, $new);
-                            $old = $baseline['old'];
-                            $amount = $baseline['amount'];
-
-                            UtilityUsage::updateOrCreate(
-                                [
-                                    'unit_id' => $record->getKey(),
-                                    'property_utility_id' => $utilityId,
-                                    'reading_date' => $date,
-                                ],
-                                [
-                                    'rental_id' => $rentalId,
-                                    'reading_type' => $type,
-                                    'old_reading' => $old,
-                                    'new_reading' => $new,
-                                    'amount_used' => $amount,
-                                    'recorded_by_id' => auth()->id(),
-                                ],
-                            );
-                            $count++;
-                        }
-
-                        return $count;
-                    });
+                    $saved = app(RoomMeterReadingsService::class)->save(
+                        $record,
+                        Carbon::parse($data['reading_date'] ?? now())->toDateString(),
+                        (int) ($data['reading_type'] ?? ReadingType::Actual->value),
+                        $data['meters'] ?? [],
+                    );
 
                     Notification::make()
                         ->title($saved
