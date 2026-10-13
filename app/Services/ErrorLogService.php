@@ -112,6 +112,34 @@ class ErrorLogService
         ]);
     }
 
+    /**
+     * A failure the browser saw and the server never did (see
+     * components.rw-client-error-reporter). `page` is the URL the user was on —
+     * the request URL itself is always the report endpoint.
+     *
+     * @param  array{kind: string, message: string, page?: ?string, source?: ?string, line?: ?int, column?: ?int, stack?: ?string, status?: ?int, client?: ?array}  $report
+     */
+    public static function recordClient(array $report): void
+    {
+        static::write([
+            'type' => ErrorLogType::Client,
+            'message' => Str::limit($report['message'], 2000),
+            'exception_class' => Str::limit('client:'.$report['kind'], 250),
+            'file' => isset($report['source']) ? Str::limit($report['source'], 250) : null,
+            'line' => $report['line'] ?? null,
+            'trace' => isset($report['stack']) ? Str::limit($report['stack'], 60000) : null,
+            // The page, not the POST to the report endpoint.
+            'method' => null,
+            'url' => Str::limit((string) ($report['page'] ?? request()->header('Referer') ?? ''), 2000) ?: null,
+            'route_name' => null,
+            'context' => array_filter([
+                'status' => $report['status'] ?? null,
+                'column' => $report['column'] ?? null,
+                'client' => isset($report['client']) ? static::safeInput($report['client']) : null,
+            ], fn ($value) => $value !== null),
+        ]);
+    }
+
     /** @param  array<string, mixed>  $input */
     public static function safeInput(array $input): array
     {

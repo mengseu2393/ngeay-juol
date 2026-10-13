@@ -1598,6 +1598,8 @@
     "Submitted data": "ទិន្នន័យដែលបានដាក់ស្នើ",
     "Stack trace": "Stack trace",
     "Action failed": "សកម្មភាពបរាជ័យ",
+    "Browser error": "កំហុសកម្មវិធីរុករក",
+    "Browser details": "ព័ត៌មានលម្អិតកម្មវិធីរុករក",
     "Reading history": "ប្រវត្តិអានលេខកុងទ័រ",
     "Reading history — Room :room": "ប្រវត្តិអានលេខកុងទ័រ — បន្ទប់ :room",
     "Reading corrected.": "បានកែតម្រូវការអានលេខរួចរាល់។",

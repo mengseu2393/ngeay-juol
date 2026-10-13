@@ -19,6 +19,13 @@ enum ErrorLogType: int implements HasColor, HasLabel
     /** Caught in code and shown to the user only as a red notification (e.g. move-in refused). */
     case ActionFailed = 4;
 
+    /**
+     * Reported by the browser: a JS error, an unhandled promise rejection or a
+     * Livewire request that failed (5xx / network) — the "it sometimes breaks on
+     * my phone" class nobody sees server-side.
+     */
+    case Client = 5;
+
     public function getLabel(): string
     {
         return match ($this) {
@@ -26,6 +33,7 @@ enum ErrorLogType: int implements HasColor, HasLabel
             self::Validation => __('Form rejected'),
             self::Blocked => __('Request blocked'),
             self::ActionFailed => __('Action failed'),
+            self::Client => __('Browser error'),
         };
     }
 
@@ -36,6 +44,7 @@ enum ErrorLogType: int implements HasColor, HasLabel
             self::Validation => 'warning',
             self::Blocked => 'info',
             self::ActionFailed => 'warning',
+            self::Client => 'gray',
         };
     }
 

@@ -57,6 +57,13 @@
         </section>
     @endif
 
+    @if (! empty($context['client']) || isset($context['status']))
+        <section>
+            <h3>{{ __('Browser details') }}</h3>
+            <pre>{{ $json(array_filter(['status' => $context['status'] ?? null, 'column' => $context['column'] ?? null] + ($context['client'] ?? []), fn ($value) => $value !== null)) }}</pre>
+        </section>
+    @endif
+
     @if ($log->trace)
         <section>
             <h3>{{ __('Stack trace') }}</h3>

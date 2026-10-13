@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ClientErrorController;
 use App\Http\Controllers\InvoiceDocumentController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\TenantPortalController;
@@ -69,6 +70,12 @@ Route::middleware(['auth', SetLocale::class])->group(function () {
     // (through payment.invoice.landlord_id). The /receipt suffix under a segment
     // Filament doesn't register keeps it clear of the panel's own routing.
     Route::get(LandlordPanelProvider::PATH.'/payments/{payment}/receipt', [PaymentReceiptController::class, 'pdf'])->name('payments.receipt');
+
+    // Browser-side failures (JS errors, failed Livewire requests) → Error Log.
+    // 30/min per user: one broken page can fire the same error in a loop.
+    Route::post('client-errors', [ClientErrorController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('client-errors.store');
 
     Route::post('api/properties/{property_id}/utility-usages/export', [UtilityExportController::class, 'export'])->name('exports.utility-usages');
     Route::get('api/exports/{file_id}/download', [UtilityExportController::class, 'download'])->name('exports.download');
