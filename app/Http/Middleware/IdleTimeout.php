@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use App\Support\DeviceSession;
 use Closure;
-use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -31,7 +30,9 @@ class IdleTimeout
             return $next($request);
         }
 
-        if (Filament::getCurrentPanel()?->getId() !== 'admin' && DeviceSession::wantsLongSession($request)) {
+        // By path, not Filament::getCurrentPanel(): outside a panel (the /m mobile
+        // shell) the "current" panel is the default one — admin.
+        if (! $request->is('admin', 'admin/*') && DeviceSession::wantsLongSession($request)) {
             return $next($request);
         }
 

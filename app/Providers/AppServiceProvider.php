@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Database\Connectors\RdsPostgresConnector;
+use App\Http\Middleware\EnsureMobileShellAvailable;
 use App\Http\Middleware\IdleTimeout;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
@@ -39,6 +40,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\ValidationException;
+use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
@@ -78,6 +80,9 @@ class AppServiceProvider extends ServiceProvider
             request()->session()->put(IdleTimeout::SESSION_KEY, now()->timestamp);
             request()->session()->forget('password_hash_'.$event->guard);
         });
+
+        // Turning the /m flag off must stop the mobile screens' own requests too.
+        Livewire::addPersistentMiddleware([EnsureMobileShellAvailable::class]);
 
         // Every lazy Livewire component in this app is a Simple Mode screen (see
         // simple-dashboard.blade.php); give them all the shared skeleton while they load.

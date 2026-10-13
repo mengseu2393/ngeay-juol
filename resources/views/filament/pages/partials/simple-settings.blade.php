@@ -14,6 +14,16 @@
 --}}
 <div class="space-y-5">
 
+    {{-- ── The new mobile app (/m) — only for users its feature flag lets in. ── --}}
+    @if (\App\Support\MobileShell::isAvailableFor(auth()->user()))
+        <div class="rw-sm-panel rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <a href="{{ route('mobile.invoices') }}" class="flex items-center justify-between gap-3" id="simple-settings-mobile-shell">
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Try the new app (beta)') }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+            </a>
+        </div>
+    @endif
+
     {{-- ── Property Settings ── --}}
     <div class="rw-sm-panel rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <a

@@ -8,10 +8,16 @@ use App\Http\Controllers\InvoiceDocumentController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\TenantPortalController;
 use App\Http\Controllers\UtilityExportController;
+use App\Http\Middleware\EnsureActiveSubscription;
+use App\Http\Middleware\EnsureMobileShellAvailable;
+use App\Http\Middleware\IdleTimeout;
+use App\Http\Middleware\RedirectToLandlordSetup;
 use App\Http\Middleware\SetLocale;
+use App\Livewire\Mobile\Invoices as MobileInvoices;
 use App\Providers\Filament\LandlordPanelProvider;
 use App\Support\SimpleLandlordMode;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +49,24 @@ Route::post('register', [RegisterController::class, 'register'])->middleware('th
 Route::get('qr-login/{token}', [QrLoginController::class, 'redeem'])
     ->middleware(['signed', 'throttle:qr-login'])
     ->name('qr-login.redeem');
+
+// ---------------------------------------------------------------------------
+// Mobile shell (/m) — Simple Mode rebuilt as a standalone phone app, outside
+// Filament (resources/views/mobile, App\Livewire\Mobile). Behind
+// config/mobile.php's flag: a 404 for anyone it doesn't let in. The rest is the
+// landlord panel's own sign-in stack (session check, idle rule, subscription,
+// setup wizard), since there's no panel here to supply it.
+// ---------------------------------------------------------------------------
+Route::prefix('m')->name('mobile.')->middleware([
+    'auth',
+    EnsureMobileShellAvailable::class,
+    AuthenticateSession::class,
+    IdleTimeout::class,
+    EnsureActiveSubscription::class,
+    RedirectToLandlordSetup::class,
+])->group(function () {
+    Route::get('/', MobileInvoices::class)->name('invoices');
+});
 
 // ---------------------------------------------------------------------------
 // Invoice documents — PDF (A4 / A5 / thermal receipt) + Excel export. Behind
