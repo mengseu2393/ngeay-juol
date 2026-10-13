@@ -1751,5 +1751,15 @@
     "Profile photo": "រូបថតប្រវត្តិរូប",
     "Profile photo updated.": "បានធ្វើបច្ចុប្បន្នភាពរូបថតប្រវត្តិរូប។",
     "No utilities found.": "រកមិនឃើញសេវាកម្មទេ។",
-    "Every room has this month's readings.": "បន្ទប់ទាំងអស់មានលេខកុងទ័រសម្រាប់ខែនេះហើយ។"
+    "Every room has this month's readings.": "បន្ទប់ទាំងអស់មានលេខកុងទ័រសម្រាប់ខែនេះហើយ។",
+    "A current tenancy is updated to the new rent too.": "ការជួលបច្ចុប្បន្នក៏នឹងប្តូរទៅថ្លៃជួលថ្មីនេះដែរ។",
+    "Back to room": "ត្រឡប់ទៅបន្ទប់",
+    "This room is not available for a new tenant.": "បន្ទប់នេះមិនទំនេរសម្រាប់អ្នកជួលថ្មីទេ។",
+    "Room status: :status": "ស្ថានភាពបន្ទប់៖ :status",
+    "Listed rent: :amount": "ថ្លៃជួលបន្ទប់៖ :amount",
+    "Please check the highlighted fields.": "សូមពិនិត្យព័ត៌មានដែលបានសម្គាល់។",
+    "End the tenancy for :tenant?": "បញ្ចប់ការជួលរបស់ :tenant មែនទេ?",
+    "Invoice not found.": "រកមិនឃើញវិក្កយបត្រ។",
+    "Payment saved. Balance: :balance": "បានរក្សាទុកការបង់ប្រាក់។ សមតុល្យនៅសល់៖ :balance",
+    "Invoice fully paid.": "វិក្កយបត្របានបង់គ្រប់ចំនួនហើយ។"
 }

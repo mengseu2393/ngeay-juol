@@ -1,9 +1,0 @@
-{
-    "A current tenancy is updated to the new rent too.": "ការជួលបច្ចុប្បន្នក៏នឹងប្តូរទៅថ្លៃជួលថ្មីនេះដែរ។",
-    "Back to room": "ត្រឡប់ទៅបន្ទប់",
-    "This room is not available for a new tenant.": "បន្ទប់នេះមិនទំនេរសម្រាប់អ្នកជួលថ្មីទេ។",
-    "Room status: :status": "ស្ថានភាពបន្ទប់៖ :status",
-    "Listed rent: :amount": "ថ្លៃជួលបន្ទប់៖ :amount",
-    "Please check the highlighted fields.": "សូមពិនិត្យព័ត៌មានដែលបានសម្គាល់។",
-    "End the tenancy for :tenant?": "បញ្ចប់ការជួលរបស់ :tenant មែនទេ?"
-}
