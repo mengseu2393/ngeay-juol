@@ -38,6 +38,7 @@ use App\Http\Middleware\RedirectToSimpleLandlordMode;
 use App\Http\Middleware\SetLocale;
 use App\Support\ActiveProperty;
 use App\Support\SimpleLandlordMode;
+use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -88,7 +89,10 @@ class LandlordPanelProvider extends PanelProvider
             // SPA exception patterns that never match the real https:// URLs).
             ->favicon(fn () => asset('favicon.ico'))
             ->brandLogoHeight('2.25rem')
-            ->font('Plus Jakarta Sans')
+            // Self-hosted and inlined by components.rw-fonts (HEAD_END below). LocalFontProvider
+            // with no URL emits nothing — Filament's default would add a render-blocking
+            // stylesheet from fonts.bunny.net. The family still sets Filament's --font-family.
+            ->font('Plus Jakarta Sans', provider: LocalFontProvider::class)
             ->sidebarCollapsibleOnDesktop()
             ->sidebarWidth('17rem')
             ->spa()
@@ -118,12 +122,7 @@ class LandlordPanelProvider extends PanelProvider
             // popup to wire up here; just load the shared admin theme.
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn (): string => '<link rel="preconnect" href="https://fonts.googleapis.com">'.
-                    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'.
-                    // Non-blocking: a render-blocking font stylesheet holds the first paint on the
-                    // network. display=swap + the system fallback stack cover the gap.
-                    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap" media="print" onload="this.media=\'all\'">'.
-                    '<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap"></noscript>'.
+                fn (): string => view('components.rw-fonts')->render().
                     '<link rel="stylesheet" href="'.asset('css/rentwise-admin.css').'?v='.@filemtime(public_path('css/rentwise-admin.css')).'">'.
                     '<link rel="manifest" href="/manifest.json">'.
                     '<meta name="theme-color" content="#059669">'.

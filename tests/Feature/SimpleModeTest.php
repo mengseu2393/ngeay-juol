@@ -986,6 +986,32 @@ class SimpleModeTest extends TestCase
         );
     }
 
+    /**
+     * The panel's fonts came from fonts.bunny.net (Filament's default provider — a
+     * render-blocking stylesheet, so a slow or captive mobile network held the first
+     * paint) and fonts.googleapis.com (async — Khmer text reflowed when it landed).
+     * They are self-hosted and inlined now; every file the page references must exist.
+     */
+    public function test_landlord_panel_serves_its_fonts_from_this_origin(): void
+    {
+        [$landlord, $property] = $this->landlordSetup(createRental: false);
+
+        $this->actingAs($landlord);
+        ActiveProperty::set($property->id);
+
+        $html = $this->get('/app/simple')->assertSuccessful()->getContent();
+
+        $this->assertStringNotContainsString('fonts.bunny.net', $html);
+        $this->assertStringNotContainsString('fonts.googleapis.com', $html);
+        $this->assertStringContainsString("font-family: 'Kantumruy Pro'", $html);
+
+        preg_match_all('#/fonts/([a-z0-9-]+\.woff2)#', $html, $matches);
+        $this->assertNotEmpty($matches[1]);
+        foreach (array_unique($matches[1]) as $file) {
+            $this->assertFileExists(public_path('fonts/'.$file));
+        }
+    }
+
     public function test_pwa_service_worker_is_accessible(): void
     {
         $this->assertFileExists(public_path('sw.js'));
