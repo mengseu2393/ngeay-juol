@@ -19,9 +19,9 @@
 <div x-data="rwMobileInvoices({{ PaymentMethod::Cash->value }}, @js(__('Something went wrong. Please try again.')))">
     <div class="flex items-end justify-between gap-3">
         <h1 class="rw-m-title">{{ __('Invoices') }}</h1>
-        {{-- The billing wizard isn't in /m yet: it opens Simple Mode's (a full page load). --}}
         <a
-            href="{{ route('filament.landlord.pages.simple', ['screen' => 'billing-invoice']) }}"
+            href="{{ route('mobile.billing') }}"
+            wire:navigate
             class="rw-m-btn rw-m-btn-primary mb-3 min-h-10 px-3 text-sm"
             id="rw-m-create-invoice"
         >

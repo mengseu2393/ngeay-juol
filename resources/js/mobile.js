@@ -5,6 +5,13 @@
  * <head> survives wire:navigate, so nothing here is registered twice.
  */
 
+// Per-area screen code (each registers its Alpine.data() on alpine:init).
+import './mobile/rooms.js';
+import './mobile/tenants.js';
+import './mobile/billing.js';
+import './mobile/settings.js';
+import './mobile/property.js';
+
 // ── Bottom sheets ────────────────────────────────────────────────────────────
 //
 // A sheet gets its own history entry, so the hardware back button (Android) and

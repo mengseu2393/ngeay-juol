@@ -13,6 +13,7 @@ use App\Http\Middleware\EnsureMobileShellAvailable;
 use App\Http\Middleware\IdleTimeout;
 use App\Http\Middleware\RedirectToLandlordSetup;
 use App\Http\Middleware\SetLocale;
+use App\Livewire\Mobile;
 use App\Livewire\Mobile\Invoices as MobileInvoices;
 use App\Providers\Filament\LandlordPanelProvider;
 use App\Support\SimpleLandlordMode;
@@ -66,6 +67,24 @@ Route::prefix('m')->name('mobile.')->middleware([
     RedirectToLandlordSetup::class,
 ])->group(function () {
     Route::get('/', MobileInvoices::class)->name('invoices');
+    Route::get('billing', Mobile\Billing::class)->name('billing');
+
+    Route::get('rooms', Mobile\Rooms::class)->name('rooms');
+    Route::get('rooms/{unit}', Mobile\Room::class)->name('room');
+    Route::get('rooms/{unit}/edit', Mobile\EditRoom::class)->name('room.edit');
+    Route::get('rooms/{unit}/tenant', Mobile\AddTenant::class)->name('room.add-tenant');
+    Route::get('rooms/{unit}/end', Mobile\EndTenancy::class)->name('room.end-tenancy');
+
+    Route::get('tenants', Mobile\Tenants::class)->name('tenants');
+    Route::get('tenants/{rental}', Mobile\Tenant::class)->name('tenant');
+
+    Route::get('readings', Mobile\Readings::class)->name('readings');
+
+    Route::get('settings', Mobile\Settings::class)->name('settings');
+    Route::get('settings/utilities', Mobile\UtilityRates::class)->name('utility-rates');
+    Route::get('settings/profile', Mobile\Profile::class)->name('profile');
+    Route::get('settings/property', Mobile\PropertySettings::class)->name('property-settings');
+    Route::get('settings/property/new', Mobile\AddProperty::class)->name('add-property');
 });
 
 // ---------------------------------------------------------------------------

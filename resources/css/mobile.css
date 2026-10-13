@@ -10,6 +10,11 @@
  | self-hosted), not from here.
  */
 @import 'tailwindcss' source(none);
+@import './mobile/rooms.css';
+@import './mobile/tenants.css';
+@import './mobile/billing.css';
+@import './mobile/settings.css';
+@import './mobile/property.css';
 
 @source '../views/mobile';
 @source '../views/livewire/mobile';
