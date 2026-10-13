@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\ReadingType;
 use App\Enums\RentalStatus;
-use App\Filament\Resources\UnitResource;
 use App\Models\Rental;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
@@ -64,7 +63,7 @@ class StartTenancyService
      */
     public function validatedReadings(Unit $unit, array $moveInReadings): array
     {
-        $allowed = UnitResource::meterUtilitiesFor($unit)->keyBy('id');
+        $allowed = MeterUtilities::forUnit($unit)->keyBy('id');
         $resolver = app(MeterReadingResolver::class);
         $readings = [];
 
@@ -82,7 +81,7 @@ class StartTenancyService
 
             if ($previous['source'] !== 'none' && $new < $previous['previous'] && ! $previous['meter']?->digits) {
                 throw ValidationException::withMessages(["moveInReadings.$utilityId" => __('The reading cannot be lower than the previous one (:value).', [
-                    'value' => UnitResource::trimReading($previous['previous']),
+                    'value' => MeterUtilities::trimReading($previous['previous']),
                 ])]);
             }
 

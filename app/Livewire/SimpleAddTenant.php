@@ -3,8 +3,8 @@
 namespace App\Livewire;
 
 use App\Enums\UnitStatus;
-use App\Filament\Resources\UnitResource;
 use App\Models\Unit;
+use App\Services\MeterUtilities;
 use App\Services\StartTenancyService;
 use App\Support\ActiveProperty;
 use Illuminate\Validation\ValidationException;
@@ -252,7 +252,7 @@ class SimpleAddTenant extends Component
 
         $selectedUnit = $this->unitId ? $this->loadUnit($this->unitId) : null;
 
-        $meteredUtilities = $selectedUnit ? UnitResource::meterUtilitiesFor($selectedUnit) : collect();
+        $meteredUtilities = $selectedUnit ? MeterUtilities::forUnit($selectedUnit) : collect();
 
         return view('livewire.simple-add-tenant', compact('vacantRooms', 'selectedUnit', 'meteredUtilities'));
     }

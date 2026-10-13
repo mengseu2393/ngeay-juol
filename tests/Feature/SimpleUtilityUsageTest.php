@@ -9,7 +9,6 @@ use App\Enums\ReadingType;
 use App\Enums\RentalStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
-use App\Filament\Resources\PropertyUtilityResource;
 use App\Livewire\SimpleUtilityUsage;
 use App\Models\Property;
 use App\Models\PropertyUtility;
@@ -20,6 +19,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Models\UtilityUsage;
 use App\Support\ActiveProperty;
+use App\Support\UtilityCatalog;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -54,7 +54,7 @@ class SimpleUtilityUsageTest extends TestCase
         Livewire::withQueryParams(['unit_id' => $unit->id])
             ->test(SimpleUtilityUsage::class)
             ->assertSet('recordingUnitId', $unit->id)
-            ->assertSee(PropertyUtilityResource::utilityLabel($utility->name));
+            ->assertSee(UtilityCatalog::label($utility->name));
     }
 
     public function test_unit_id_query_param_for_a_foreign_unit_does_not_open_the_form(): void

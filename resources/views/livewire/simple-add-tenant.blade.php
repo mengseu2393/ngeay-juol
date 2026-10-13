@@ -206,13 +206,13 @@
                         @foreach($meteredUtilities as $utility)
                             <div>
                                 <label class="rw-sm-label" for="at-reading-{{ $utility->id }}">
-                                    {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($utility->name) }}
+                                    {{ \App\Support\UtilityCatalog::label($utility->name) }}
                                     @if($utility->unit_of_measure)<span class="text-gray-400">({{ $utility->unit_of_measure }})</span>@endif
                                 </label>
                                 <input type="number" id="at-reading-{{ $utility->id }}" wire:model="moveInReadings.{{ $utility->id }}"
                                     class="rw-sm-input" inputmode="decimal" step="0.001" min="0" placeholder="0.000">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {{ \App\Filament\Resources\UnitResource::readingHint($selectedUnit->id, $utility->id, $utility->unit_of_measure) }}
+                                    {{ \App\Services\MeterUtilities::readingHint($selectedUnit->id, $utility->id, $utility->unit_of_measure) }}
                                 </p>
                                 @error("moveInReadings.{$utility->id}") <p class="rw-sm-error">{{ $message }}</p> @enderror
                             </div>

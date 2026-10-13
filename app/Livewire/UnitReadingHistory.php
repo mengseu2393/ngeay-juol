@@ -2,10 +2,10 @@
 
 namespace App\Livewire;
 
-use App\Filament\Resources\UnitResource;
 use App\Models\InvoiceLine;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
+use App\Services\MeterUtilities;
 use App\Services\UtilityReadingCorrectionService;
 use App\Support\ActiveProperty;
 use Illuminate\Validation\ValidationException;
@@ -168,7 +168,7 @@ class UnitReadingHistory extends Component
         $unit = $this->unit();
 
         return $unit
-            ? UnitResource::meterUtilitiesFor($unit)->keyBy('id')
+            ? MeterUtilities::forUnit($unit)->keyBy('id')
             : collect();
     }
 

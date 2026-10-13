@@ -38,7 +38,7 @@
                             @foreach($meteredUtilities as $utility)
                                 <div>
                                     <label class="rw-sm-label" for="utility-usage-{{ $utility->id }}">
-                                        {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($utility->name) }}
+                                        {{ \App\Support\UtilityCatalog::label($utility->name) }}
                                         @if($utility->unit_of_measure)
                                             <span class="text-gray-400">({{ $utility->unit_of_measure }})</span>
                                         @endif
@@ -53,7 +53,7 @@
                                         placeholder="0.000"
                                     >
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        {{ \App\Filament\Resources\UnitResource::readingHint($recordingUnitId, $utility->id, $utility->unit_of_measure) }}
+                                        {{ \App\Services\MeterUtilities::readingHint($recordingUnitId, $utility->id, $utility->unit_of_measure) }}
                                     </p>
                                 </div>
                             @endforeach
@@ -81,7 +81,7 @@
     {{-- ── Room list ── --}}
     @forelse($rooms as $room)
         @php
-            $pendingCount = \App\Filament\Resources\UnitResource::meterUtilitiesFor($room)->count();
+            $pendingCount = \App\Services\MeterUtilities::forUnit($room)->count();
         @endphp
 
         <button

@@ -18,7 +18,7 @@
                     wire:click="selectUtility({{ $u->id }})"
                     class="rw-rh-tab {{ $u->id === $utilityId ? 'is-active' : '' }}"
                     aria-selected="{{ $u->id === $utilityId ? 'true' : 'false' }}">
-                    {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($u->name) }}
+                    {{ \App\Support\UtilityCatalog::label($u->name) }}
                 </button>
             @endforeach
         </div>

@@ -104,10 +104,10 @@
                         <p class="rw-um-muted">{{ __('Read the meters now so the tenant is only billed from this point.') }}</p>
                         @foreach ($utilities as $u)
                             <label class="rw-rh-label" for="uo-mi-{{ $u->id }}">
-                                {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($u->name) }}@if ($u->unit_of_measure) ({{ $u->unit_of_measure }})@endif
+                                {{ \App\Support\UtilityCatalog::label($u->name) }}@if ($u->unit_of_measure) ({{ $u->unit_of_measure }})@endif
                             </label>
                             <input id="uo-mi-{{ $u->id }}" type="number" inputmode="decimal" step="0.001" min="0" class="rw-rh-input" wire:model="moveInReadings.{{ $u->id }}" placeholder="0.000">
-                            <p class="rw-um-muted">{{ \App\Filament\Resources\UnitResource::readingHint($unit->id, $u->id, $u->unit_of_measure) }}</p>
+                            <p class="rw-um-muted">{{ \App\Services\MeterUtilities::readingHint($unit->id, $u->id, $u->unit_of_measure) }}</p>
                             @error("moveInReadings.{$u->id}") <p class="rw-rh-error">{{ $message }}</p> @enderror
                         @endforeach
                     @endif
@@ -175,12 +175,12 @@
                     @foreach ($utilities as $u)
                         <button type="button" role="tab" wire:click="selectUtility({{ $u->id }})"
                             class="rw-rh-tab {{ $u->id === $utilityId ? 'is-active' : '' }}" aria-selected="{{ $u->id === $utilityId ? 'true' : 'false' }}">
-                            {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($u->name) }}
+                            {{ \App\Support\UtilityCatalog::label($u->name) }}
                         </button>
                     @endforeach
                 </div>
 
-                <p class="rw-um-muted">{{ \App\Filament\Resources\UnitResource::readingHint($unit->id, $utility->id, $uom) }}</p>
+                <p class="rw-um-muted">{{ \App\Services\MeterUtilities::readingHint($unit->id, $utility->id, $uom) }}</p>
 
                 @if ($panel === 'reading')
                     <div class="rw-uo-panel" id="uo-reading-panel">

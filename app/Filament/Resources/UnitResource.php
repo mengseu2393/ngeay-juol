@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use App\Enums\BillingType;
 use App\Enums\ReadingType;
 use App\Enums\RentalStatus;
 use App\Enums\UnitStatus;
@@ -10,10 +9,10 @@ use App\Filament\Concerns\ScopesToActiveProperty;
 use App\Filament\Resources\PropertyUtilityResource\RelationManagers\ChargeRulesRelationManager;
 use App\Filament\Resources\UnitResource\Pages;
 use App\Filament\Tables\RowActionGroup;
-use App\Models\PropertyUtility;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Services\MeterReadingResolver;
+use App\Services\MeterUtilities;
 use App\Services\RoomAccountService;
 use App\Services\RoomGridService;
 use App\Support\ActiveProperty;
@@ -407,15 +406,10 @@ class UnitResource extends Resource implements HasShieldPermissions
             });
     }
 
-    /** The property's meter-based, active utilities (Metered / Shared) for a room. */
+    /** The property's meter-based, active utilities (Metered / Shared) for a room. Lives in MeterUtilities. */
     public static function meterUtilitiesFor(Unit $record): Collection
     {
-        return PropertyUtility::query()
-            ->where('property_id', $record->property_id)
-            ->whereIn('billing_type', [BillingType::Metered->value, BillingType::Shared->value])
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        return MeterUtilities::forUnit($record);
     }
 
     /**
@@ -425,17 +419,7 @@ class UnitResource extends Resource implements HasShieldPermissions
      */
     public static function readingHint(int $unitId, int $utilityId, ?string $uom = null): string
     {
-        $context = app(MeterReadingResolver::class)->previous($unitId, $utilityId);
-        $suffix = $uom ? ' '.$uom : '';
-        $value = static::trimReading($context['previous']).$suffix;
-
-        return match ($context['source']) {
-            'meter_reading' => __('Previous: :value', ['value' => $value])
-                .($context['usage']?->reading_date ? ' · '.$context['usage']->reading_date->format('d M Y') : ''),
-            'meter_install' => __('Meter installed at :value — first reading bills from there.', ['value' => $value]),
-            'usage' => __('Previous: :value', ['value' => $value]),
-            default => __('First reading — sets the starting baseline (no consumption billed).'),
-        };
+        return MeterUtilities::readingHint($unitId, $utilityId, $uom);
     }
 
     /** Most recent reading for a room + utility, or null if none yet. */
@@ -468,7 +452,7 @@ class UnitResource extends Resource implements HasShieldPermissions
     /** Trim a decimal(…,3) reading to a clean string ("1,251", "11", "1.5"). */
     public static function trimReading($value): string
     {
-        return rtrim(rtrim(number_format((float) $value, 3), '0'), '.');
+        return MeterUtilities::trimReading($value);
     }
 
     /**

@@ -162,7 +162,7 @@
     <x-rw-simple-popup name="reading-history" close="closeHistory">
         @if($historyUtility)
             <div class="rw-sm-modal w-full">
-                <h3 class="rw-sm-modal-title">{{ __('Reading history') }} · {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel((string) $historyUtility->name) }}</h3>
+                <h3 class="rw-sm-modal-title">{{ __('Reading history') }} · {{ \App\Support\UtilityCatalog::label((string) $historyUtility->name) }}</h3>
                 @if($historyRooms->isEmpty())
                     <p class="rw-sm-modal-sub">{{ __('No rooms found.') }}</p>
                 @else
@@ -183,7 +183,7 @@
     {{-- ── Cards ── --}}
     @forelse($utilities as $utility)
         @php
-            $label = \App\Filament\Resources\PropertyUtilityResource::utilityLabel((string) $utility->name);
+            $label = \App\Support\UtilityCatalog::label((string) $utility->name);
             $editData = [
                 'id' => $utility->id,
                 'name' => $utility->name,

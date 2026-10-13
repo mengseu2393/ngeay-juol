@@ -3,10 +3,10 @@
 namespace App\Livewire;
 
 use App\Enums\ReadingType;
-use App\Filament\Resources\UnitResource;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Services\MeterReadingResolver;
+use App\Services\MeterUtilities;
 use App\Support\ActiveProperty;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -90,7 +90,7 @@ class SimpleUtilityUsage extends Component
         // this unit's property — a tampered payload can't inject another
         // property's (or an inactive/flat) utility id. Same tamper-protection as
         // UnitResource::meterReadingsAction().
-        $allowed = UnitResource::meterUtilitiesFor($unit)->keyBy('id');
+        $allowed = MeterUtilities::forUnit($unit)->keyBy('id');
 
         $entries = collect($this->readingValues)
             ->filter(fn ($v, $utilityId) => $v !== null && $v !== '' && $allowed->has((int) $utilityId));
@@ -176,7 +176,7 @@ class SimpleUtilityUsage extends Component
         $recordingUnit = $this->recordingUnitId ? $this->scopedUnit($this->recordingUnitId) : null;
 
         $meteredUtilities = $recordingUnit
-            ? UnitResource::meterUtilitiesFor($recordingUnit)
+            ? MeterUtilities::forUnit($recordingUnit)
             : collect();
 
         return view('livewire.simple-utility-usage', [

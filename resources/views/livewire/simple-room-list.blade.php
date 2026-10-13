@@ -167,7 +167,7 @@
                     @foreach($meteredUtilities as $utility)
                         <div>
                             <label class="rw-sm-label" for="utility-reading-{{ $utility->id }}">
-                                {{ \App\Filament\Resources\PropertyUtilityResource::utilityLabel($utility->name) }}
+                                {{ \App\Support\UtilityCatalog::label($utility->name) }}
                                 @if($utility->unit_of_measure)
                                     <span class="text-gray-400">({{ $utility->unit_of_measure }})</span>
                                 @endif

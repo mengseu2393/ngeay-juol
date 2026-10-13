@@ -5,8 +5,6 @@ namespace App\Livewire\Concerns;
 use App\Enums\ReadingType;
 use App\Enums\RentalStatus;
 use App\Enums\UnitStatus;
-use App\Filament\Pages\UnitOverview;
-use App\Filament\Resources\UnitResource;
 use App\Livewire\SimpleUnitDetail;
 use App\Models\InvoiceLine;
 use App\Models\Rental;
@@ -14,6 +12,7 @@ use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Services\EndTenancyService;
 use App\Services\MeterReadingRecorder;
+use App\Services\MeterUtilities;
 use App\Services\StartTenancyService;
 use App\Services\UtilityReadingCorrectionService;
 use App\Services\UtilityReadingResetService;
@@ -24,7 +23,7 @@ use Livewire\Attributes\Locked;
 
 /**
  * Everything the room page does — shared by the full-mode page
- * ({@see UnitOverview}) and the Simple Mode screen
+ * (the panel's UnitOverview page) and the Simple Mode screen
  * ({@see SimpleUnitDetail}) so the two can never drift. Rules
  * live in services; this only collects input, re-checks the policy on every
  * action, and exposes the view data.
@@ -111,7 +110,7 @@ trait ManagesUnit
         abort_unless(Auth::user()?->can('view', $model), 403);
 
         $this->unitId = $model->getKey();
-        $this->utilityId = UnitResource::meterUtilitiesFor($model)->first()?->getKey();
+        $this->utilityId = MeterUtilities::forUnit($model)->first()?->getKey();
 
         // The rest of the panel (switcher, sidebar group) follows the room's property.
         ActiveProperty::set($model->property_id);
@@ -150,7 +149,7 @@ trait ManagesUnit
 
     public function selectUtility(int $id): void
     {
-        abort_unless(UnitResource::meterUtilitiesFor($this->unit())->contains('id', $id), 404);
+        abort_unless(MeterUtilities::forUnit($this->unit())->contains('id', $id), 404);
         $this->utilityId = $id;
         $this->limit = self::PER_PAGE;
         $this->cancelEdit();
@@ -250,7 +249,7 @@ trait ManagesUnit
     {
         $unit = $this->unit();
         abort_unless($this->panel === 'reading' && Auth::user()?->can('create', UtilityUsage::class), 403);
-        abort_unless(UnitResource::meterUtilitiesFor($unit)->contains('id', $this->utilityId), 404);
+        abort_unless(MeterUtilities::forUnit($unit)->contains('id', $this->utilityId), 404);
 
         $this->validate([
             'newReading' => 'required|numeric|min:0|max:999999999',
@@ -275,7 +274,7 @@ trait ManagesUnit
         $this->resetValidation();
         $unit = $this->unit();
         abort_unless($this->panel === 'reset' && Auth::user()?->can('create', UtilityUsage::class), 403);
-        abort_unless(UnitResource::meterUtilitiesFor($unit)->contains('id', $this->utilityId), 404);
+        abort_unless(MeterUtilities::forUnit($unit)->contains('id', $this->utilityId), 404);
 
         $this->validate([
             'startingReading' => 'required|numeric|min:0|max:999999999',
@@ -432,7 +431,7 @@ trait ManagesUnit
     protected function unitViewData(): array
     {
         $unit = $this->unit();
-        $utilities = UnitResource::meterUtilitiesFor($unit)->keyBy('id');
+        $utilities = MeterUtilities::forUnit($unit)->keyBy('id');
         $utility = $utilities->get($this->utilityId);
 
         $readings = $utility

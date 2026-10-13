@@ -19,6 +19,7 @@ use App\Services\ChargeRuleResolver;
 use App\Services\MeterReadingResolver;
 use App\Support\ActiveProperty;
 use App\Support\Money;
+use App\Support\UtilityCatalog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -215,17 +216,7 @@ class PropertyUtilityResource extends Resource
     /** @return array<string, string> */
     public static function utilityOptions(): array
     {
-        return [
-            'Electricity' => __('Electricity'),
-            'Water' => __('Water'),
-            'Gas' => __('Gas'),
-            'Internet' => __('Internet'),
-            'Trash' => __('Trash'),
-            'Cleaning' => __('Cleaning'),
-            'Parking' => __('Parking'),
-            'Security' => __('Security'),
-            'Other' => __('Other'),
-        ];
+        return UtilityCatalog::options();
     }
 
     /** @return array<string, string> */
@@ -243,23 +234,13 @@ class PropertyUtilityResource extends Resource
 
     public static function utilityLabel(string $name): string
     {
-        return static::utilityOptions()[$name] ?? $name;
+        return UtilityCatalog::label($name);
     }
 
     /** Sensible unit/billing defaults for a utility name (shared with Simple Mode). */
     public static function utilityDefaults(string $name): array
     {
-        return match ($name) {
-            'Electricity' => ['unit' => 'kWh', 'billing' => BillingType::Metered],
-            'Water' => ['unit' => 'm³', 'billing' => BillingType::Metered],
-            'Gas' => ['unit' => 'm³', 'billing' => BillingType::Metered],
-            'Internet' => ['unit' => 'month', 'billing' => BillingType::Flat],
-            'Trash' => ['unit' => 'month', 'billing' => BillingType::Flat],
-            'Cleaning' => ['unit' => 'month', 'billing' => BillingType::Flat],
-            'Parking' => ['unit' => 'month', 'billing' => BillingType::Flat],
-            'Security' => ['unit' => 'month', 'billing' => BillingType::Flat],
-            default => ['unit' => 'unit', 'billing' => BillingType::Flat],
-        };
+        return UtilityCatalog::defaults($name);
     }
 
     protected static function applyUtilityDefaults(mixed $state, Forms\Set $set): void

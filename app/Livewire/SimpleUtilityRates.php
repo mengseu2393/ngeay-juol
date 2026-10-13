@@ -3,12 +3,12 @@
 namespace App\Livewire;
 
 use App\Enums\BillingType;
-use App\Filament\Resources\PropertyUtilityResource;
 use App\Models\PropertyUtility;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Support\ActiveProperty;
 use App\Support\Money;
+use App\Support\UtilityCatalog;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -166,13 +166,13 @@ class SimpleUtilityRates extends Component
 
         // Custom names already on this property (e.g. "Trash / Cleaning") join
         // the preset list so the edit popup's <select> can show them.
-        $nameOptions = PropertyUtilityResource::utilityOptions();
+        $nameOptions = UtilityCatalog::options();
         foreach ($utilities->pluck('name')->filter()->unique() as $name) {
             $nameOptions[$name] ??= $name;
         }
         $nameDefaults = collect(array_keys($nameOptions))
             ->mapWithKeys(function (string $name) {
-                $d = PropertyUtilityResource::utilityDefaults($name);
+                $d = UtilityCatalog::defaults($name);
 
                 return [$name => ['unit' => $d['unit'], 'billing' => $d['billing']->value]];
             })
