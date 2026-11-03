@@ -12,7 +12,12 @@
     Source: Google Fonts (SIL Open Font License 1.1). Subsets kept: khmer, latin,
     latin-ext. The Khmer file is preloaded — every screen needs it.
 --}}
+{{-- `:preload="false"` for pages that are navigated with wire:navigate or often have no Khmer text on screen: the
+     browser then warns "preloaded but not used" because the font is already loaded / never needed. /m2 passes false. --}}
+@props(['preload' => true])
+@if ($preload)
 <link rel="preload" href="{{ asset('fonts/kantumruy-pro-khmer-efd3b52e.woff2') }}" as="font" type="font/woff2" crossorigin>
+@endif
 <style>
     /* Kantumruy Pro — khmer */
     @font-face {

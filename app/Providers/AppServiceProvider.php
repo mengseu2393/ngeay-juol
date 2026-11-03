@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Database\Connectors\RdsPostgresConnector;
+use App\Http\Middleware\EnsureM2Available;
 use App\Http\Middleware\EnsureMobileShellAvailable;
 use App\Http\Middleware\IdleTimeout;
 use App\Models\ChatMessage;
@@ -82,7 +83,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Turning the /m flag off must stop the mobile screens' own requests too.
-        Livewire::addPersistentMiddleware([EnsureMobileShellAvailable::class]);
+        Livewire::addPersistentMiddleware([EnsureMobileShellAvailable::class, EnsureM2Available::class]);
 
         // Every lazy Livewire component in this app is a Simple Mode screen (see
         // simple-dashboard.blade.php); give them all the shared skeleton while they load.

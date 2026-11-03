@@ -10,10 +10,12 @@ use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\TenantPortalController;
 use App\Http\Controllers\UtilityExportController;
 use App\Http\Middleware\EnsureActiveSubscription;
+use App\Http\Middleware\EnsureM2Available;
 use App\Http\Middleware\EnsureMobileShellAvailable;
 use App\Http\Middleware\IdleTimeout;
 use App\Http\Middleware\RedirectToLandlordSetup;
 use App\Http\Middleware\SetLocale;
+use App\Livewire\M2;
 use App\Livewire\Mobile;
 use App\Livewire\Mobile\Invoices as MobileInvoices;
 use App\Providers\Filament\LandlordPanelProvider;
@@ -104,6 +106,32 @@ Route::prefix('m')->name('mobile.')->middleware([
     Route::get('settings/profile', Mobile\Profile::class)->name('profile');
     Route::get('settings/property', Mobile\PropertySettings::class)->name('property-settings');
     Route::get('settings/property/new', Mobile\AddProperty::class)->name('add-property');
+});
+
+// ---------------------------------------------------------------------------
+// /m2 — a second phone app, separate from /m (App\Livewire\M2, resources/views/m2,
+// public/css/m2.css), built from the owner's paper sketches. Behind config/m2.php's
+// flag: a 404 for anyone it doesn't let in.
+// ---------------------------------------------------------------------------
+Route::prefix('m2')->name('m2.')->middleware([
+    'auth',
+    EnsureM2Available::class,
+    AuthenticateSession::class,
+    IdleTimeout::class,
+    EnsureActiveSubscription::class,
+    RedirectToLandlordSetup::class,
+])->group(function () {
+    Route::get('/', M2\Home::class)->name('home');
+    Route::get('dashboard', M2\Dashboard::class)->name('dashboard');
+    Route::get('rooms/{unit}', M2\Room::class)->name('room');
+    Route::get('rooms/{unit}/meter/{utility}', M2\Meter::class)->name('meter');
+    Route::get('rooms/{unit}/service/{utility}', M2\Service::class)->name('service');
+    Route::get('rooms/{unit}/bill', M2\Bill::class)->name('bill');
+    Route::get('rooms/{unit}/invoice', M2\CreateInvoice::class)->name('invoice.create');
+    Route::get('tenants/{rental}', M2\Tenant::class)->name('tenant');
+    Route::get('invoices/{invoice}/slip', M2\Slip::class)->name('slip');
+    Route::get('settings', M2\Settings::class)->name('settings');
+    Route::get('settings/profile', M2\Profile::class)->name('profile');
 });
 
 // ---------------------------------------------------------------------------
