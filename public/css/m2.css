@@ -154,10 +154,11 @@ body.m2 {
 .m2-mini .m2-mini-ico svg { width: 12px; height: 12px; }
 
 /* ── Pills ── */
-.m2-pills { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+.m2-pills { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 14px; margin-bottom: -12px; }
 .m2-pills::-webkit-scrollbar { display: none; }
 .m2-pill {
     flex: none; min-height: 38px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; line-height: 1.5; white-space: nowrap; text-decoration: none; color: inherit;
     border: 1px solid var(--m2-line); background: var(--m2-card); font-weight: 500; font-size: 13px;
 }
 .m2-pill[aria-pressed='true'] { background: var(--m2-brand); border-color: var(--m2-brand); color: var(--m2-brand-ink); }
@@ -702,6 +703,8 @@ html:not(.dark) .m2a-ico { background: #d3eee0; color: #0b6b4a; }
 .m2a .m2-btn.is-ghost { border: 1px solid var(--m2-line); }
 .m2a .m2a-photo-btn { width: auto; display: inline-flex; margin-top: 12px; min-height: 40px; padding: 0 18px; font-size: 13px; cursor: pointer; }
 .m2a .m2a-photo-btn.is-busy { opacity: .6; pointer-events: none; }
+/* Settings is a list of labels, not a dashboard: medium weight for titles, headings and the avatar so the page reads calm (Khmer is heavy at 600). */
+#m2-settings .m2a-t b, #m2-settings .m2-title, #m2-settings .m2a-h, #m2-settings .m2-avatar { font-weight: 500; }
 .m2a .m2-input { background: var(--m2-bg); border: 1px solid var(--m2-line); border-radius: 12px; min-height: 46px; }
 .m2a .m2-input.is-big { min-height: 52px; font-size: 20px; font-weight: 500; }
 .m2a .m2-input.is-static { display: flex; align-items: center; padding: 0 14px; font-size: 15px; color: var(--m2-ink); }
@@ -722,3 +725,95 @@ html:not(.dark) .m2a-ico { background: #d3eee0; color: #0b6b4a; }
 .m2a-chip.is-w { background: var(--m2-brand-soft); color: var(--m2-brand); }
 .m2a-chip.is-e { background: var(--m2-warn-soft); color: var(--m2-warn); }
 .m2a-sum.is-bad b { color: var(--m2-bad); }
+
+/* ══ Settings screens (property, add property, utility rates, reading history) — the settings plan's form pieces ══ */
+.m2-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.m2a-stack > * + * { margin-top: 12px; }
+.m2a-stack > .m2a-h { margin-top: 20px; }
+.m2a-stack > .m2a-h + * { margin-top: 0; }
+.m2a-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.m2a-two > * { min-width: 0; }
+.m2a-two > .m2-btn { width: 100%; }
+.m2a-hint { color: var(--m2-muted); font-size: 12px; margin: 0 4px; }
+.m2a-opt { color: var(--m2-muted); }
+/* radio pills: the label is the pill, its checked radio presses it */
+label.m2-pill { position: relative; display: inline-flex; align-items: center; white-space: nowrap; cursor: pointer; flex: none; }
+label.m2-pill:has(> input:checked) { background: var(--m2-brand); border-color: var(--m2-brand); color: var(--m2-brand-ink); }
+label.m2-pill:has(> input:focus-visible), .m2-seg > label:has(> input:focus-visible) { outline: 2px solid var(--m2-brand); outline-offset: 2px; }
+.m2-seg > label { position: relative; cursor: pointer; }
+.m2a .m2-seg > label:has(> input:checked) { background: var(--m2-card); color: var(--m2-ink); }
+/* on/off switch: a real checkbox drawn as the plan's switch */
+.m2a-sw { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 42px; height: 26px; margin: 0; border-radius: 999px;
+    background: var(--a-idle); border: 1px solid var(--m2-line); cursor: pointer; transition: background .15s; }
+.m2a-sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--m2-card);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .2); transition: left .15s; }
+.m2a-sw:checked { background: var(--m2-brand); border-color: var(--m2-brand); }
+.m2a-sw:checked::after { left: 18px; }
+.m2a-sw:focus-visible { outline: 2px solid var(--m2-brand); outline-offset: 2px; }
+label.m2a-row { cursor: pointer; }
+/* an input at the end of a list row (opening readings, utility prices) */
+.m2a .m2-input.m2a-row-input { width: 120px; min-height: 40px; flex: none; text-align: right; padding: 0 12px; font-variant-numeric: tabular-nums; }
+.m2a-money-input { display: inline-flex; align-items: center; gap: 6px; flex: none; color: var(--m2-muted); }
+.m2a-money-input .m2-input.m2a-row-input { width: 104px; }
+.m2a .m2a-area { display: block; width: 100%; padding: 12px 14px; resize: vertical; line-height: 1.45; font: inherit; }
+.m2a select.m2-input:disabled, .m2a .m2-input:disabled { opacity: .55; }
+.m2a-fold { display: inline-flex; transition: transform .15s; }
+.m2a-fold.is-open { transform: rotate(90deg); }
+.m2a-busy { opacity: .5; transition: opacity .15s; }
+.m2a-check { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; cursor: pointer; }
+.m2a-check input { width: 20px; height: 20px; flex: none; margin-top: 1px; accent-color: var(--m2-brand); }
+.m2a-row .m2-err { display: block; font-size: 12px; }
+.m2a-bar > a { text-decoration: none; }
+.m2-notice.is-bad { background: var(--m2-bad-soft); color: var(--m2-bad); }
+/* toast */
+.m2-toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); z-index: 60;
+    max-width: min(92vw, 420px); padding: 12px 18px; border-radius: 14px; background: #0f2a1f; color: #f2fbf6; font-size: 14px; line-height: 1.4;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18); cursor: pointer; }
+html.dark .m2-toast { background: #e8f5ee; color: #0b241a; }
+/* radio segments (Billing type): the label is the segment */
+.m2-seg > label {
+    flex: 1 1 0; min-width: max-content; min-height: 36px; padding: 0 8px; border-radius: 11px;
+    background: transparent; color: var(--m2-muted); font-weight: 500; font-size: 12.5px;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* Owed tab rows: the "N days late · M invoices" line wraps (Khmer is long) instead of running under the amount. */
+.m2a-row .m2-due-late { color: var(--m2-bad); font-size: 12.5px; line-height: 1.5; white-space: normal; }
+.m2a-row .m2-due-amt { flex: none; align-self: flex-start; line-height: 1.5; }
+
+/* ID card photos (Add tenant, Edit tenant): square tiles, with a dashed one to add more. */
+.m2-photo-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.m2-photo-tile, .m2-photo-add { position: relative; width: 96px; height: 96px; flex: none; border-radius: 14px; overflow: hidden; }
+.m2-photo-tile { border: 1px solid var(--m2-line); background: var(--m2-card); }
+.m2-photo-tile.is-new { border: 2px solid var(--m2-brand); }
+.m2-photo-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.m2-photo-name { display: flex; align-items: center; justify-content: center; height: 100%; padding: 6px; font-size: 11px; text-align: center; word-break: break-all; color: var(--m2-muted); }
+.m2-photo-x { position: absolute; top: 0; right: 0; width: 36px; height: 36px; border: 0; padding: 0; background: rgba(0, 0, 0, .55); color: #fff; font-size: 20px; line-height: 1; border-bottom-left-radius: 12px; cursor: pointer; }
+.m2-photo-add { display: flex; align-items: center; justify-content: center; padding: 6px; border: 2px dashed var(--m2-line); color: var(--m2-muted); font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; }
+.m2-photo-add.is-busy { opacity: .6; pointer-events: none; }
+
+/* Share to Telegram (Slip): Telegram's own blue, in light and dark alike. */
+.m2-btn.is-telegram { background: #229ed9; color: #fff; box-shadow: 0 6px 14px rgba(34, 158, 217, .28); }
+
+/* Month header inside the dashboard History list. */
+.m2a-row.m2a-month { background: transparent; font-size: 13px; }
+.m2a-month .m2a-t b { color: var(--m2-muted); font-weight: 600; }
+
+/* Dashboard (Home's list style): summary card with a stats trio, a bar chart, month headers. */
+.m2a-sum.is-col { flex-direction: column; align-items: stretch; gap: 12px; }
+.m2a-sumrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.m2a-stats { display: flex; gap: 8px; }
+.m2a-stats > div { flex: 1; min-width: 0; padding: 10px; border-radius: 12px; background: var(--m2-bg); }
+.m2a-stats small { display: block; color: var(--m2-muted); font-size: 11.5px; }
+.m2a-stats b { display: block; font-size: 15px; font-weight: 700; }
+.m2a-stats b.is-bad { color: var(--m2-bad); }
+.m2a-bars { display: flex; align-items: flex-end; gap: 10px; height: 96px; }
+.m2a-bc { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+.m2a-bc i { display: block; width: 100%; border-radius: 6px 6px 2px 2px; background: var(--m2-line); }
+.m2a-bc.is-now i { background: var(--m2-brand); }
+.m2a-bc span { font-size: 11px; color: var(--m2-muted); }
+.m2a-bc.is-now span { color: var(--m2-ink); font-weight: 600; }
+.m2a-mh { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 14px 4px 8px; font-size: 12.5px; color: var(--m2-muted); }
+.m2a-mh b { font-weight: 600; }
+.m2a-main > .m2a-mh:first-child { margin-top: 4px; }
+.m2a-mh + .m2a-list { margin-bottom: 4px; }

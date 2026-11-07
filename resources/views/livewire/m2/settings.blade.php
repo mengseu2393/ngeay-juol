@@ -22,11 +22,11 @@
 
         <h2 class="m2a-h">{{ __('Property') }}</h2>
         <div class="m2a-list">
-            <a href="{{ $links['property'] }}" class="m2a-row" id="m2-settings-property">
-                <x-m2.icon name="property" class="is-info" /><span class="m2a-t"><b>{{ __('Property Settings') }}</b></span>{!! $chev !!}
+            <a href="{{ route('m2.property') }}" wire:navigate class="m2a-row" id="m2-settings-property">
+                <x-m2.icon name="property" class="is-info" /><span class="m2a-t"><b>{{ __('Property Settings') }}</b>@if ($propertyName)<span class="m2-trunc">{{ $propertyName }}</span>@endif</span>{!! $chev !!}
             </a>
             @if ($canAddProperty)
-                <a href="{{ $links['add'] }}" class="m2a-row" id="m2-settings-add-property">
+                <a href="{{ route('m2.add-property') }}" wire:navigate class="m2a-row" id="m2-settings-add-property">
                     <x-m2.icon name="plus" /><span class="m2a-t"><b>{{ __('Add property') }}</b></span>{!! $chev !!}
                 </a>
             @endif
@@ -37,8 +37,8 @@
 
         <h2 class="m2a-h">{{ __('Utilities') }}</h2>
         <div class="m2a-list">
-            <a href="{{ $links['rates'] }}" class="m2a-row" id="m2-settings-utility-rates">
-                <x-m2.icon name="bolt" class="is-e" /><span class="m2a-t"><b>{{ __('Utility Rates') }}</b></span>{!! $chev !!}
+            <a href="{{ route('m2.utilities') }}" wire:navigate class="m2a-row" id="m2-settings-utility-rates">
+                <x-m2.icon name="bolt" class="is-e" /><span class="m2a-t"><b>{{ __('Utility Rates') }}</b>@if ($activeUtilities !== null)<span>{{ __(':count active', ['count' => $activeUtilities]) }}</span>@endif</span>{!! $chev !!}
             </a>
         </div>
 

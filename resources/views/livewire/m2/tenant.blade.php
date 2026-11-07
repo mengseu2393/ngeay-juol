@@ -42,6 +42,15 @@
             @endforeach
         </div>
 
+        @if ($rental->emergency_contact_name || $rental->emergency_contact_phone)
+            <h2 class="m2a-h">{{ __('Emergency contact') }}</h2>
+            <div class="m2a-list" id="m2-tenant-emergency">
+                @if ($rental->emergency_contact_name)<div class="m2a-kv"><span>{{ __('Name') }}</span><b>{{ $rental->emergency_contact_name }}</b></div>@endif
+                @if ($rental->emergency_contact_phone)<div class="m2a-kv"><span>{{ __('Phone') }}</span><b class="m2-num"><a href="tel:{{ preg_replace('/[^\d+]/', '', $rental->emergency_contact_phone) }}" style="color:var(--m2-brand)">{{ $rental->emergency_contact_phone }}</a></b></div>@endif
+                @if ($rental->emergency_contact_relationship)<div class="m2a-kv"><span>{{ __('Relationship') }}</span><b>{{ $rental->emergency_contact_relationship }}</b></div>@endif
+            </div>
+        @endif
+
         <h2 class="m2a-h">{{ __('ID card') }}</h2>
         <div class="m2a-list" id="m2-tenant-id">
             <div class="m2a-kv"><span>{{ __('ID card number') }}</span><b class="m2-num">{{ $rental->occupant_id_card ?: '—' }}</b></div>
@@ -49,7 +58,8 @@
                 @if ($photos->isNotEmpty())
                     <div class="m2-photos">
                         @foreach ($photos as $media)
-                            <a href="{{ $media->getUrl() }}" target="_blank" rel="noopener" wire:key="m2-photo-{{ $media->id }}"><img src="{{ $media->getUrl() }}" alt="{{ __('ID card photo') }}" loading="lazy"></a>
+                            @php $photoUrl = \App\Support\M2Shell::mediaUrl($media->getUrl()); @endphp
+                            <a href="{{ $photoUrl }}" target="_blank" rel="noopener" wire:key="m2-photo-{{ $media->id }}"><img src="{{ $photoUrl }}" alt="{{ __('ID card photo') }}" loading="lazy"></a>
                         @endforeach
                     </div>
                 @else
@@ -72,6 +82,10 @@
                     </div>
                 @endforeach
             </div>
+        @endif
+
+        @if ($canEditTenant && $step !== 'done')
+            <a href="{{ route('m2.tenant.edit', $rental->id) }}" wire:navigate class="m2-btn is-ghost" style="margin-top:20px" id="m2-tenant-edit">{{ __('Edit tenant') }}</a>
         @endif
 
         {{-- ── End tenancy: only the room's current tenant, and only for someone who may edit it ── --}}

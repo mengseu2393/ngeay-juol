@@ -40,9 +40,9 @@ class UtilityReadingCorrectionService
      *
      * @return array{rows: array<int, array<string, mixed>>, error: ?string}
      */
-    public function preview(UtilityUsage $usage, float $newReading, string $date): array
+    public function preview(UtilityUsage $usage, float $newReading, string $date, bool $allowBilled = false): array
     {
-        $plan = $this->plan($usage, $newReading, $date);
+        $plan = $this->plan($usage, $newReading, $date, $allowBilled);
 
         return ['rows' => $plan['rows'], 'error' => $plan['error']];
     }
@@ -50,10 +50,10 @@ class UtilityReadingCorrectionService
     /**
      * @throws ValidationException when the correction is invalid or blocked by a locked invoice
      */
-    public function apply(UtilityUsage $usage, float $newReading, string $date, ?ReadingType $type = null): void
+    public function apply(UtilityUsage $usage, float $newReading, string $date, ?ReadingType $type = null, bool $allowBilled = false): void
     {
-        DB::transaction(function () use ($usage, $newReading, $date, $type): void {
-            $plan = $this->plan($usage, $newReading, $date);
+        DB::transaction(function () use ($usage, $newReading, $date, $type, $allowBilled): void {
+            $plan = $this->plan($usage, $newReading, $date, $allowBilled);
 
             if ($plan['error']) {
                 throw ValidationException::withMessages(['new_reading' => $plan['error']]);
@@ -75,7 +75,7 @@ class UtilityReadingCorrectionService
     /**
      * @return array{rows: array, error: ?string, models: array<int, array>, byId: array<int, UtilityUsage>}
      */
-    private function plan(UtilityUsage $usage, float $newReading, string $date): array
+    private function plan(UtilityUsage $usage, float $newReading, string $date, bool $allowBilled = false): array
     {
         $fail = fn (string $message) => ['rows' => [], 'error' => $message, 'models' => [], 'byId' => []];
 
@@ -174,7 +174,8 @@ class UtilityReadingCorrectionService
                 continue;
             }
 
-            $invoice = $this->lockedInvoiceFor($u);
+            // $allowBilled: fix the meter history only — an issued invoice's lines are never touched.
+            $invoice = $allowBilled ? null : $this->lockedInvoiceFor($u);
             if ($invoice) {
                 return $fail(__('This reading (or a later one it affects) is already billed on invoice :number. Cancel or revise that invoice first.', [
                     'number' => $invoice->invoice_number,
@@ -216,6 +217,12 @@ class UtilityReadingCorrectionService
             ->orderBy('reading_date')
             ->orderBy('id')
             ->get();
+    }
+
+    /** The issued (non-draft, non-cancelled) invoice that already bills this reading, if any. */
+    public function billedOn(UtilityUsage $usage): ?Invoice
+    {
+        return $this->lockedInvoiceFor($usage);
     }
 
     /** The invoice that bills this reading when it is past Draft (and not Cancelled). */

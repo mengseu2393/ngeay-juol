@@ -138,7 +138,7 @@ class SimpleUtilityRates extends Component
         $this->dispatch('utility-rate-deleted');
     }
 
-    private function scoped(int $id): ?PropertyUtility
+    protected function scoped(int $id): ?PropertyUtility
     {
         return PropertyUtility::query()
             ->when(ActiveProperty::id(), fn ($q) => $q->where('property_id', ActiveProperty::id()))

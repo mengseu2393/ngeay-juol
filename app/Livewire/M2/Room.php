@@ -3,9 +3,10 @@
 namespace App\Livewire\M2;
 
 use App\Enums\BillingType;
-use App\Enums\OccupantRole;
+use App\Enums\UnitStatus;
 use App\Models\Invoice;
 use App\Models\PropertyUtility;
+use App\Models\Rental;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Support\ActiveProperty;
@@ -16,9 +17,9 @@ use Livewire\Component;
 /**
  * /m2/rooms/{unit} — sketches ② and ④: the room's name on top, then who lives
  * there, its meters (electricity E, water W), its price, its other services
- * (parking, lift, sanitation…) and its latest bill. Read-only; every row opens
- * the screen that does the work. The {unit} binding runs through the landlord
- * scope, so another landlord's room is a 404.
+ * (parking, lift, sanitation…) and its latest bill. Every row opens the screen
+ * that does the work; "Edit room" opens M2\EditRoom. The {unit} binding runs
+ * through the landlord scope, so another landlord's room is a 404.
  */
 #[Layout('m2.layout')]
 class Room extends Component
@@ -35,9 +36,21 @@ class Room extends Component
         }
     }
 
+    /** A vacant room that isn't Available (Maintenance / Unavailable) is let again with one tap. */
+    public function markAvailable(): void
+    {
+        abort_unless(auth()->user()?->can('update', $this->unit), 403);
+
+        $unit = Unit::query()->with('activeRental')->findOrFail($this->unit->id);
+        abort_if($unit->activeRental, 422);
+
+        $unit->update(['status' => UnitStatus::Available]);
+        $this->unit = $unit;
+    }
+
     public function render()
     {
-        $unit = $this->unit->load('activeRental.occupants', 'property');
+        $unit = $this->unit->load('activeRental', 'property');
         $rental = $unit->activeRental;
 
         $utilities = PropertyUtility::query()
@@ -65,12 +78,14 @@ class Room extends Component
         return view('livewire.m2.room', [
             'unit' => $unit,
             'rental' => $rental,
-            'coOccupants' => $rental?->occupants->reject(fn ($o) => $o->role === OccupantRole::Primary) ?? collect(),
             'meters' => $meters,
             'services' => $services,
             'latest' => $latest,
             'bill' => $bill,
+            'canMarkAvailable' => ! $rental && $unit->status !== UnitStatus::Available && (bool) auth()->user()?->can('update', $unit),
+            'canAddTenant' => ! $rental && $unit->status === UnitStatus::Available && (bool) auth()->user()?->can('create', Rental::class),
             'canCreateInvoice' => (bool) auth()->user()?->can('create', Invoice::class),
+            'canEditRoom' => (bool) auth()->user()?->can('update', $unit),
             'price' => Money::format($unit->rent_amount, Money::forRecord($unit)),
         ])->title(__('Room').' '.$unit->room_number);
     }

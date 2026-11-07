@@ -8,9 +8,11 @@ use App\Models\PropertyUtility;
 use App\Models\Unit;
 use App\Models\UtilityUsage;
 use App\Services\MeterReadingResolver;
+use App\Services\UtilityReadingCorrectionService;
 use App\Services\UtilityReadingResetService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -39,6 +41,19 @@ class Meter extends Component
 
     public ?string $saved = null;
 
+    /** Which change is waiting for a "yes, really": 'save' | 'reset' | 'edit' | null. */
+    public ?string $confirming = null;
+
+    /** Reset only — the owner ticked that they know what a reset does. */
+    public bool $understood = false;
+
+    /** Correct — the past reading being fixed, and its new number / date. */
+    public ?int $editingId = null;
+
+    public string $editReading = '';
+
+    public string $editDate = '';
+
     public function mount(Unit $unit, PropertyUtility $utility): void
     {
         // A meter of another property — or a flat charge, which has no meter — isn't this room's.
@@ -58,6 +73,16 @@ class Meter extends Component
             'reading.min' => __('Enter a valid meter reading.'),
             'reading.max' => __('Enter a valid meter reading.'),
         ]);
+
+        $this->saved = null;
+        $this->confirming = 'save';
+    }
+
+    public function confirmSave(): void
+    {
+        abort_unless(Auth::user()?->can('create', UtilityUsage::class), 403);
+
+        $this->validate(['reading' => ['required', 'numeric', 'min:0', 'max:999999999']]);
 
         $date = now()->toDateString();
         $new = (float) $this->reading;
@@ -87,12 +112,22 @@ class Meter extends Component
         });
 
         $this->reading = '';
+        $this->confirming = null;
         $this->saved = __('Meter reading saved.');
+    }
+
+    /** Back from any "are you sure?" step without changing anything. */
+    public function backFromConfirm(): void
+    {
+        $this->confirming = null;
+        $this->understood = false;
     }
 
     public function openReset(): void
     {
         $this->resetting = true;
+        $this->confirming = null;
+        $this->understood = false;
         $this->resetTo = '0';
         $this->saved = null;
     }
@@ -100,6 +135,8 @@ class Meter extends Component
     public function cancelReset(): void
     {
         $this->resetting = false;
+        $this->confirming = null;
+        $this->understood = false;
         $this->resetTo = '';
         $this->resetErrorBag();
     }
@@ -115,11 +152,100 @@ class Meter extends Component
             'resetTo.max' => __('Enter a valid meter reading.'),
         ]);
 
+        $this->confirming = 'reset';
+        $this->understood = false;
+    }
+
+    public function applyReset(): void
+    {
+        abort_unless(Auth::user()?->can('create', UtilityUsage::class), 403);
+
+        $this->validate(['resetTo' => ['required', 'numeric', 'min:0', 'max:999999999']]);
+
+        if (! $this->understood) {
+            $this->addError('understood', __('Tick the box to confirm.'));
+
+            return;
+        }
+
         app(UtilityReadingResetService::class)->reset($this->unit, $this->utility->id, (float) $this->resetTo, now()->toDateString());
 
         $this->resetting = false;
+        $this->confirming = null;
+        $this->understood = false;
         $this->resetTo = '';
         $this->saved = __('Meter reset. The next reading starts from here.');
+    }
+
+    /** Correct — open a past reading to fix its number (or date), e.g. back to last month's. */
+    public function edit(int $usageId): void
+    {
+        $usage = $this->scopedUsage($usageId);
+        abort_unless(Auth::user()?->can('update', $usage), 403);
+
+        if (! app(UtilityReadingCorrectionService::class)->isEditable($usage)) {
+            return;
+        }
+
+        $this->resetErrorBag();
+        $this->saved = null;
+        $this->confirming = null;
+        $this->editingId = $usage->getKey();
+        $this->editReading = rtrim(rtrim(number_format((float) $usage->new_reading, 3, '.', ''), '0'), '.');
+        $this->editDate = $usage->reading_date->toDateString();
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->editingId = null;
+        $this->confirming = null;
+        $this->resetErrorBag();
+    }
+
+    /** Re-chains every later reading and refuses anything already billed (see the service). */
+    public function saveEdit(): void
+    {
+        $usage = $this->scopedUsage((int) $this->editingId);
+        abort_unless(Auth::user()?->can('update', $usage), 403);
+
+        $this->validate([
+            'editReading' => ['required', 'numeric', 'min:0', 'max:999999999'],
+            'editDate' => ['required', 'date', 'before_or_equal:today'],
+        ]);
+
+        $this->confirming = 'edit';
+    }
+
+    public function applyEdit(): void
+    {
+        $usage = $this->scopedUsage((int) $this->editingId);
+        abort_unless(Auth::user()?->can('update', $usage), 403);
+
+        $this->validate([
+            'editReading' => ['required', 'numeric', 'min:0', 'max:999999999'],
+            'editDate' => ['required', 'date', 'before_or_equal:today'],
+        ]);
+
+        try {
+            app(UtilityReadingCorrectionService::class)->apply($usage, (float) $this->editReading, $this->editDate, null, true);
+        } catch (ValidationException $e) {
+            $this->addError('editReading', collect($e->errors())->flatten()->first());
+            $this->confirming = null;
+
+            return;
+        }
+
+        $this->editingId = null;
+        $this->confirming = null;
+        $this->saved = __('Meter reading saved.');
+    }
+
+    private function scopedUsage(int $id): UtilityUsage
+    {
+        return UtilityUsage::query()
+            ->where('unit_id', $this->unit->id)
+            ->where('property_utility_id', $this->utility->id)
+            ->findOrFail($id);
     }
 
     public function render()
@@ -146,6 +272,7 @@ class Meter extends Component
             'hasPrevious' => $previous['source'] !== 'none',
             'used' => $used,
             'history' => $history,
+            'service' => app(UtilityReadingCorrectionService::class),
         ])->title(__($this->utility->name));
     }
 }

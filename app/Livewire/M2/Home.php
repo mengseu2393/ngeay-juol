@@ -132,6 +132,7 @@ class Home extends Component
             'due' => $due,
             'propertyNames' => $propertyNames,
             'showPropertyName' => $propertyNames->count() > 1,
+            'canAddRoom' => (bool) auth()->user()?->can('create', Unit::class) && Property::query()->exists(),
         ])->title(__('Home'));
     }
 }

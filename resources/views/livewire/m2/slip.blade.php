@@ -36,6 +36,18 @@
             <p class="m2-sub" style="margin-top:14px">{{ $invoice->payment_status->getLabel() }}</p>
         </article>
 
+        @if ($canShare)
+            <a
+                href="{{ $telegramUrl }}"
+                onclick="m2SaveInvoicePdf(this)"
+                data-pdf-url="{{ route('invoices.pdf', ['invoice' => $invoice->id]) }}"
+                data-filename="{{ $shareFilename }}"
+                class="m2-btn is-telegram m2-noprint"
+                id="m2-slip-share"
+            >{{ __('Share to Telegram') }}</a>
+            <p class="m2-muted m2-sm m2-noprint" style="margin:0;text-align:center">{{ __('The PDF is saved to your phone. Attach it in the Telegram chat.') }}</p>
+        @endif
+
         <div class="m2-grid2 m2-noprint">
             <button type="button" class="m2-btn is-ghost" onclick="window.print()" id="m2-slip-print">{{ __('Print') }}</button>
             <a href="{{ route('invoices.pdf', ['invoice' => $invoice->id, 'mode' => 'stream']) }}" class="m2-btn" id="m2-slip-pdf">{{ __('PDF') }}</a>

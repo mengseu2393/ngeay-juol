@@ -369,7 +369,7 @@ class PropertySettings extends Component
     // ── Internals ───────────────────────────────────────────────────────────
 
     /** The property, when this user may change it right now; otherwise a toast and null. */
-    private function writableProperty(): ?Property
+    protected function writableProperty(): ?Property
     {
         $property = $this->propertyId ? Property::query()->find($this->propertyId) : null;
         abort_unless($property !== null, 404);
@@ -385,19 +385,19 @@ class PropertySettings extends Component
         return $property;
     }
 
-    private function setting(): PropertySetting
+    protected function setting(): PropertySetting
     {
         return app(PropertySettingsService::class)->forProperty($this->propertyId);
     }
 
-    private function saved(string $sheet, string $message): void
+    protected function saved(string $sheet, string $message): void
     {
         $this->fillAll();
         $this->dispatch('rw-m-sheet-close', name: $sheet);
         $this->dispatch('rw-m-toast', message: $message);
     }
 
-    private function fillAll(): void
+    protected function fillAll(): void
     {
         $property = Property::query()->findOrFail($this->propertyId);
         $setting = $this->setting();
@@ -444,7 +444,7 @@ class PropertySettings extends Component
     }
 
     /** Metered utilities of this property — the only kind with an opening index (same as the panel). */
-    private function meteredUtilities(): Collection
+    protected function meteredUtilities(): Collection
     {
         return PropertyUtility::query()
             ->where('property_id', $this->propertyId)
@@ -454,7 +454,7 @@ class PropertySettings extends Component
             ->get();
     }
 
-    private function openingRows(): \Illuminate\Support\Collection
+    protected function openingRows(): \Illuminate\Support\Collection
     {
         $utility = $this->openingUtilityId ? $this->meteredUtilities()->firstWhere('id', $this->openingUtilityId) : null;
 
@@ -467,7 +467,7 @@ class PropertySettings extends Component
      *
      * @return array{city: array<string, string>, district: array<string, string>, commune: array<string, string>, village: array<string, string>}
      */
-    private function locationOptions(): array
+    protected function locationOptions(): array
     {
         $d = $this->details;
         $levels = [
@@ -487,7 +487,7 @@ class PropertySettings extends Component
     }
 
     /** "4100.0000" → "4100", "1.50" → "1.5". */
-    private static function plainNumber(mixed $value): string
+    protected static function plainNumber(mixed $value): string
     {
         $value = (string) $value;
 

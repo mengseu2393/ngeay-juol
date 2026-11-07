@@ -2,10 +2,10 @@
 
 namespace App\Livewire\M2;
 
-use App\Providers\Filament\LandlordPanelProvider;
+use App\Models\PropertyUtility;
 use App\Services\PropertySetupService;
+use App\Support\ActiveProperty;
 use App\Support\M2Shell;
-use App\Support\MobileShell;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -15,10 +15,10 @@ use Livewire\Component;
  * account, links to property and utility settings, profile, the language switch
  * and sign out; the same options as the old /m Settings tab.
  *
- * Property settings, Add property and Utility rates are not rebuilt in /m2: they
- * open the existing screens — /m's when the /m flag lets this user in, otherwise
- * the landlord panel's own pages. Nothing stateful here: language links and the
- * sign-out form are full page loads (they change the session).
+ * Property settings, Add property and Utility rates open their /m2 screens
+ * (M2\PropertySettings, M2\AddProperty, M2\UtilityRates). Nothing stateful
+ * here: language links and the sign-out form are full page loads (they change
+ * the session).
  */
 #[Layout('m2.layout')]
 class Settings extends Component
@@ -26,8 +26,7 @@ class Settings extends Component
     public function render()
     {
         $user = Auth::user();
-        $inMobileShell = MobileShell::isAvailableFor($user);
-        $panel = LandlordPanelProvider::PATH;
+        $propertyId = ActiveProperty::id();
 
         return view('livewire.m2.settings', [
             'user' => $user,
@@ -35,11 +34,10 @@ class Settings extends Component
             'locale' => app()->getLocale(),
             'locales' => ['en' => 'English', 'km' => 'ខ្មែរ'],
             'canAddProperty' => PropertySetupService::canAdd($user),
-            'links' => [
-                'property' => $inMobileShell ? route('mobile.property-settings') : url($panel.'/property-settings'),
-                'add' => $inMobileShell ? route('mobile.add-property') : url($panel.'/add-property'),
-                'rates' => $inMobileShell ? route('mobile.utility-rates') : url($panel.'/property-utilities'),
-            ],
+            'propertyName' => ActiveProperty::model()?->name,
+            'activeUtilities' => $propertyId
+                ? PropertyUtility::query()->where('property_id', $propertyId)->where('is_active', true)->count()
+                : null,
         ])->title(__('Settings'));
     }
 }

@@ -141,10 +141,13 @@ class AddProperty extends Component
 
         ActiveProperty::set($property->id);
 
-        $this->redirect(
-            $this->withRooms ? route('mobile.rooms') : route('mobile.property-settings'),
-            navigate: false,
-        );
+        $this->redirect($this->createdUrl(), navigate: false);
+    }
+
+    /** Where the new property opens: its rooms when some were made, otherwise its settings. */
+    protected function createdUrl(): string
+    {
+        return $this->withRooms ? route('mobile.rooms') : route('mobile.property-settings');
     }
 
     public function render()
@@ -165,7 +168,7 @@ class AddProperty extends Component
     }
 
     /** The plan's "maximum properties" message when the landlord is already at it, so they know before typing. */
-    private function propertyLimitMessage(): ?string
+    protected function propertyLimitMessage(): ?string
     {
         try {
             SubscriptionService::assertWithinPropertyCap(Auth::user());

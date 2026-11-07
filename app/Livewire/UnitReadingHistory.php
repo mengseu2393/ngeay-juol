@@ -21,7 +21,7 @@ use Livewire\Component;
  */
 class UnitReadingHistory extends Component
 {
-    private const PER_PAGE = 12;
+    protected const PER_PAGE = 12;
 
     public int $unitId;
 
@@ -155,7 +155,7 @@ class UnitReadingHistory extends Component
         $this->saved = true;
     }
 
-    private function unit(): ?Unit
+    protected function unit(): ?Unit
     {
         return Unit::query()
             ->when(ActiveProperty::id(), fn ($q) => $q->where('property_id', ActiveProperty::id()))
@@ -163,7 +163,7 @@ class UnitReadingHistory extends Component
             ->first();
     }
 
-    private function utilities()
+    protected function utilities()
     {
         $unit = $this->unit();
 

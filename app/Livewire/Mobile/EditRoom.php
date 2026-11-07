@@ -71,24 +71,10 @@ class EditRoom extends Component
 
         Gate::authorize('update', $this->unit);
 
-        $data = $this->validate([
-            'roomNumber' => ['required', 'string', 'max:255'],
-            'floorNumber' => ['nullable', 'string', 'max:255'],
-            'roomType' => ['required', 'string', 'max:255'],
-            'rentAmount' => ['required', 'numeric', 'min:0', 'max:9999999999'],
-            'rentCurrency' => ['required', Rule::in(['USD', 'KHR'])],
+        $data = $this->validate(RoomDetailsService::formRules() + [
             'status' => ['required', Rule::enum(UnitStatus::class)],
-            'maxOccupants' => ['nullable', 'integer', 'min:1', 'max:20'],
-            'description' => ['nullable', 'string', 'max:5000'],
-        ], [], [
-            'roomNumber' => __('Room number'),
-            'floorNumber' => __('Floor'),
-            'roomType' => __('Room type'),
-            'rentAmount' => __('Rent amount'),
-            'rentCurrency' => __('Currency'),
+        ], [], RoomDetailsService::formLabels() + [
             'status' => __('Status'),
-            'maxOccupants' => __('Max occupants'),
-            'description' => __('Notes'),
         ]);
 
         app(RoomDetailsService::class)->update($this->unit, [
@@ -164,6 +150,12 @@ class EditRoom extends Component
             return;
         }
 
+        $this->afterDelete();
+    }
+
+    /** Where the app goes once the room is gone. */
+    protected function afterDelete(): void
+    {
         $this->redirect(route('mobile.rooms'), navigate: true);
     }
 

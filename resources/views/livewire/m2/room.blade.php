@@ -45,18 +45,18 @@
                     </span>
                     {!! $chev !!}
                 </a>
-                @foreach ($coOccupants as $occupant)
-                    <div class="m2a-row is-static" wire:key="m2-occ-{{ $occupant->id }}">
-                        <span class="m2a-dot is-idle"></span>
-                        <span class="m2a-t">
-                            <b class="m2-trunc" style="display:block">{{ $occupant->occupant_name }}</b>
-                            <span>{{ $occupant->role === \App\Enums\OccupantRole::Dependent ? __('Dependent') : __('Co-tenant') }}</span>
-                        </span>
-                    </div>
-                @endforeach
             </div>
         @else
-            <div class="m2a-empty" id="m2-room-vacant">{{ __('Vacant') }}</div>
+            <div class="m2a-empty" id="m2-room-vacant">{{ $unit->status === \App\Enums\UnitStatus::Available ? __('Vacant') : __('No tenant') }}</div>
+            @if (! $canAddTenant && $unit->status !== \App\Enums\UnitStatus::Available)
+                <p class="m2-muted m2-sm" style="margin:0 4px" id="m2-room-not-available">{{ __('Room status: :status', ['status' => $unit->status->getLabel()]) }} — {{ __('This room is not available for a new tenant.') }}</p>
+            @endif
+            @if ($canMarkAvailable)
+                <button type="button" wire:click="markAvailable" class="m2-btn is-ghost" id="m2-room-mark-available">{{ __('Mark room as available') }}</button>
+            @endif
+            @if ($canAddTenant)
+                <a href="{{ route('m2.room.add-tenant', $unit) }}" wire:navigate class="m2-btn" id="m2-room-add-tenant">{{ __('Add tenant') }}</a>
+            @endif
         @endif
 
         {{-- ── Meters: E and W ── --}}
@@ -111,5 +111,9 @@
                 {!! $chev !!}
             </a>
         </div>
+
+        @if ($canEditRoom)
+            <a href="{{ route('m2.room.edit', $unit) }}" wire:navigate class="m2-btn is-ghost" id="m2-room-edit">{{ __('Edit room') }}</a>
+        @endif
     </main>
 </div>

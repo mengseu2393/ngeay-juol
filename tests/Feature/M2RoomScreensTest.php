@@ -4,21 +4,27 @@ namespace Tests\Feature;
 
 use App\Enums\BillingType;
 use App\Enums\InvoiceLineType;
+use App\Enums\InvoiceStatus;
 use App\Enums\RentalStatus;
+use App\Enums\UnitStatus;
 use App\Livewire\M2\Bill;
 use App\Livewire\M2\Room;
 use App\Livewire\M2\Slip;
 use App\Livewire\M2\Tenant;
 use App\Models\ChargeRule;
+use App\Models\Invoice;
 use App\Models\InvoiceLine;
+use App\Models\Unit;
+use App\Services\InvoicePdfService;
 use App\Support\ActiveProperty;
 use Carbon\Carbon;
 use Livewire\Livewire;
 
 /**
  * /m2's room-side screens — Room, Tenant, Service, Bill, Slip (sketches ②, ④,
- * ⑤ and the slip). All read-only: pinned here is what each one shows, and that a
- * flat charge and a meter can't be opened on each other's screen.
+ * ⑤ and the slip). Pinned here is what each one shows, and that a flat charge and
+ * a meter can't be opened on each other's screen; the writes have their own test
+ * classes (M2BillPaymentTest, M2EditRoomTest, M2EditTenantTest, M2TenantEndTest).
  */
 class M2RoomScreensTest extends M2TestCase
 {
@@ -205,6 +211,62 @@ class M2RoomScreensTest extends M2TestCase
             ->assertSee('$250.00');
     }
 
+    /**
+     * The button has to open the Telegram app itself, so it's a tg:// link and not the phone's share sheet.
+     * That link can't carry a file, so the same tap saves the PDF for attaching in the chat.
+     */
+    public function test_the_slip_opens_telegram_with_what_is_owed_and_saves_the_pdf(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $rental = $this->rental($landlord, $property, 'A-1', 'Dara');
+        $invoice = $this->invoice($rental, 'INV-77', 250);
+        $this->signIn($landlord, $property);
+
+        $message = __('Invoice :number — :room — :amount due :date', [
+            'number' => 'INV-77', 'room' => 'A-1', 'amount' => '$250.00', 'date' => Invoice::displayDate($invoice->due_date, 'd M Y'),
+        ]);
+
+        Livewire::test(Slip::class, ['invoice' => $invoice])
+            ->assertSeeHtml('id="m2-slip-share"')
+            ->assertSeeHtml('href="tg://msg?text='.rawurlencode($message).'"')
+            ->assertSeeHtml('onclick="m2SaveInvoicePdf(this)"')
+            ->assertSeeHtml('data-pdf-url="'.route('invoices.pdf', ['invoice' => $invoice->id]).'"')
+            ->assertSeeHtml('data-filename="'.InvoicePdfService::filename($invoice, 'pdf').'"');
+
+        // The saving script comes with the layout: without it the tap would open Telegram with no PDF.
+        $this->get(route('m2.slip', $invoice))->assertOk()->assertSee('window.m2SaveInvoicePdf', false);
+    }
+
+    /** "Pay $0.00 by…" would send a tenant who has paid the wrong message. */
+    public function test_a_paid_bill_is_shared_as_paid(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $rental = $this->rental($landlord, $property, 'A-1', 'Dara');
+        $invoice = $this->invoice($rental, 'INV-77', 250);
+        $this->signIn($landlord, $property);
+        $invoice->recordPayment(['amount' => 250, 'currency' => 'USD']);
+
+        Livewire::test(Slip::class, ['invoice' => $invoice->fresh()])
+            ->assertSeeHtml('id="m2-slip-share"')
+            ->assertSeeHtml('href="tg://msg?text='.rawurlencode(__('Invoice :number — :room — paid', ['number' => 'INV-77', 'room' => 'A-1'])).'"');
+    }
+
+    /** A tenant would read a cancelled bill as still owed. */
+    public function test_a_cancelled_bill_cannot_be_shared(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $rental = $this->rental($landlord, $property, 'A-1', 'Dara');
+        $invoice = $this->invoice($rental, 'INV-77', 250, InvoiceStatus::Cancelled);
+        $this->signIn($landlord, $property);
+
+        Livewire::test(Slip::class, ['invoice' => $invoice])
+            ->assertDontSeeHtml('id="m2-slip-share"')
+            ->assertSeeHtml('id="m2-slip-pdf"');
+    }
+
     private function line($invoice, string $description, float $amount): InvoiceLine
     {
         return InvoiceLine::create([
@@ -222,5 +284,33 @@ class M2RoomScreensTest extends M2TestCase
             'unit_price_khr' => $amount * 4000,
             'exchange_rate' => 4000,
         ]);
+    }
+
+    /**
+     * Why: a room set to Maintenance/Unavailable can't take a tenant, and /m2 had
+     * no way to flip it back, so the landlord was stuck with no "Add tenant" button.
+     */
+    public function test_an_unavailable_vacant_room_can_be_marked_available_then_gets_add_tenant(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $unit = Unit::create([
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'room_number' => 'C-302',
+            'room_type' => 'Standard',
+            'rent_amount' => 100,
+            'status' => UnitStatus::Unavailable,
+        ]);
+
+        $this->signIn($landlord, $property);
+
+        Livewire::test(Room::class, ['unit' => $unit])
+            ->assertSee(__('Mark room as available'))
+            ->assertDontSee(__('Add tenant'))
+            ->call('markAvailable')
+            ->assertSee(__('Add tenant'));
+
+        $this->assertSame(UnitStatus::Available, $unit->fresh()->status);
     }
 }

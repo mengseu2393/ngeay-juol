@@ -135,15 +135,33 @@ Route::prefix('m2')->name('m2.')->middleware([
 ])->group(function () {
     Route::get('/', M2\Home::class)->name('home');
     Route::get('dashboard', M2\Dashboard::class)->name('dashboard');
+    Route::get('dashboard/income', M2\DashboardIncome::class)->name('dashboard.income');
+    Route::get('dashboard/occupancy', M2\DashboardOccupancy::class)->name('dashboard.occupancy');
+    Route::get('dashboard/properties/{property}', M2\DashboardProperty::class)->name('dashboard.property');
+    Route::get('dashboard/rooms/{unit}', M2\DashboardRoom::class)->name('dashboard.room');
+    // 'new' before {unit}.
+    Route::get('rooms/new', M2\AddRoom::class)->name('add-room');
     Route::get('rooms/{unit}', M2\Room::class)->name('room');
     Route::get('rooms/{unit}/meter/{utility}', M2\Meter::class)->name('meter');
     Route::get('rooms/{unit}/service/{utility}', M2\Service::class)->name('service');
+    Route::get('rooms/{unit}/edit', M2\EditRoom::class)->name('room.edit');
+    Route::get('rooms/{unit}/tenant', M2\AddTenant::class)->name('room.add-tenant');
     Route::get('rooms/{unit}/bill', M2\Bill::class)->name('bill');
     Route::get('rooms/{unit}/invoice', M2\CreateInvoice::class)->name('invoice.create');
     Route::get('tenants/{rental}', M2\Tenant::class)->name('tenant');
+    Route::get('tenants/{rentalId}/edit', M2\TenantEdit::class)->whereNumber('rentalId')->name('tenant.edit');
     Route::get('invoices/{invoice}/slip', M2\Slip::class)->name('slip');
     Route::get('settings', M2\Settings::class)->name('settings');
     Route::get('settings/profile', M2\Profile::class)->name('profile');
+    // Property and utility settings, rebuilt in /m2 ('new' / 'history' before the {…} routes).
+    Route::get('settings/property', M2\PropertySettings::class)->name('property');
+    Route::get('settings/property/new', M2\AddProperty::class)->name('add-property');
+    Route::get('settings/property/{section}', M2\PropertySettings::class)
+        ->whereIn('section', M2\PropertySettings::SECTIONS)->name('property.section');
+    Route::get('settings/utilities', M2\UtilityRates::class)->name('utilities');
+    Route::get('settings/utilities/new', M2\UtilityRate::class)->name('utilities.new');
+    Route::get('settings/utilities/history', M2\UtilityReadingHistory::class)->name('utilities.history');
+    Route::get('settings/utilities/{utility}', M2\UtilityRate::class)->whereNumber('utility')->name('utilities.edit');
 });
 
 // ---------------------------------------------------------------------------

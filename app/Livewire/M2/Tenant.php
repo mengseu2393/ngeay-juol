@@ -19,7 +19,8 @@ use Livewire\Component;
  * "place of birth" has no column, so the tenant's address and nationality stand
  * in for it. The {rental} binding runs through the landlord scope.
  *
- * "End tenancy" lives here for the room's current tenant: a small confirm card
+ * "Edit tenant" opens M2\TenantEdit. "End tenancy" lives here for the room's
+ * current tenant: a small confirm card
  * (end date, how it ended, free the room) that runs the same rules as the /m
  * shell and Simple Mode ({@see EndsTenancy}).
  */
@@ -103,6 +104,7 @@ class Tenant extends Component
             'rental' => $rental,
             'genders' => ['male' => __('Male'), 'female' => __('Female'), 'other' => __('Other')],
             'photos' => $rental->getMedia('id_cards'),
+            'canEditTenant' => (bool) Auth::user()?->can('update', $rental),
             'coOccupants' => $rental->occupants->reject(fn ($o) => $o->role === OccupantRole::Primary),
             'avatar' => M2Shell::mediaUrl($rental->tenant?->getFirstMediaUrl('avatar')),
             'canEnd' => $this->canEnd(),

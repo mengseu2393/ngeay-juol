@@ -60,6 +60,18 @@
                 return new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
             } catch (e) { return file; }
         };
+
+        // The Slip's Telegram button is a tg:// link, which opens the app but can only carry text. So the tap
+        // also saves the PDF, for attaching in the chat. Here and not in the Slip's view: scripts in a page
+        // swapped in by wire:navigate don't run.
+        window.m2SaveInvoicePdf = window.m2SaveInvoicePdf || function (link) {
+            var a = document.createElement('a');
+            a.href = link.dataset.pdfUrl;
+            a.download = link.dataset.filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        };
     </script>
 
     <x-rw-fonts :preload="false" />
@@ -70,5 +82,14 @@
 </head>
 <body class="m2">
     {{ $slot }}
+
+    {{-- Toast: the `rw-m-toast` window event the shared /m logic dispatches, or a message flashed
+         before a redirect (session 'm2-toast'). Rendered with each page, so it survives wire:navigate. --}}
+    <div class="m2-toast" id="m2-toast" role="status" aria-live="polite"
+         x-data="{ msg: @js(session('m2-toast')), timer: null,
+                   show(m) { if (! m) { return; } this.msg = m; clearTimeout(this.timer); this.timer = setTimeout(() => { this.msg = null; }, 3200); } }"
+         x-init="show(msg)"
+         x-on:rw-m-toast.window="show($event.detail.message)"
+         x-show="msg" x-transition.opacity x-cloak x-text="msg" x-on:click="msg = null"></div>
 </body>
 </html>

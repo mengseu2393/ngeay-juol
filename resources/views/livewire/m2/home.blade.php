@@ -101,6 +101,11 @@
                     @endforeach
                 </div>
             @endif
+
+            @if ($canAddRoom)
+                {{-- Opened on a property, the room goes there; otherwise the form asks which one. --}}
+                <a href="{{ route('m2.add-room', $scoped ? ['property' => $propertyId] : []) }}" wire:navigate class="m2-btn is-ghost" style="margin-top:12px" id="m2-add-room">{{ __('Add room') }}</a>
+            @endif
         @endif
     </main>
 </div>

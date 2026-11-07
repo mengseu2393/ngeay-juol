@@ -12,9 +12,8 @@ use Livewire\Livewire;
 /**
  * /m2 Settings — what the round picture in every header opens (the old /m
  * Settings tab's options). Pinned: the picture is the way in, Settings has the
- * account / language / sign out, the three management rows go to the screens
- * that exist (/m's when its flag lets the user in, the panel's otherwise), and
- * Profile only ever edits the signed-in user.
+ * account / language / sign out, the property and utility rows open /m2's own
+ * screens, and Profile only ever edits the signed-in user.
  */
 class M2SettingsTest extends M2TestCase
 {
@@ -62,21 +61,29 @@ class M2SettingsTest extends M2TestCase
             ->assertSeeHtml("localStorage.setItem('theme', v)");
     }
 
-    public function test_property_and_utility_rows_open_the_panel_pages_unless_the_m_shell_is_on(): void
+    /**
+     * The property and utility rows used to leave the app for /m or the panel; they now stay in /m2
+     * whatever the /m flag says, and say which property / how many utilities are on.
+     */
+    public function test_property_and_utility_rows_stay_in_m2(): void
     {
         $landlord = $this->landlord();
-        $this->signIn($landlord, $this->property($landlord));
+        $property = $this->property($landlord, 'Sunrise Apartments');
+        $this->utility($property, 'Electricity');
+        $this->signIn($landlord, $property);
 
-        config(['mobile.enabled' => false]);
-        $this->get(route('m2.settings'))
-            ->assertSee(url('app/property-settings'), false)
-            ->assertSee(url('app/property-utilities'), false)
-            ->assertDontSee(route('mobile.property-settings'), false);
-
-        config(['mobile.enabled' => true]);
-        $this->get(route('m2.settings'))
-            ->assertSee(route('mobile.property-settings'), false)
-            ->assertSee(route('mobile.utility-rates'), false);
+        foreach ([false, true] as $mobileOn) {
+            config(['mobile.enabled' => $mobileOn]);
+            $this->get(route('m2.settings'))
+                ->assertOk()
+                ->assertSee(route('m2.property'), false)
+                ->assertSee(route('m2.utilities'), false)
+                ->assertSee('Sunrise Apartments')
+                ->assertSee(__(':count active', ['count' => 1]))
+                ->assertDontSee(route('mobile.property-settings'), false)
+                ->assertDontSee(url('app/property-settings'), false)
+                ->assertDontSee(url('app/property-utilities'), false);
+        }
     }
 
     public function test_profile_saves_the_signed_in_users_details(): void
