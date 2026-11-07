@@ -1,0 +1,19 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": null,
+    "installCommand": "PUPPETEER_SKIP_DOWNLOAD=1 npm ci",
+    "buildCommand": "npm run build",
+    "outputDirectory": "public",
+    "functions": {
+        "api/index.php": {
+            "runtime": "vercel-php@0.7.4",
+            "maxDuration": 30,
+            "excludeFiles": "{.git/**,node_modules/**,tests/**,storage/**,docs/**,graphify-out/**,ai-tasks/**,dol-ngai/**}"
+        }
+    },
+    "routes": [
+        { "src": "/index.php", "dest": "/api/index.php" },
+        { "handle": "filesystem" },
+        { "src": "/(.*)", "dest": "/api/index.php" }
+    ]
+}

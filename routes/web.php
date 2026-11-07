@@ -19,6 +19,7 @@ use App\Livewire\M2;
 use App\Livewire\Mobile;
 use App\Livewire\Mobile\Invoices as MobileInvoices;
 use App\Providers\Filament\LandlordPanelProvider;
+use App\Support\M2Shell;
 use App\Support\SimpleLandlordMode;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\AuthenticateSession;
@@ -26,6 +27,17 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
+    // config m2.default (the Vercel test deploy): straight into /m2, guests to sign-in.
+    if (config('m2.default')) {
+        if (! Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        if (M2Shell::isDefaultFor(Auth::user())) {
+            return redirect()->route('m2.home');
+        }
+    }
+
     return view('welcome');
 });
 

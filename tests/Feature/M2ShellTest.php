@@ -39,6 +39,40 @@ class M2ShellTest extends M2TestCase
         $this->get('/m2')->assertRedirect(route('login'));
     }
 
+    /**
+     * M2_DEFAULT makes /m2 the landing page (the Vercel test deploy), but only
+     * for users the flag lets in — anyone else keeps the normal routing rather
+     * than being sent to a 404.
+     */
+    public function test_m2_default_makes_m2_the_landing_page_for_users_it_lets_in(): void
+    {
+        config(['m2.default' => true, 'm2.enabled' => false, 'm2.testers' => ['owner@example.com']]);
+
+        $this->get('/')->assertRedirect(route('login'));
+        $this->assertSame('/m2', $this->getJson(route('manifest'))->json('start_url'));
+
+        $tester = $this->landlord('owner@example.com');
+        $tester->forceFill(['password' => bcrypt('secret-pass')])->save();
+        $this->post('/login', ['login' => 'owner@example.com', 'password' => 'secret-pass'])
+            ->assertRedirect(route('m2.home'));
+        $this->get('/')->assertRedirect(route('m2.home'));
+
+        auth()->logout();
+        $other = $this->landlord('other@example.com');
+        $other->forceFill(['password' => bcrypt('secret-pass')])->save();
+        $response = $this->post('/login', ['login' => 'other@example.com', 'password' => 'secret-pass']);
+        $this->assertStringNotContainsString('/m2', (string) $response->headers->get('Location'));
+    }
+
+    public function test_m2_default_is_off_unless_set(): void
+    {
+        $landlord = $this->landlord();
+        $this->signIn($landlord, $this->property($landlord));
+
+        $this->get('/')->assertOk();
+        $this->assertNotSame('/m2', $this->getJson(route('manifest'))->json('start_url'));
+    }
+
     public function test_every_m2_screen_opens_for_the_landlord(): void
     {
         $landlord = $this->landlord();

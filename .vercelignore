@@ -1,0 +1,23 @@
+# Rebuilt on Vercel (composer by vercel-php, npm by buildCommand)
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+
+# Secrets and local state — env vars go in the Vercel dashboard
+.env
+.env.*
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/app/*
+/bootstrap/cache/*.php
+
+# Not needed to run the app
+/tests
+/graphify-out
+/ai-tasks
+/dol-ngai
+/.git

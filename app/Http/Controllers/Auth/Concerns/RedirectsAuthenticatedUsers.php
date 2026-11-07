@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth\Concerns;
 
 use App\Providers\Filament\LandlordPanelProvider;
+use App\Support\M2Shell;
 use App\Support\MobileShell;
 use App\Support\SimpleLandlordMode;
 
@@ -33,6 +34,10 @@ trait RedirectsAuthenticatedUsers
 
         if ($user->isPlatformStaff()) {
             return redirect()->intended(route('filament.admin.pages.dashboard'));
+        }
+
+        if ($user->hasAnyRole(['landlord', 'landlord_manager']) && M2Shell::isDefaultFor($user)) {
+            return redirect()->intended(route('m2.home'));
         }
 
         if ($user->hasAnyRole(['landlord', 'landlord_manager']) && MobileShell::takesOver(request())) {

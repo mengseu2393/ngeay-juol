@@ -17,4 +17,11 @@ return [
         explode(',', (string) env('M2_TESTERS', '')),
     ))),
 
+    /*
+    | Make /m2 the landing page for everyone the flag above lets in: sign-in
+    | sends them to /m2, "/" goes to /m2 (guests to the sign-in page), and the
+    | installed app starts at /m2. For the Vercel test deploy (docs/VERCEL.md).
+    */
+    'default' => (bool) env('M2_DEFAULT', false),
+
 ];

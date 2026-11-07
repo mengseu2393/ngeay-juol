@@ -39,7 +39,7 @@ class ManifestController extends Controller
             'name' => 'ងាយជួល — ngeay juol',
             'short_name' => 'ងាយជួល',
             'description' => 'Landlord property management — simple daily tool for rental tracking in Cambodia.',
-            'start_url' => $mobile ? '/m' : '/login',
+            'start_url' => config('m2.default') ? '/m2' : ($mobile ? '/m' : '/login'),
             'scope' => '/',
             'display' => 'standalone',
             'orientation' => 'portrait-primary',
