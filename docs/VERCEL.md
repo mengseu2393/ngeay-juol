@@ -4,7 +4,8 @@ A throwaway deploy for testing the `/m2` phone app. **Not** for the full app or
 production — see `DEPLOYMENT.md` for that. Files: `vercel.json`, `api/index.php`,
 `.vercelignore`.
 
-Runs on the community `vercel-php@0.7.4` runtime (PHP 8.3). Every request goes to
+Runs in Vercel's Singapore region (`sin1`, next to the TiDB database — the default
+`iad1` adds ~200ms per query) on the community `vercel-php@0.7.4` runtime (PHP 8.3). Every request goes to
 `api/index.php`, which moves Laravel's `storage/` and `bootstrap/cache` files to
 `/tmp` (the only writable path) and trusts Vercel's proxy headers. Static files in
 `public/` (incl. `css/m2.css`, Filament assets, Vite's `public/build`) are served directly.
