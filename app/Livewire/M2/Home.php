@@ -100,7 +100,7 @@ class Home extends Component
             $due = $scoped ? RoomDueService::forProperty($propertyId) : RoomDueService::forAll();
 
             $rooms = Unit::query()
-                ->with('activeRental')
+                ->with(RoomDueService::withTenancyBills())
                 ->when($scoped, fn ($q) => $q->where('property_id', $propertyId))
                 ->get()
                 // Owing rooms first (longest-waiting on top), then the rest by property and room number.
@@ -119,7 +119,7 @@ class Home extends Component
             'total' => round((float) $rooms->sum(fn (Unit $r) => $due[$r->id]['balanceUsd'] ?? 0), 2),
             'late' => $rooms->filter(fn (Unit $r) => ($due[$r->id]['daysLate'] ?? 0) > 0)->count(),
             'soon' => $rooms->filter(fn (Unit $r) => $due->has($r->id) && $due[$r->id]['daysLate'] === 0)->count(),
-            'paid' => $rooms->filter(fn (Unit $r) => ! $due->has($r->id) && $r->activeRental)->count(),
+            'paid' => $rooms->filter(fn (Unit $r) => ! $due->has($r->id) && $r->activeRental?->bills_count)->count(),
         ];
 
         return view('livewire.m2.home', [

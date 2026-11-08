@@ -31,7 +31,7 @@
                     @php
                         $owing = $due->get($room->id);
                         $isLate = ($owing['daysLate'] ?? 0) > 0;
-                        $state = $owing ? ($isLate ? 'is-late' : 'is-soon') : ($room->activeRental ? 'is-ok' : 'is-idle');
+                        $state = $owing ? ($isLate ? 'is-late' : 'is-soon') : ($room->activeRental?->bills_count ? 'is-ok' : 'is-idle');
                     @endphp
                     <a href="{{ route('m2.dashboard.room', $room) }}" wire:navigate class="m2a-row" wire:key="m2-dash-room-{{ $room->id }}" id="m2-dash-room-{{ $room->id }}">
                         <span class="m2a-dot {{ $state }}"></span>
@@ -43,8 +43,10 @@
                             @if ($owing)
                                 <b class="m2-num">{{ Money::format($owing['balance'], $currency) }}</b>
                                 <span class="{{ $isLate ? 'is-late' : '' }}">{{ $isLate ? __(':days days late', ['days' => $owing['daysLate']]) : __('Due :date', ['date' => $owing['oldest']?->translatedFormat('d M')]) }}</span>
-                            @elseif ($room->activeRental)
+                            @elseif ($room->activeRental?->bills_count)
                                 <span class="m2a-chip is-ok">{{ __('Paid up') }}</span>
+                            @elseif ($room->activeRental)
+                                <span class="m2a-chip is-idle">{{ __('No bill yet') }}</span>
                             @else
                                 <span class="m2a-chip is-idle">{{ __('Vacant') }}</span>
                             @endif

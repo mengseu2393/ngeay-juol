@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
+use App\Livewire\M2\DashboardProperty;
 use App\Livewire\M2\Home;
 use App\Support\ActiveProperty;
 use Carbon\Carbon;
@@ -32,6 +33,32 @@ class M2HomeTest extends M2TestCase
             ->assertViewHas('rooms', fn ($rooms) => $rooms->pluck('room_number')->all() === ['A-2', 'A-3', 'A-1'])
             ->assertSee(__(':days days late', ['days' => 35]))
             ->assertSee(__(':days days late', ['days' => 1]));
+    }
+
+    /**
+     * Owing nothing isn't the same as having paid: a tenancy that has never been billed (or only
+     * has a cancelled bill) showed "Paid up" (បានបង់ហើយ) on Home and on the dashboard's property
+     * list. The owner flagged it; such a room now reads "No bill yet" until its first invoice.
+     */
+    public function test_a_tenant_without_any_invoice_is_no_bill_yet_not_paid_up(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $unbilled = $this->rental($landlord, $property, 'A-1', 'Dara');
+        $cancelledOnly = $this->rental($landlord, $property, 'A-2', 'Sokha');
+        $this->invoice($cancelledOnly, 'INV-C', 300, InvoiceStatus::Cancelled);
+        $paid = $this->rental($landlord, $property, 'A-3', 'Vanna');
+        $this->invoice($paid, 'INV-P', 300, InvoiceStatus::Paid);
+
+        $this->signIn($landlord, $property);
+
+        foreach ([Livewire::test(Home::class), Livewire::test(DashboardProperty::class, ['property' => $property])] as $screen) {
+            $html = $screen->html();
+            $this->assertSame(1, substr_count($html, '>'.__('Paid up').'<'));
+            $this->assertSame(2, substr_count($html, '>'.__('No bill yet').'<'));
+        }
+
+        Livewire::test(Home::class)->assertViewHas('summary', fn ($s) => $s['paid'] === 1);
     }
 
     /**

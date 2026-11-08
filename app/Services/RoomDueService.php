@@ -33,6 +33,20 @@ class RoomDueService
         return self::build(null);
     }
 
+    /**
+     * Eager-load for a room list: each room's active tenancy with `bills_count`,
+     * its invoices other than cancelled ones. Owing nothing only means "Paid up"
+     * once the tenancy has been billed; before its first invoice it is "No bill yet".
+     *
+     * @return array<string, \Closure>
+     */
+    public static function withTenancyBills(): array
+    {
+        return ['activeRental' => fn ($rental) => $rental->withCount([
+            'invoices as bills_count' => fn ($invoice) => $invoice->where('payment_status', '!=', InvoiceStatus::Cancelled->value),
+        ])];
+    }
+
     private static function build(?int $propertyId): Collection
     {
         $today = today();

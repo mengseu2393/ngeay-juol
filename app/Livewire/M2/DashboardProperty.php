@@ -24,7 +24,7 @@ class DashboardProperty extends Component
         $due = RoomDueService::forProperty($this->property->id);
 
         $rooms = Unit::query()
-            ->with('activeRental')
+            ->with(RoomDueService::withTenancyBills())
             ->where('property_id', $this->property->id)
             ->get()
             ->sort(fn (Unit $a, Unit $b) => ($due->has($b->id) <=> $due->has($a->id))

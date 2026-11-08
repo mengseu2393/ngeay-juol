@@ -78,7 +78,7 @@
                             $late = ($owed['daysLate'] ?? 0) > 0;
                             $tenant = $room->activeRental?->occupant_name;
                             $roomCurrency = Money::forPropertyId($room->property_id);
-                            $state = $owed ? ($late ? 'is-late' : 'is-soon') : ($room->activeRental ? 'is-ok' : 'is-idle');
+                            $state = $owed ? ($late ? 'is-late' : 'is-soon') : ($room->activeRental?->bills_count ? 'is-ok' : 'is-idle');
                         @endphp
                         <a href="{{ route('m2.room', $room) }}" wire:navigate wire:key="m2-room-{{ $room->id }}" class="m2a-row" id="m2-room-{{ $room->id }}">
                             <span class="m2a-dot {{ $state }}"></span>
@@ -90,8 +90,11 @@
                                 @if ($owed)
                                     <b class="m2-num">{{ Money::format($owed['balance'], $roomCurrency) }}</b>
                                     <span class="{{ $late ? 'is-late' : '' }}">{{ $late ? __(':days days late', ['days' => $owed['daysLate']]) : __('Due :date', ['date' => $owed['oldest']?->translatedFormat('d M')]) }}</span>
-                                @elseif ($room->activeRental)
+                                @elseif ($room->activeRental?->bills_count)
                                     <span class="m2a-chip is-ok">{{ __('Paid up') }}</span>
+                                @elseif ($room->activeRental)
+                                    {{-- A tenant but no invoice yet: nothing is owed, but nothing was paid either. --}}
+                                    <span class="m2a-chip is-idle">{{ __('No bill yet') }}</span>
                                 @else
                                     <span class="m2a-chip is-idle">{{ __('Vacant') }}</span>
                                 @endif
