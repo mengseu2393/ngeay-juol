@@ -76,8 +76,11 @@ class PropertyResource extends Resource
                                             && ! $livewire instanceof RelationManager),
                                     Forms\Components\TextInput::make('name')->required()->maxLength(255),
                                     Forms\Components\Select::make('property_type')
-                                        ->options(PropertyType::class)
-                                        ->default(PropertyType::Apartment)
+                                        // Only Room rental / Whole house are offered; a property saved
+                                        // as a retired kind (Condo, Villa, …) keeps its own as an option.
+                                        ->options(fn (?Property $record) => PropertyType::pickerOptions($record?->property_type))
+                                        ->enum(PropertyType::class)
+                                        ->default(PropertyType::default()->value)
                                         ->required(),
                                     Forms\Components\Textarea::make('description')->columnSpanFull(),
                                 ])->columns(2),

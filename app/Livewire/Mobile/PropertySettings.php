@@ -90,7 +90,7 @@ class PropertySettings extends Component
 
         $this->validate([
             'details.name' => ['required', 'string', 'max:255'],
-            'details.property_type' => ['required', Rule::in(array_keys(PropertyType::options()))],
+            'details.property_type' => ['required', Rule::in(array_keys(PropertyType::pickerOptions($property->property_type)))],
             'details.address_line' => ['nullable', 'string', 'max:255'],
             'details.city' => ['nullable', 'string', 'max:255'],
             'details.district' => ['nullable', 'string', 'max:255'],
@@ -354,7 +354,7 @@ class PropertySettings extends Component
         return view('livewire.mobile.property-settings', [
             'property' => $property,
             'setting' => $property ? $this->setting() : null,
-            'propertyTypes' => PropertyType::options(),
+            'propertyTypes' => PropertyType::pickerOptions($property?->property_type),
             'currencies' => PropertySettingsService::currencyOptions(),
             'billingModes' => FirstMonthBillingMode::options(),
             'presets' => PropertySettingsService::moveInPresetOptions(),
@@ -404,7 +404,7 @@ class PropertySettings extends Component
 
         $this->details = [
             'name' => (string) $property->name,
-            'property_type' => $property->property_type?->value ?? PropertyType::Apartment->value,
+            'property_type' => $property->property_type?->value ?? PropertyType::default()->value,
             'address_line' => (string) $property->address_line,
             'city' => (string) $property->city,
             'district' => (string) $property->district,

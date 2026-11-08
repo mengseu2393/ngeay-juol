@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\PlanBillingModel;
 use App\Enums\PlanInterval;
+use App\Enums\PropertyType;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
+use App\Filament\Resources\PropertyResource\Pages\EditProperty;
 use App\Models\Property;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
@@ -13,6 +15,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -30,6 +33,26 @@ class PropertyResourceTest extends TestCase
 
         $this->seed(RolesAndPermissionsSeeder::class);
         Filament::setCurrentPanel(Filament::getPanel('landlord'));
+    }
+
+    /**
+     * The type Select only offers Room rental / Whole house, but a property saved
+     * as a retired kind (Condo) must open and save without losing it.
+     */
+    public function test_the_edit_form_keeps_a_retired_property_type(): void
+    {
+        $landlord = $this->makeLandlord();
+        $property = Property::create(['landlord_id' => $landlord->id, 'name' => 'Old Condo', 'property_type' => PropertyType::Condo]);
+        $this->actingAs($landlord);
+
+        Livewire::test(EditProperty::class, ['record' => $property->getRouteKey()])
+            ->assertFormSet(['property_type' => PropertyType::Condo->value])
+            ->fillForm(['name' => 'Old Condo Renamed'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(PropertyType::Condo, $property->fresh()->property_type);
+        $this->assertSame('Old Condo Renamed', $property->fresh()->name);
     }
 
     public function test_from_simple_forces_the_table_into_card_view(): void

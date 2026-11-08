@@ -31,7 +31,7 @@ class AddProperty extends Component
 {
     public string $name = '';
 
-    public int|string $propertyType = PropertyType::Apartment->value;
+    public int|string $propertyType = '';
 
     public string $currency = 'USD';
 
@@ -59,6 +59,8 @@ class AddProperty extends Component
     public function mount(): void
     {
         abort_unless(PropertySetupService::canAdd(Auth::user()), 403);
+
+        $this->propertyType = PropertyType::default()->value;
 
         foreach (DefaultPropertyUtilitiesService::defaults() as $utility) {
             $this->rates[$utility['name']] = '';
@@ -92,7 +94,7 @@ class AddProperty extends Component
 
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'propertyType' => ['required', Rule::in(array_keys(PropertyType::options()))],
+            'propertyType' => ['required', Rule::in(array_keys(PropertyType::pickerOptions()))],
             'currency' => ['required', Rule::in(PropertySetupService::currencies())],
             'addressLine' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],
@@ -153,7 +155,7 @@ class AddProperty extends Component
     public function render()
     {
         return view('livewire.mobile.add-property', [
-            'propertyTypes' => PropertyType::options(),
+            'propertyTypes' => PropertyType::pickerOptions(),
             'limitMessage' => $this->propertyLimitMessage(),
             'utilities' => collect(DefaultPropertyUtilitiesService::defaults())->map(fn (array $utility) => $utility + [
                 'label' => UtilityCatalog::label($utility['name']),

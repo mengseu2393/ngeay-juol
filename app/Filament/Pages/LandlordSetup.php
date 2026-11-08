@@ -374,7 +374,7 @@ class LandlordSetup extends Page
         $this->properties = $properties->map(fn (Property $p) => [
             'id' => $p->id,
             'name' => $p->name,
-            'property_type' => $p->property_type?->value ?? PropertyType::Apartment->value,
+            'property_type' => $p->property_type?->value ?? PropertyType::default()->value,
             'address_line' => $p->address_line,
             'city' => $p->city,
             'district' => $p->district,
@@ -422,7 +422,7 @@ class LandlordSetup extends Page
         return [
             'id' => null,
             'name' => '',
-            'property_type' => PropertyType::Apartment->value,
+            'property_type' => PropertyType::default()->value,
             'address_line' => '',
             'city' => '',
             'district' => '',

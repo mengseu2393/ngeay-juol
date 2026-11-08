@@ -47,7 +47,7 @@ class MobileAddPropertyTest extends MobileTestCase
 
         Livewire::test(AddProperty::class)
             ->set('name', 'New Tower')
-            ->set('propertyType', PropertyType::Apartment->value)
+            ->set('propertyType', PropertyType::House->value)
             ->set('currency', 'KHR')
             ->set('city', 'Phnom Penh')
             ->set('rates.Electricity', '1000')

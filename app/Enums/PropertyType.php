@@ -18,7 +18,7 @@ enum PropertyType: int implements HasLabel
     {
         return match ($this) {
             self::Apartment => __('Apartment'),
-            self::House => __('House'),
+            self::House => __('Whole house'),
             self::Condo => __('Condominium'),
             self::Villa => __('Villa'),
             self::Commercial => __('Commercial'),
@@ -27,7 +27,42 @@ enum PropertyType: int implements HasLabel
         };
     }
 
-    /** @return array<int, string> */
+    /**
+     * The two kinds a landlord picks from when adding or editing a property: a whole
+     * house let as one, or a house split into rooms. The owner dropped the rest
+     * (Condo, Villa, …) from the pickers; they stay as cases because properties
+     * saved earlier still carry them, and filters/labels must keep reading them.
+     *
+     * @return list<self>
+     */
+    public static function offered(): array
+    {
+        return [self::RoomRental, self::House];
+    }
+
+    /** What a new property starts as. */
+    public static function default(): self
+    {
+        return self::RoomRental;
+    }
+
+    /**
+     * Picker options: the offered kinds, plus $current when it's a retired kind, so
+     * editing an old Condo property neither fails validation nor silently changes it.
+     *
+     * @return array<int, string>
+     */
+    public static function pickerOptions(self|int|string|null $current = null): array
+    {
+        $current = $current instanceof self ? $current : self::tryFrom((int) $current);
+
+        return collect(self::offered())
+            ->when($current && ! in_array($current, self::offered(), true), fn ($c) => $c->push($current))
+            ->mapWithKeys(fn (self $case) => [$case->value => $case->getLabel()])
+            ->all();
+    }
+
+    /** Every kind, for filters and lists over saved properties. @return array<int, string> */
     public static function options(): array
     {
         // "Other" stays last even though Room rental was added after it.

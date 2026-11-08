@@ -53,7 +53,7 @@
                 <div class="rw-setup-field">
                     <label class="rw-sm-label" for="p-{{ $i }}-type">{{ __('Property type') }}</label>
                     <select id="p-{{ $i }}-type" class="rw-sm-input" wire:model="properties.{{ $i }}.property_type">
-                        @foreach ($propertyTypes as $value => $label)
+                        @foreach (\App\Enums\PropertyType::pickerOptions($property['property_type'] ?? null) as $value => $label)
                             <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
                     </select>
