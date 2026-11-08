@@ -32,7 +32,7 @@ class M2MeterTest extends M2TestCase
             ->call('save')->call('confirmSave')
             ->assertHasNoErrors()
             ->assertSet('reading', '')
-            ->assertSee(__('Meter reading saved.'));
+            ->assertDispatched('rw-m-toast', message: __('Meter reading saved.'));
 
         $this->assertDatabaseHas('utility_usages', [
             'unit_id' => $unit->id,
@@ -98,7 +98,7 @@ class M2MeterTest extends M2TestCase
             ->call('confirmReset')->set('understood', true)->call('applyReset')
             ->assertHasNoErrors()
             ->assertSet('resetting', false)
-            ->assertSee(__('Meter reset. The next reading starts from here.'));
+            ->assertDispatched('rw-m-toast', message: __('Meter reset. The next reading starts from here.'));
 
         $this->assertDatabaseHas('utility_usages', [
             'unit_id' => $unit->id,

@@ -1903,6 +1903,6 @@
     "Sounds": "សំឡេង",
     "A short sound when something is saved or fails": "សំឡេងខ្លីៗ ពេលរក្សាទុកបាន ឬបរាជ័យ",
     "Vibration": "ញ័រ",
-    "A short buzz when something is saved or fails": "ញ័រខ្លីៗ ពេលរក្សាទុកបាន ឬបរាជ័យ",
+    "A short buzz on every tap, save or failure": "ញ័រខ្លីៗ រាល់ពេលចុច រក្សាទុក ឬបរាជ័យ",
     "Room is available for a new tenant.": "បន្ទប់អាចជួលបានសម្រាប់អ្នកជួលថ្មីហើយ។"
 }

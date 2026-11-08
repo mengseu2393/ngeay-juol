@@ -99,7 +99,7 @@ class M2SettingsTest extends M2TestCase
             ->set('phone_number', '012 000 111')
             ->call('saveInfo')
             ->assertHasNoErrors()
-            ->assertSee(__('Profile updated.'));
+            ->assertDispatched('rw-m-toast', message: __('Profile updated.'));
 
         $this->assertDatabaseHas('users', ['id' => $landlord->id, 'name' => 'Sophea Tao', 'phone_number' => '012 000 111']);
         $this->assertSame('Mobile Landlord', $other->fresh()->name);

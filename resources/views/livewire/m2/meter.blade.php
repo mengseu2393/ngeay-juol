@@ -13,10 +13,7 @@
     <x-m2.header :title="__('Room').' '.$unit->room_number" :subtitle="UtilityCatalog::label($utility->name)" :back="route('m2.room', $unit)" />
 
     <main class="m2-wrap m2a-main">
-        @if ($saved)
-            <div class="m2-notice is-ok" role="status" id="m2-meter-saved">{{ $saved }}</div>
-        @endif
-
+        {{-- Saves show as the top toast (m2-feedback.js), every time — not an inline box that stays put. --}}
         <div class="m2a-tiles">
             <div class="m2a-tile" id="m2-meter-begin">
                 <span class="k">{{ __('Begin') }}</span>

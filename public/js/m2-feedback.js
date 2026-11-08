@@ -12,7 +12,7 @@
  *   - Livewire responses: a method call that comes back with field errors (.m2-err) on
  *     screen is a failure (shake, first field pulsed); a failed request is a failure;
  *   - markup appearing after an update: [data-m2-feedback="big|success|error"],
- *     .m2-notice.is-ok (success), .m2-notice.is-bad (error).
+ *     .m2-notice.is-ok (success), .m2-notice.is-bad (error) — both also as a toast.
  *
  * Sound is synthesised with Web Audio (no files). Phones only allow it after a first tap,
  * so the context is unlocked on the first pointerdown. Vibration is Android-only.
@@ -82,7 +82,7 @@
     }
 
     // ── vibration (Android; iPhone browsers have none) ──────────────────────
-    var BUZZ = { success: [14], big: [14, 50, 22], money: [14, 40, 14, 40, 24], warning: [24], error: [32, 45, 32] };
+    var BUZZ = { tap: [10], success: [14], big: [14, 50, 22], money: [14, 40, 14, 40, 24], warning: [24], error: [32, 45, 32] };
     function buzz(kind) {
         if (!pref('m2-vibrate') || !navigator.vibrate) { return; }
         try { navigator.vibrate(BUZZ[kind] || 0); } catch (e) {}
@@ -167,7 +167,11 @@
     document.addEventListener('pointerdown', function (e) {
         audio(); // unlock sound on the first touch
         lastButton = e.target.closest && e.target.closest('.m2-btn');
+        var el = e.button > 0 ? null : pressable(e.target);
+        if (el) { pressIn(el); }
     }, true);
+    document.addEventListener('pointerup', pressOut, true);
+    document.addEventListener('pointercancel', pressOut, true); // the finger started a scroll
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && e.target.form) { lastButton = e.target.form.querySelector('.m2-btn[type=submit], button[type=submit].m2-btn'); }
     }, true);
@@ -180,6 +184,45 @@
         btn.classList.add('is-done');
         setTimeout(function () { btn.classList.remove('is-done'); }, 1000);
     }
+
+    // ── every tap (back, buttons, rows, links): a tiny buzz and a press-in ──
+    // Held, the thing sinks in (at least ~90ms, so a quick tap still shows), then springs back.
+    // Wide things (rows, full-width buttons) sink less than tiles, tiles less than small round ones (Back).
+    var PRESSABLE = 'button, a[href], [role="button"], label.m2a-row, .m2-btn, .m2-item, .m2a-row, .m2-seg > label';
+    function pressable(target) {
+        var el = target && target.closest ? target.closest(PRESSABLE) : null;
+        if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true'
+            || el.classList.contains('is-static') || el.closest('.m2-toast')) { return null; }
+        return el;
+    }
+    var pressedEl = null;
+    var pressedAt = 0;
+    function pressIn(el) {
+        el.classList.remove('m2-unpress');
+        var w = el.offsetWidth;
+        el.style.setProperty('--m2-press', w > 220 ? '.98' : (w > 100 ? '.95' : '.9'));
+        el.classList.add('m2-press');
+        pressedEl = el;
+        pressedAt = Date.now();
+    }
+    function pressOut() {
+        var el = pressedEl;
+        pressedEl = null;
+        if (!el) { return; }
+        setTimeout(function () {
+            el.classList.remove('m2-press');
+            el.classList.add('m2-unpress');
+            setTimeout(function () { el.classList.remove('m2-unpress'); }, 320);
+        }, Math.max(0, 90 - (Date.now() - pressedAt)));
+    }
+    // On click, not pointerdown: phones only allow vibrate() inside a real tap. One buzz per tap
+    // (a label's click also clicks its checkbox).
+    var lastTap = 0;
+    document.addEventListener('click', function (e) {
+        if (!pressable(e.target) || Date.now() - lastTap < 150) { return; }
+        lastTap = Date.now();
+        buzz('tap');
+    }, true);
 
     // ── one feedback per moment: the strongest kind wins ────────────────────
     var pending = null;
@@ -237,7 +280,7 @@
         var marked = el.matches('[data-m2-feedback]') ? el : el.querySelector('[data-m2-feedback]');
         if (marked) { notify(marked.getAttribute('data-m2-feedback'), marked.getAttribute('data-m2-feedback-message') || null); return; }
         var ok = el.matches('.m2-notice.is-ok') ? el : el.querySelector('.m2-notice.is-ok');
-        if (ok) { notify('success', null); return; }
+        if (ok) { notify('success', ok.textContent.trim()); return; }
         var bad = el.matches('.m2-notice.is-bad') ? el : el.querySelector('.m2-notice.is-bad');
         if (bad) { notify('error', bad.textContent.trim()); }
     }

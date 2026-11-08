@@ -70,7 +70,7 @@
                     @endforeach
                 </span>
             </div>
-            {{-- Sound and vibration for saves / failures (public/js/m2-feedback.js). Per device, in localStorage;
+            {{-- Sound for saves / failures, vibration for those and every tap (public/js/m2-feedback.js). Per device, in localStorage;
                  on by default. Vibration only shows where the browser has it (not iPhone). --}}
             <label class="m2a-row" for="m2-settings-sound" id="m2-settings-sound-row"
                    x-data="{ on: window.m2Feedback ? window.m2Feedback.pref('m2-sound') : true }">
@@ -83,7 +83,7 @@
                    x-data="{ on: window.m2Feedback ? window.m2Feedback.pref('m2-vibrate') : true }"
                    x-show="window.m2Feedback && window.m2Feedback.canVibrate" x-cloak>
                 <x-m2.icon name="phone" class="is-w" />
-                <span class="m2a-t"><b>{{ __('Vibration') }}</b><span>{{ __('A short buzz when something is saved or fails') }}</span></span>
+                <span class="m2a-t"><b>{{ __('Vibration') }}</b><span>{{ __('A short buzz on every tap, save or failure') }}</span></span>
                 <input type="checkbox" role="switch" class="m2a-sw" id="m2-settings-vibrate" x-model="on"
                        x-on:change="window.m2Feedback && (window.m2Feedback.setPref('m2-vibrate', on), on && window.m2Feedback.buzz('success'))">
             </label>

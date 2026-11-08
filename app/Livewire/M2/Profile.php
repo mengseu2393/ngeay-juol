@@ -15,12 +15,33 @@ use Livewire\Attributes\Layout;
 #[Layout('m2.layout')]
 class Profile extends SimpleProfile
 {
+    /** Each save is a toast at the top (sound, buzz), every time — not an inline box that stays put. */
+    public function saveInfo(): void
+    {
+        parent::saveInfo();
+
+        if ($this->infoSaved) {
+            $this->dispatch('rw-m-toast', message: __('Profile updated.'));
+        }
+    }
+
     public function saveAvatar(): void
     {
         parent::saveAvatar();
 
         // Re-render in place: drop the already-loaded media or the old photo would keep showing.
         Auth::user()->unsetRelation('media');
+
+        $this->dispatch('rw-m-toast', message: __('Profile photo updated.'));
+    }
+
+    public function savePassword(): void
+    {
+        parent::savePassword();
+
+        if ($this->passwordSaved) {
+            $this->dispatch('rw-m-toast', message: __('Password updated.'));
+        }
     }
 
     public function render()

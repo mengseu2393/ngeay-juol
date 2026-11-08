@@ -32,7 +32,6 @@
             @error('avatarPhoto') <p class="m2-err" data-m2-feedback="error" data-m2-feedback-message="{{ $message }}">{{ $message }}</p> @enderror
         </section>
 
-        @if ($infoSaved)<div class="m2-notice is-ok" role="status" id="m2-profile-info-saved">{{ __('Profile updated.') }}</div>@endif
 
         <h2 class="m2a-h">{{ __('Information') }}</h2>
         <form wire:submit="saveInfo" class="m2a-card" id="m2-profile-info">
@@ -97,7 +96,6 @@
             </button>
         </form>
 
-        @if ($passwordSaved)<div class="m2-notice is-ok" role="status" id="m2-profile-password-saved">{{ __('Password updated.') }}</div>@endif
 
         <h2 class="m2a-h">{{ __('Password') }}</h2>
         <form wire:submit="savePassword" class="m2a-card" id="m2-profile-password">

@@ -39,8 +39,6 @@ class Meter extends Component
 
     public bool $resetting = false;
 
-    public ?string $saved = null;
-
     /** Which change is waiting for a "yes, really": 'save' | 'reset' | 'edit' | null. */
     public ?string $confirming = null;
 
@@ -74,7 +72,6 @@ class Meter extends Component
             'reading.max' => __('Enter a valid meter reading.'),
         ]);
 
-        $this->saved = null;
         $this->confirming = 'save';
     }
 
@@ -113,7 +110,7 @@ class Meter extends Component
 
         $this->reading = '';
         $this->confirming = null;
-        $this->saved = __('Meter reading saved.');
+        $this->dispatch('rw-m-toast', message: __('Meter reading saved.'));
     }
 
     /** Back from any "are you sure?" step without changing anything. */
@@ -129,7 +126,6 @@ class Meter extends Component
         $this->confirming = null;
         $this->understood = false;
         $this->resetTo = '0';
-        $this->saved = null;
     }
 
     public function cancelReset(): void
@@ -174,7 +170,7 @@ class Meter extends Component
         $this->confirming = null;
         $this->understood = false;
         $this->resetTo = '';
-        $this->saved = __('Meter reset. The next reading starts from here.');
+        $this->dispatch('rw-m-toast', message: __('Meter reset. The next reading starts from here.'));
     }
 
     /** Correct — open a past reading to fix its number (or date), e.g. back to last month's. */
@@ -188,7 +184,6 @@ class Meter extends Component
         }
 
         $this->resetErrorBag();
-        $this->saved = null;
         $this->confirming = null;
         $this->editingId = $usage->getKey();
         $this->editReading = rtrim(rtrim(number_format((float) $usage->new_reading, 3, '.', ''), '0'), '.');
@@ -237,7 +232,7 @@ class Meter extends Component
 
         $this->editingId = null;
         $this->confirming = null;
-        $this->saved = __('Meter reading saved.');
+        $this->dispatch('rw-m-toast', message: __('Meter reading saved.'));
     }
 
     private function scopedUsage(int $id): UtilityUsage
