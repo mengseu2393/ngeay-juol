@@ -18,6 +18,46 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-title" content="ងាយជួល">
+    <link rel="manifest" href="/manifest.json">
+
+    {{-- PWA. Here and not in a screen: scripts in a page swapped in by wire:navigate don't run, and
+         beforeinstallprompt fires once at load — Settings' "Install app" row reads window.m2InstallPrompt.
+         The worker is registered when the browser is idle so it never competes with the first paint; once
+         ready, it is handed this page's css/js/font URLs to cache (they were fetched before it existed),
+         so the next launch loads them from the phone. Pages themselves are never cached (public/sw.js). --}}
+    <script>
+        (function () {
+            if (window.__m2PwaBound) { return; }
+            window.__m2PwaBound = true;
+
+            window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                window.m2InstallPrompt = e;
+                window.dispatchEvent(new Event('m2-install-ready'));
+            });
+            window.addEventListener('appinstalled', function () {
+                window.m2InstallPrompt = null;
+                window.dispatchEvent(new Event('m2-install-ready'));
+            });
+
+            if (!('serviceWorker' in navigator)) { return; }
+            var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1500); };
+            window.addEventListener('load', function () {
+                idle(function () {
+                    navigator.serviceWorker.register('/sw.js').catch(function () {});
+                    navigator.serviceWorker.ready.then(function (reg) {
+                        if (!reg.active) { return; }
+                        var urls = [@js(asset('fonts/kantumruy-pro-khmer-efd3b52e.woff2'))];
+                        document.querySelectorAll('link[rel="stylesheet"][href], script[src]').forEach(function (el) {
+                            urls.push(el.href || el.src);
+                        });
+                        reg.active.postMessage({ type: 'm2-warm', urls: urls });
+                    }).catch(function () {});
+                });
+            });
+        })();
+    </script>
 
     {{-- Theme before first paint (same localStorage key as the panels and /m). It is applied again after every
          wire:navigate page swap, and when another tab changes the choice, so Dark chosen in Settings holds on Home. --}}

@@ -7,12 +7,17 @@
  *   - Google Fonts: cache-first, 1-year TTL
  *   - Financial routes (invoices, payments, billing, tenants, rentals, subscription): network-only (NEVER cached)
  *   - Livewire / API / POST: network-only (pass-through)
- *   - All other navigations: network-first → /offline.html fallback
+ *   - All other navigations: network-first → /offline.html fallback, NEVER stored
+ *     (this covers every /m2 screen: a bill or slip is never shown from cache)
+ *   - Livewire's own JS (/livewire/livewire.min.js?id=<hash>): cache-first — versioned by ?id=
+ *   - Navigation preload is on: the page request starts while the worker boots
+ *   - 'm2-warm' message: the /m2 layout hands over its css/js/font URLs to cache after the
+ *     first visit (they were fetched before the worker existed)
  *
  * Financial data is NEVER cached for offline reads or writes.
  */
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const SHELL_CACHE   = `ngeay-juol-shell-${CACHE_VERSION}`;
 const FONT_CACHE    = `ngeay-juol-fonts-${CACHE_VERSION}`;
 
@@ -57,16 +62,44 @@ self.addEventListener('install', (event) => {
 // ── Activate: delete stale caches ───────────────────────────────
 self.addEventListener('activate', (event) => {
     const validCaches = [SHELL_CACHE, FONT_CACHE];
-    event.waitUntil(
+    event.waitUntil(Promise.all([
         caches.keys().then((names) =>
             Promise.all(
                 names
                     .filter((n) => !validCaches.includes(n))
                     .map((n) => caches.delete(n))
             )
-        )
-    );
+        ),
+        // Start the page request in parallel with the worker's boot instead of after it.
+        self.registration.navigationPreload
+            ? self.registration.navigationPreload.enable().catch(() => {})
+            : Promise.resolve(),
+    ]));
     self.clients.claim();
+});
+
+// ── Warm: cache the files a page already loaded (sent by the /m2 layout) ──
+self.addEventListener('message', (event) => {
+    const data = event.data || {};
+    if (data.type !== 'm2-warm' || !Array.isArray(data.urls)) return;
+    event.waitUntil((async () => {
+        const cache = await caches.open(SHELL_CACHE);
+        for (const href of data.urls.slice(0, 30)) {
+            let url;
+            try { url = new URL(href, self.location.origin); } catch { continue; }
+            if (url.origin !== self.location.origin) continue;
+            if (!(isStaticAsset(url) || isPanelAsset(url) || isLivewireScript(url))) continue;
+            const request = new Request(url.href, { credentials: 'same-origin' });
+            if (await cache.match(request)) continue;
+            try {
+                const response = await fetch(request);
+                if (response.ok) {
+                    await cache.put(request, response);
+                    await evictOtherVersions(cache, request);
+                }
+            } catch { /* offline or gone: the next real load caches it */ }
+        }
+    })());
 });
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -96,6 +129,16 @@ function isStaticAsset(url) {
         // Not /manifest.json: it is served by the app and follows the mobile
         // shell's flag (start_url), so it must come from the network.
     );
+}
+
+/**
+ * Livewire's script, served by PHP (on Vercel every fetch is a function call). Its URL
+ * carries ?id=<hash of the file>, so a Livewire upgrade is a new cache key: cache-first
+ * is safe. Checked before the network-only '/livewire' prefix, which stays for updates.
+ */
+function isLivewireScript(url) {
+    return (url.pathname === '/livewire/livewire.min.js' || url.pathname === '/livewire/livewire.js')
+        && url.searchParams.has('id');
 }
 
 function isGoogleFont(url) {
@@ -149,10 +192,16 @@ async function staleWhileRevalidate(request, cacheName) {
     return cached || fetchPromise;
 }
 
-async function networkFirstWithOfflineFallback(request) {
+/**
+ * Pages are never written to the cache: /m2 screens show money (bills, slips, dues),
+ * and an old copy of one must never be shown as current. Offline → /offline.html.
+ */
+async function networkFirstWithOfflineFallback(event) {
+    const request = event.request;
     try {
-        const response = await fetch(request);
-        return response;
+        const preloaded = await event.preloadResponse;
+        if (preloaded) return preloaded;
+        return await fetch(request);
     } catch {
         const cached = await caches.match(request);
         if (cached) return cached;
@@ -176,8 +225,21 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 3. Financial / dynamic routes: network-only, no caching
-    if (isNetworkOnly(url)) return;
+    // 3. Livewire's versioned script: cache-first (before the network-only '/livewire' rule)
+    if (isLivewireScript(url)) {
+        event.respondWith(cacheFirst(event.request, SHELL_CACHE));
+        return;
+    }
+
+    // 3b. Financial / dynamic routes: network-only, no caching. A navigation still answers with
+    //     the preloaded response — with navigation preload on, letting the browser fetch it again
+    //     would hit the server twice.
+    if (isNetworkOnly(url)) {
+        if (isNavigation(event.request)) {
+            event.respondWith((async () => (await event.preloadResponse) || fetch(event.request))());
+        }
+        return;
+    }
 
     // 4. Static assets: cache-first
     if (isStaticAsset(url)) {
@@ -199,7 +261,7 @@ self.addEventListener('fetch', (event) => {
 
     // 6. All other navigation (page requests): network-first → offline.html fallback
     if (isNavigation(event.request)) {
-        event.respondWith(networkFirstWithOfflineFallback(event.request));
+        event.respondWith(networkFirstWithOfflineFallback(event));
         return;
     }
 

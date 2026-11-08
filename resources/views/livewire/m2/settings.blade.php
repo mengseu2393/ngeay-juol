@@ -42,6 +42,39 @@
             </a>
         </div>
 
+        {{-- Install as an app. Android/Chrome: the browser's own prompt, captured at load by the layout
+             (window.m2InstallPrompt — beforeinstallprompt fires once, before this screen may be open).
+             iPhone has no prompt, only Share → Add to Home Screen, so it gets that hint instead.
+             Hidden once running installed, or where the browser can't install. --}}
+        <div id="m2-settings-install-section" x-cloak
+             x-data="{
+                installed: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+                ios: /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+                canPrompt: !!window.m2InstallPrompt,
+                async install() {
+                    var e = window.m2InstallPrompt;
+                    if (!e) { return; }
+                    e.prompt();
+                    try { await e.userChoice; } catch (err) {}
+                    window.m2InstallPrompt = null;
+                    this.canPrompt = false;
+                }
+             }"
+             x-on:m2-install-ready.window="canPrompt = !!window.m2InstallPrompt"
+             x-show="!installed && (canPrompt || ios)">
+            <h2 class="m2a-h">{{ __('App') }}</h2>
+            <div class="m2a-list">
+                <button type="button" class="m2a-row" id="m2-settings-install" x-show="canPrompt" x-on:click="install()">
+                    <x-m2.icon name="download" class="is-info" />
+                    <span class="m2a-t"><b>{{ __('Install app') }}</b><span>{{ __('Open it from your home screen, faster') }}</span></span>{!! $chev !!}
+                </button>
+                <div class="m2a-row is-static" id="m2-settings-install-ios" x-show="!canPrompt && ios">
+                    <x-m2.icon name="download" class="is-info" />
+                    <span class="m2a-t"><b>{{ __('Install app') }}</b><span>{{ __('Tap Share, then Add to Home Screen') }}</span></span>
+                </div>
+            </div>
+        </div>
+
         <h2 class="m2a-h">{{ __('Account') }}</h2>
         <div class="m2a-list">
             <a href="{{ route('m2.profile') }}" wire:navigate class="m2a-row" id="m2-settings-profile">

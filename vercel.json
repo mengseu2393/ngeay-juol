@@ -15,6 +15,7 @@
     "routes": [
         { "src": "/", "dest": "/api/index.php" },
         { "src": "/index.php", "dest": "/api/index.php" },
+        { "src": "/fonts/(.*)\\.woff2", "headers": { "Cache-Control": "public, max-age=31536000, immutable" }, "continue": true },
         { "handle": "filesystem" },
         { "src": "/(.*)", "dest": "/api/index.php" }
     ]
