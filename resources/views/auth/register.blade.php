@@ -33,8 +33,12 @@
         $error = 'text-xs text-red-600 dark:text-red-400 mt-1';
     @endphp
     <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen relative overflow-x-hidden">
-        <div class="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-emerald-400 glow-bg pointer-events-none"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-cyan-400 glow-bg pointer-events-none"></div>
+        {{-- Glows clipped in their own layer: sticking out past the screen edge made phones widen the
+             page, so it slid sideways (body overflow-x-hidden does not stop that on mobile). --}}
+        <div class="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+            <div class="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-emerald-400 glow-bg pointer-events-none"></div>
+            <div class="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-cyan-400 glow-bg pointer-events-none"></div>
+        </div>
 
         <main class="relative z-10 w-full max-w-md mx-auto px-4 py-6 sm:py-12">
             {{-- Brand --}}

@@ -49,8 +49,12 @@
     <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex items-center justify-center p-6 relative overflow-x-hidden transition-colors duration-300">
         
         <!-- Decorative Ambient Lights -->
-        <div class="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-emerald-400 glow-bg pointer-events-none"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-cyan-400 glow-bg pointer-events-none"></div>
+        {{-- Glows clipped in their own layer: sticking out past the screen edge made phones widen the
+             page, so it slid sideways (body overflow-x-hidden does not stop that on mobile). --}}
+        <div class="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+            <div class="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-emerald-400 glow-bg pointer-events-none"></div>
+            <div class="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-cyan-400 glow-bg pointer-events-none"></div>
+        </div>
 
         <!-- Main Card container -->
         <div class="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10 lg:min-h-[600px]">

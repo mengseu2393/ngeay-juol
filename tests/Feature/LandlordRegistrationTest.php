@@ -51,6 +51,20 @@ class LandlordRegistrationTest extends TestCase
             ->assertSee('data-rw-password-toggle="password"', false);
     }
 
+    /**
+     * On a phone these pages slid sideways: the two background glows stuck out past the right
+     * edge, and mobile browsers widen the page to fit them (body overflow-x-hidden doesn't stop
+     * that). They must sit inside their own clipping layer.
+     */
+    public function test_auth_page_glows_are_clipped_so_the_page_cannot_slide_sideways(): void
+    {
+        foreach ([route('register'), route('login'), route('password.request'), route('password.reset', ['token' => 'x'])] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSeeInOrder(['<div class="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">', 'right-[-10%]', '</div>', '</div>'], false);
+        }
+    }
+
     public function test_registering_with_a_phone_creates_a_ready_landlord_and_opens_the_setup_wizard(): void
     {
         $response = $this->post(route('register'), $this->payload([
