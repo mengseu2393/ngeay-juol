@@ -542,7 +542,27 @@ html.dark body.m2:has(.m2a) .m2-top { background: #07100c; }
 .m2a { --a-idle: #e6eee9; --a-shadow: 0 1px 2px rgba(15, 42, 31, .06), 0 8px 24px rgba(15, 42, 31, .08); }
 html.dark .m2a { --a-idle: #1a2c24; }
 .m2a svg.m2a-i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.m2a-top { display: flex; align-items: center; gap: 12px; padding-top: calc(env(safe-area-inset-top) + 18px); padding-bottom: 12px; }
+.m2a-top { padding-top: calc(env(safe-area-inset-top) + 14px); padding-bottom: 12px; }
+/* The welcome card (Home only): brand green fading into white, a soft light in the corner. */
+.m2a-welcome {
+    position: relative; overflow: hidden; padding: 14px 16px 18px; border-radius: 22px; color: #ffffff;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(255, 255, 255, .55) 0, rgba(255, 255, 255, 0) 55%),
+        linear-gradient(135deg, #0b7a55 0%, #1f9a6a 45%, #8fd4b2 80%, #f4fbf7 100%);
+    box-shadow: 0 1px 2px rgba(11, 122, 85, .12), 0 10px 28px rgba(11, 122, 85, .22);
+}
+html.dark .m2a-welcome {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(255, 255, 255, .16) 0, rgba(255, 255, 255, 0) 55%),
+        linear-gradient(135deg, #0d4a35 0%, #146347 50%, #2f8a66 85%, #6fbf9b 100%);
+    box-shadow: none;
+}
+.m2a-home-tag { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(255, 255, 255, .2); font-size: 12px; font-weight: 600; }
+.m2a-home-tag svg.m2a-i { width: 15px; height: 15px; }
+.m2a-welcome-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.m2a-welcome .m2a-name b { font-size: 20px; }
+.m2a-welcome .m2a-name small { color: rgba(255, 255, 255, .88); }
+.m2a-welcome .m2a-avatar { width: 52px; height: 52px; background: #ffffff; color: #0b7a55; box-shadow: 0 0 0 3px rgba(255, 255, 255, .45); font-size: 20px; }
 .m2a-avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--m2-brand-soft); color: var(--m2-brand); font-weight: 700; }
 .m2a-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .m2a-name { min-width: 0; display: flex; flex-direction: column; }

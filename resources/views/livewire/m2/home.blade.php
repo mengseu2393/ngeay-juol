@@ -12,13 +12,19 @@
         $chev = '<svg class="m2a-chev" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7"/></svg>';
     @endphp
 
+    {{-- The welcome card: green fading into white, with the owner's name, so Home is unmistakably the main screen. --}}
     <header class="m2a-top m2-wrap">
-        <a href="{{ route('m2.settings') }}" wire:navigate class="m2a-avatar" aria-label="{{ __('Settings') }}" id="m2-open-settings">
-            @if ($photo)<img src="{{ $photo }}" alt="">@else{{ mb_strtoupper(mb_substr($me->name ?? '?', 0, 1)) }}@endif
-        </a>
-        <div class="m2a-name">
-            <b>{{ $heroTitle }}</b>
-            <small class="m2a-sub">{{ $heroSub }}</small>
+        <div class="m2a-welcome" id="m2-welcome">
+            <span class="m2a-home-tag"><svg class="m2a-i" viewBox="0 0 24 24" aria-hidden="true"><path d="m2.25 12 8.954-8.955a1.126 1.126 0 0 1 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75"/></svg>{{ __('Home') }}</span>
+            <div class="m2a-welcome-row">
+                <a href="{{ route('m2.settings') }}" wire:navigate class="m2a-avatar" aria-label="{{ __('Settings') }}" id="m2-open-settings">
+                    @if ($photo)<img src="{{ $photo }}" alt="">@else{{ mb_strtoupper(mb_substr($me->name ?? '?', 0, 1)) }}@endif
+                </a>
+                <div class="m2a-name">
+                    <b>{{ $heroTitle }}</b>
+                    <small class="m2a-sub">{{ $heroSub }} · {{ now()->translatedFormat('l, j F') }}</small>
+                </div>
+            </div>
         </div>
     </header>
 

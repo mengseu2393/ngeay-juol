@@ -61,6 +61,19 @@ class M2HomeTest extends M2TestCase
         Livewire::test(Home::class)->assertViewHas('summary', fn ($s) => $s['paid'] === 1);
     }
 
+    /** The owner asked for a green-into-white card with their name on top, so Home reads as the main screen. */
+    public function test_home_opens_with_a_welcome_card_naming_the_owner(): void
+    {
+        $landlord = $this->landlord();
+        $landlord->update(['name' => 'Sophea Chan']);
+        $this->signIn($landlord, $this->property($landlord));
+
+        Livewire::test(Home::class)
+            ->assertSeeHtml('id="m2-welcome"')
+            ->assertSee(__('Hi, :name', ['name' => 'Sophea Chan']))
+            ->assertSee(__('Home'));
+    }
+
     /**
      * The room cards stay light: meter readings (E / W) live on the Room screen, not on Home. What is
      * owed shows as a thin strip along the card's bottom edge, and only for a room that owes.
@@ -124,7 +137,7 @@ class M2HomeTest extends M2TestCase
 
         Livewire::test(Home::class, ['scope' => 'property'])
             ->assertSeeHtml('<b>'.__('Hi, :name', ['name' => 'Mobile Landlord']).'</b>')
-            ->assertSeeHtml('<small class="m2a-sub">Son Sok Place</small>');
+            ->assertSeeHtml('<small class="m2a-sub">Son Sok Place · ');
     }
 
     public function test_choosing_a_property_opens_its_rooms(): void
