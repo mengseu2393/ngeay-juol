@@ -133,7 +133,9 @@ class M2EditTenantTest extends M2TestCase
 
         $media = $rental->fresh()->getMedia('id_cards');
         $this->assertCount(1, $media);
-        $this->assertSame('new.jpg', $media->first()->file_name);
+        // Stored under a generated name (a phone's file name can break a path); the original stays as its name.
+        $this->assertMatchesRegularExpression('/^id-card-[a-z0-9]{8}\.jpg$/', $media->first()->file_name);
+        $this->assertSame('new', $media->first()->name);
     }
 
     /** Media Library builds absolute URLs from APP_URL, which breaks the picture when the phone uses another address. */

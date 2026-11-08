@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Support\MediaUpload;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -131,9 +132,7 @@ class SimpleProfile extends Component
         // special characters) makes an unreliable path on some servers and object stores.
         $extension = $this->avatarPhoto->guessExtension() ?: 'jpg';
 
-        $user->addMedia($this->avatarPhoto->getRealPath())
-            ->usingFileName('avatar-'.Str::lower(Str::random(8)).'.'.$extension)
-            ->toMediaCollection('avatar');
+        MediaUpload::attach($user, $this->avatarPhoto, 'avatar', 'avatar-'.Str::lower(Str::random(8)).'.'.$extension);
 
         $this->reset('avatarPhoto');
 

@@ -33,6 +33,9 @@ class M2Shell
      * A stored photo's URL without the host. Media Library builds absolute URLs from APP_URL, which breaks
      * the picture (a broken-image icon) whenever the phone reaches the app by another address than APP_URL
      * — LAN IP vs 127.0.0.1 vs a tunnel. A path-only URL always resolves against the page's own host.
+     *
+     * Only this app's own files (/storage/…, the local public disk) lose their host. A photo kept in a
+     * bucket (MEDIA_DISK=s3, the Vercel deploy) lives on the bucket's host, so its URL stays whole.
      */
     public static function mediaUrl(?string $url): ?string
     {
@@ -42,6 +45,10 @@ class M2Shell
 
         $path = parse_url($url, PHP_URL_PATH);
 
-        return $path ? $path.(($q = parse_url($url, PHP_URL_QUERY)) ? '?'.$q : '') : $url;
+        if (! $path || ! str_starts_with($path, '/storage/')) {
+            return $url;
+        }
+
+        return $path.(($q = parse_url($url, PHP_URL_QUERY)) ? '?'.$q : '');
     }
 }

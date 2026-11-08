@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\M2\Home;
 use App\Livewire\M2\Profile;
 use App\Livewire\M2\Settings;
 use App\Support\M2Shell;
@@ -143,5 +144,32 @@ class M2SettingsTest extends M2TestCase
         $this->assertStringStartsWith('/', M2Shell::mediaUrl($url));
         $this->assertStringNotContainsString('://', M2Shell::mediaUrl($url));
         $this->assertNull(M2Shell::mediaUrl(''));
+    }
+
+    /**
+     * The Vercel deploy keeps photos in an R2/S3 bucket (MEDIA_DISK=s3): its disk is per-instance and
+     * wiped, so photos saved there vanished. A bucket photo's URL is on the bucket's own host and must
+     * stay absolute — stripping the host like a local /storage/ URL would point it at the app instead.
+     */
+    public function test_a_profile_photo_kept_in_a_bucket_keeps_the_buckets_url(): void
+    {
+        config(['media-library.disk_name' => 's3']);
+        Storage::fake('s3', ['url' => 'https://pub-test.r2.dev']);
+        $landlord = $this->landlord('owner@example.com');
+        $this->signIn($landlord, $this->property($landlord));
+
+        Livewire::test(Profile::class)
+            ->set('avatarPhoto', UploadedFile::fake()->image('my photo?.jpg', 800, 600))
+            ->assertHasNoErrors();
+
+        $media = $landlord->fresh()->getFirstMedia('avatar');
+        $this->assertSame('s3', $media->disk);
+        Storage::disk('s3')->assertExists($media->getPathRelativeToRoot());
+
+        $url = M2Shell::mediaUrl($media->getUrl());
+        $this->assertStringStartsWith('https://pub-test.r2.dev/', $url);
+        $this->assertStringNotContainsString('?', basename($url));
+
+        Livewire::test(Home::class)->assertSeeHtml('src="'.$url.'"');
     }
 }

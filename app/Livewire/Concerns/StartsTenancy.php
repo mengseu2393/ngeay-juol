@@ -7,6 +7,8 @@ use App\Livewire\SimpleAddTenant;
 use App\Models\Unit;
 use App\Services\StartTenancyService;
 use App\Support\ActiveProperty;
+use App\Support\MediaUpload;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -133,9 +135,9 @@ trait StartsTenancy
         $accountResult = $started['account'];
 
         foreach ($this->idCardPhotos as $photo) {
-            $rental->addMedia($photo->getRealPath())
-                ->usingFileName($photo->getClientOriginalName())
-                ->toMediaCollection('id_cards');
+            // A generated name, like the avatar's: a phone's own file name can carry characters
+            // ("?", "#", spaces) that make an unreliable path on disk or in a bucket.
+            MediaUpload::attach($rental, $photo, 'id_cards', 'id-card-'.Str::lower(Str::random(8)).'.'.($photo->guessExtension() ?: 'jpg'));
         }
 
         $this->result = [
