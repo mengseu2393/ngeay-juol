@@ -134,6 +134,8 @@ Route::prefix('m2')->name('m2.')->middleware([
     RedirectToLandlordSetup::class,
 ])->group(function () {
     Route::get('/', M2\Home::class)->name('home');
+    // The setup wizard after /register (RedirectToLandlordSetup lets this path through).
+    Route::get('setup', M2\Setup::class)->name('setup');
     Route::get('dashboard', M2\Dashboard::class)->name('dashboard');
     Route::get('dashboard/income', M2\DashboardIncome::class)->name('dashboard.income');
     Route::get('dashboard/occupancy', M2\DashboardOccupancy::class)->name('dashboard.occupancy');

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
+use Illuminate\Http\Request;
 
 /**
  * The /m2 app's feature flag (config/m2.php): on for every landlord-side user
@@ -27,6 +28,22 @@ class M2Shell
     public static function isDefaultFor(?User $user): bool
     {
         return config('m2.default') && self::isAvailableFor($user);
+    }
+
+    /**
+     * Whether a landlord still in the setup wizard does it in /m2 (/m2/setup) rather than the
+     * panel (/app/setup): when /m2 is their landing page, on a phone or the installed app, or
+     * when they are already in /m2 — always for a user the flag lets in. Desktop keeps the panel.
+     */
+    public static function runsSetupFor(Request $request): bool
+    {
+        if (! self::isAvailableFor($user = $request->user())) {
+            return false;
+        }
+
+        return self::isDefaultFor($user)
+            || DeviceSession::wantsLongSession($request)
+            || $request->is('m2', 'm2/*');
     }
 
     /**

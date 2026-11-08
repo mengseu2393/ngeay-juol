@@ -843,3 +843,41 @@ html.dark .m2-toast { background: #e8f5ee; color: #0b241a; }
 .m2-pw .m2-input { padding-right: 48px; }
 .m2-pw-eye { position: absolute; top: 0; right: 0; bottom: 0; width: 48px; display: grid; place-items: center; border: 0; background: transparent; color: var(--m2-muted); cursor: pointer; }
 .m2-pw-eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ══ Setup wizard (/m2/setup): progress card, one step per screen, Back / Next pinned at the bottom ══ */
+.m2-setup-main { padding-bottom: calc(env(safe-area-inset-bottom) + 150px); }
+.m2-setup-meta { display: flex; align-items: center; gap: 10px; }
+.m2-setup-meta b { font-size: 16px; font-weight: 700; }
+.m2-setup-track { height: 8px; margin-top: 14px; border-radius: 99px; background: rgba(255, 255, 255, .35); overflow: hidden; }
+.m2-setup-track > i { display: block; height: 100%; border-radius: 99px; background: #ffffff; transition: width .3s; }
+.m2-setup-steps { display: flex; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; overflow-x: auto; scrollbar-width: none; }
+.m2-setup-steps::-webkit-scrollbar { display: none; }
+.m2-setup-steps li { flex: none; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; background: rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .85); }
+.m2-setup-steps li.is-done::before { content: "✓ "; }
+.m2-setup-steps li.is-current { background: #ffffff; color: #0b7a55; font-weight: 600; }
+html.dark .m2-setup-steps li.is-current { color: #0d4a35; }
+.m2-setup-intro h1 { margin: 6px 4px 2px; font-size: 20px; font-weight: 700; line-height: 1.35; }
+.m2-setup-intro p { margin: 0 4px; color: var(--m2-muted); font-size: 13px; line-height: 1.55; }
+.m2-setup-sechead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.m2-setup-sechead .m2a-h { margin-bottom: 0; }
+.m2-setup-link { border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--m2-brand); cursor: pointer; }
+.m2-setup-link.is-bad { color: var(--m2-bad); }
+.m2-setup-sechead .m2-setup-link { margin-top: 12px; }
+.m2-setup-utility { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 10px; }
+.m2-setup-actions { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 12px 0 calc(env(safe-area-inset-bottom) + 8px);
+    background: var(--m2-card); border-top: 1px solid var(--m2-line); box-shadow: 0 -8px 24px rgba(15, 42, 31, .08); }
+.m2-setup-actions-row { display: flex; gap: 10px; }
+.m2-setup-actions-row > .m2-btn { flex: 1; min-height: 50px; }
+.m2-setup-actions-row > .m2-btn.is-ghost { flex: 0 0 34%; }
+.m2-setup-later { display: block; width: 100%; margin-top: 4px; padding: 8px; border: 0; background: none; font: inherit; font-size: 13px; color: var(--m2-muted); cursor: pointer; }
+
+/* ══ Room generator + editable room list (partials/room-grid: /m2/setup and Add property) ══ */
+.m2-rg-list { overflow: hidden; }
+.m2-rg-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 10px 14px; font-size: 12px; color: var(--m2-muted); background: var(--m2-brand-soft); }
+.m2-rg-head b { color: var(--m2-brand); font-size: 12.5px; }
+.m2-rg-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--m2-line); }
+.m2-rg-row .m2-input { min-height: 42px; }
+.m2-rg-row .m2-err { grid-column: 1 / -1; margin-top: 0; }
+.m2-rg-remove { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 12px; background: var(--m2-bad-soft); color: var(--m2-bad); cursor: pointer; }
+.m2-rg-remove svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.m2-rg-add { display: block; width: 100%; min-height: 46px; border: 1.5px dashed var(--m2-line); border-radius: 14px; background: transparent; color: var(--m2-brand); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }

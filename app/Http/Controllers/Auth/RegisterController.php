@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\Concerns\RedirectsAuthenticatedUsers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\LandlordRegistrationService;
+use App\Support\M2Shell;
 use App\Support\PhoneNumber;
 use Closure;
 use Illuminate\Http\Request;
@@ -79,7 +80,8 @@ class RegisterController extends Controller
         Auth::login($user, remember: true);
         $request->session()->regenerate();
 
-        return redirect()->route('filament.landlord.pages.setup');
+        // On to the setup wizard: the phone one in /m2 where the landlord will use /m2, else the panel's.
+        return redirect()->route(M2Shell::runsSetupFor($request) ? 'm2.setup' : 'filament.landlord.pages.setup');
     }
 
     /** phone_number isn't normalized in older rows, so compare in normalized form. */
