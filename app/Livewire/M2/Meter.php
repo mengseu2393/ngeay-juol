@@ -164,7 +164,27 @@ class Meter extends Component
             return;
         }
 
-        app(UtilityReadingResetService::class)->reset($this->unit, $this->utility->id, (float) $this->resetTo, now()->toDateString());
+        $today = UtilityUsage::query()
+            ->where('unit_id', $this->unit->id)
+            ->where('property_utility_id', $this->utility->id)
+            ->whereDate('reading_date', now()->toDateString())
+            ->where('is_reset', false)
+            ->exists();
+
+        if ($today) {
+            $this->addError('date', __('A reading is already saved today. Change it in the history below, or reset the meter tomorrow.'));
+
+            return;
+        }
+
+        try {
+            app(UtilityReadingResetService::class)->reset($this->unit, $this->utility->id, (float) $this->resetTo, now()->toDateString());
+        } catch (ValidationException $e) {
+            // Shown on the confirm card itself — before, a refusal left the card as it was and the tap looked dead.
+            $this->addError('date', collect($e->errors())->flatten()->first());
+
+            return;
+        }
 
         $this->resetting = false;
         $this->confirming = null;

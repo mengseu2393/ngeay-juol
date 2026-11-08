@@ -152,6 +152,9 @@ body.m2 {
 .m2-mini:active { background: var(--m2-line); }
 .m2-mini .m2-mini-ico { width: 20px; height: 20px; border-radius: 50%; background: var(--m2-brand-soft); color: var(--m2-brand); }
 .m2-mini .m2-mini-ico svg { width: 12px; height: 12px; }
+/* the generic .m2-ico is a 36px tile; inside a small button it is the 20px dot */
+.m2-mini .m2-ico.m2-mini-ico { width: 22px; height: 22px; flex: none; border-radius: 50%; background: var(--m2-brand-soft); color: var(--m2-brand); }
+.m2-mini .m2-ico.m2-mini-ico svg { width: 12px; height: 12px; }
 
 /* ── Pills ── */
 .m2-pills { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 14px; margin-bottom: -12px; }

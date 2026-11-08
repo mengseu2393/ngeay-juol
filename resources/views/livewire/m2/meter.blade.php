@@ -79,6 +79,10 @@
                         <span class="m2-sm">{{ __('The meter was replaced or went back to zero.') }}</span>
                     </label>
                     @error('understood') <p class="m2-err">{{ $message }}</p> @enderror
+                    {{-- A refused reset (e.g. a reading already exists today) must say why, here, where the tap was. --}}
+                    @error('date') <p class="m2-err" id="m2-meter-reset-error">{{ $message }}</p> @enderror
+                    @error('startingReading') <p class="m2-err" id="m2-meter-reset-error">{{ $message }}</p> @enderror
+                    @error('resetTo') <p class="m2-err" id="m2-meter-reset-error">{{ $message }}</p> @enderror
                     <div class="m2-grid2">
                         <button type="button" wire:click="backFromConfirm" class="m2-btn is-ghost">{{ __('Go back') }}</button>
                         <button type="button" wire:click="applyReset" class="m2-btn is-danger" id="m2-meter-reset-yes">{{ __('Yes, reset') }}</button>
@@ -151,7 +155,9 @@
                             </span>
                             <span class="m2a-chip is-warn">{{ $row->is_reset ? '0' : $trim($row->amount_used) }} {{ $uom }}</span>
                             @if ($can && $service->isEditable($row))
-                                <button type="button" wire:click="edit({{ $row->id }})" class="m2a-chip is-idle" id="m2-meter-edit-{{ $row->id }}">{{ __('Correct') }}</button>
+                                <button type="button" wire:click="edit({{ $row->id }})" class="m2-mini" id="m2-meter-edit-{{ $row->id }}">
+                                    <x-m2.icon name="pencil" class="m2-mini-ico" /><span>{{ __('Change') }}</span>
+                                </button>
                             @endif
                         </div>
                     @endif

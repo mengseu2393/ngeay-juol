@@ -81,6 +81,30 @@ class M2MeterTest extends M2TestCase
         $this->assertSame(0, UtilityUsage::count());
     }
 
+    /**
+     * "Yes, reset" looked dead when the reset was refused (a reading already exists today): the
+     * error was in the bag but the confirm card only printed the tick-box error. It must say why.
+     */
+    public function test_a_refused_reset_says_why_on_the_confirm_card(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $unit = $this->rental($landlord, $property, 'A-1', 'Dara')->unit;
+        $electricity = $this->utility($property, 'Electricity');
+        $this->reading($landlord, $unit, $electricity, now()->toDateString(), 100, 10);
+
+        $this->signIn($landlord, $property);
+
+        Livewire::test(Meter::class, ['unit' => $unit, 'utility' => $electricity])
+            ->call('openReset')
+            ->set('resetTo', '0')
+            ->call('confirmReset')->set('understood', true)->call('applyReset')
+            ->assertHasErrors('date')
+            ->assertSet('resetting', true)
+            ->assertSeeHtml('id="m2-meter-reset-error"')
+            ->assertSee(__('A reading is already saved today. Change it in the history below, or reset the meter tomorrow.'));
+    }
+
     public function test_reset_records_a_new_starting_point_that_is_not_billed(): void
     {
         $landlord = $this->landlord();
