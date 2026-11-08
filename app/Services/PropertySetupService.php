@@ -100,6 +100,14 @@ class PropertySetupService
     public function syncCurrency(Property $property, string $currency): void
     {
         $setting = PropertySetting::query()->firstOrNew(['property_id' => $property->id]);
+
+        // A new property starts from the same defaults as its settings screen (billing and
+        // invoice-on-move-in on); without this the row got only the currency and every switch
+        // fell back to its column default (off).
+        if (! $setting->exists) {
+            $setting->fill(PropertySettingsService::DEFAULTS);
+        }
+
         $changed = $setting->currency !== $currency;
         $setting->currency = $currency;
         $setting->save();

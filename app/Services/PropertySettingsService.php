@@ -27,7 +27,8 @@ class PropertySettingsService
         // the column default, so settings rows that already exist keep their choice.
         'create_invoice_on_move_in' => true,
         'upfront_deposit_months' => 0,
-        'monthly_billing_enabled' => false,
+        // On for new properties: a landlord who just registered can bill right away.
+        'monthly_billing_enabled' => true,
         'invoice_due_days' => 7,
     ];
 

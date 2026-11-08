@@ -46,6 +46,37 @@ class PropertySetupServiceTest extends MobileTestCase
         $this->assertEquals(150000, $rooms->first()->rent_amount);
     }
 
+    /**
+     * A landlord who just registered (or adds a property) must be able to bill straight away: the
+     * settings row used to get only the currency, so monthly billing and invoice-on-move-in fell
+     * back to their column defaults (off) and /m2 said "Monthly billing is disabled".
+     */
+    public function test_a_new_property_starts_with_billing_and_invoice_on_move_in_on(): void
+    {
+        $this->actingAs($this->landlord());
+
+        $property = app(PropertySetupService::class)->create(['name' => 'Fresh', 'property_type' => 1, 'currency' => 'KHR']);
+        $setting = PropertySetting::where('property_id', $property->id)->sole();
+
+        $this->assertTrue($setting->monthly_billing_enabled);
+        $this->assertTrue($setting->create_invoice_on_move_in);
+        $this->assertSame('KHR', $setting->currency);
+        $this->assertSame(7, $setting->due_day_of_month);
+    }
+
+    /** Re-saving an existing property's currency must not switch its billing back on. */
+    public function test_changing_currency_keeps_an_existing_billing_choice(): void
+    {
+        $this->actingAs($this->landlord());
+
+        $property = app(PropertySetupService::class)->create(['name' => 'Kept', 'property_type' => 1, 'currency' => 'USD']);
+        PropertySetting::where('property_id', $property->id)->update(['monthly_billing_enabled' => false]);
+
+        app(PropertySetupService::class)->syncCurrency($property, 'KHR');
+
+        $this->assertFalse(PropertySetting::where('property_id', $property->id)->sole()->monthly_billing_enabled);
+    }
+
     public function test_create_without_rooms_makes_no_rooms(): void
     {
         $this->actingAs($this->landlord());

@@ -31,7 +31,7 @@ class PropertySettingsServiceTest extends MobileTestCase
         $this->assertSame(1, PropertySetting::where('property_id', $property->id)->count());
         $this->assertSame(7, $setting->due_day_of_month);
         $this->assertSame(FirstMonthBillingMode::FullMonth, $setting->fresh()->first_month_billing_mode);
-        $this->assertFalse($setting->fresh()->monthly_billing_enabled);
+        $this->assertTrue($setting->fresh()->monthly_billing_enabled);
     }
 
     /** Owners expected the first invoice to appear at move-in without finding the switch: it starts ON. */
