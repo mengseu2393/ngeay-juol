@@ -20,7 +20,10 @@
             <div class="m2a-empty" id="m2-invoice-blocked">{{ __('Monthly billing is disabled for this property.') }}</div>
 
         @elseif ($step === 'result')
-            <div class="m2a-card" id="m2-invoice-result" style="text-align:center">
+            {{-- data-m2-feedback: appearing after the create call, it plays the big check (m2-feedback.js). --}}
+            <div class="m2a-card" id="m2-invoice-result" style="text-align:center"
+                 @if ($resultSummary['created'] > 0) data-m2-feedback="big" data-m2-feedback-message="{{ __('Created :count invoice(s).', ['count' => $resultSummary['created']]) }}"
+                 @elseif ($resultSummary['failures'] === []) data-m2-feedback="warning" data-m2-feedback-message="{{ __('No invoice was created.') }}" @endif>
                 @if ($resultSummary['created'] > 0)
                     <x-m2.icon name="check" style="margin:0 auto;width:48px;height:48px" />
                     <b>{{ __('Created :count invoice(s).', ['count' => $resultSummary['created']]) }}</b>

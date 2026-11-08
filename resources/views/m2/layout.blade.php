@@ -79,17 +79,27 @@
     @include('components.rw-session-expired-redirect')
 
     <link rel="stylesheet" href="{{ asset('css/m2.css') }}?v={{ @filemtime(public_path('css/m2.css')) }}">
+
+    {{-- Feedback for every save / failure: sound, vibration, toast, motion (public/js/m2-feedback.js). --}}
+    <script>
+        window.m2FeedbackText = @js([
+            'checkFields' => __('Please check the highlighted fields.'),
+            'network' => __('Could not save. Check your connection and try again.'),
+        ]);
+    </script>
+    <script src="{{ asset('js/m2-feedback.js') }}?v={{ @filemtime(public_path('js/m2-feedback.js')) }}"></script>
 </head>
 <body class="m2">
     {{ $slot }}
 
-    {{-- Toast: the `rw-m-toast` window event the shared /m logic dispatches, or a message flashed
-         before a redirect (session 'm2-toast'). Rendered with each page, so it survives wire:navigate. --}}
-    <div class="m2-toast" id="m2-toast" role="status" aria-live="polite"
-         x-data="{ msg: @js(session('m2-toast')), timer: null,
-                   show(m) { if (! m) { return; } this.msg = m; clearTimeout(this.timer); this.timer = setTimeout(() => { this.msg = null; }, 3200); } }"
-         x-init="show(msg)"
-         x-on:rw-m-toast.window="show($event.detail.message)"
-         x-show="msg" x-transition.opacity x-cloak x-text="msg" x-on:click="msg = null"></div>
+    {{-- A message flashed before a redirect (session 'm2-toast': a string, or [message, kind]). m2-feedback.js
+         shows it as a toast — with sound — on this page, including one swapped in by wire:navigate. --}}
+    @php
+        $flash = session('m2-toast');
+        $flash = is_array($flash) ? $flash : ($flash ? ['message' => $flash, 'kind' => 'success'] : null);
+    @endphp
+    @if ($flash)
+        <script type="application/json" id="m2-flash">@json($flash)</script>
+    @endif
 </body>
 </html>

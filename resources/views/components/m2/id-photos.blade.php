@@ -55,7 +55,7 @@
     </div>
 
     <p class="m2-err" x-show="failed" x-cloak>{{ __('The photo could not be uploaded. Try another one.') }}</p>
-    @error('newIdCardPhotos.*')<p class="m2-err">{{ $message }}</p>@enderror
-    @error('idCardPhotos')<p class="m2-err">{{ $message }}</p>@enderror
-    @error('idCardPhotos.*')<p class="m2-err">{{ $message }}</p>@enderror
+    @error('newIdCardPhotos.*')<p class="m2-err" data-m2-feedback="error" data-m2-feedback-message="{{ $message }}">{{ $message }}</p>@enderror
+    @error('idCardPhotos')<p class="m2-err" data-m2-feedback="error" data-m2-feedback-message="{{ $message }}">{{ $message }}</p>@enderror
+    @error('idCardPhotos.*')<p class="m2-err" data-m2-feedback="error" data-m2-feedback-message="{{ $message }}">{{ $message }}</p>@enderror
 </div>

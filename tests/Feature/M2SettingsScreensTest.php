@@ -470,7 +470,8 @@ class M2SettingsScreensTest extends M2TestCase
 
         $this->withSession(['m2-toast' => 'Utility added.'])
             ->get(route('m2.utilities'))
-            ->assertSee('id="m2-toast"', false)
-            ->assertSee('Utility added.');
+            ->assertSee('id="m2-flash"', false)
+            ->assertSee('Utility added.')
+            ->assertSee('js/m2-feedback.js', false);
     }
 }

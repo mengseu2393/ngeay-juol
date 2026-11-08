@@ -194,7 +194,7 @@ class PropertySettings extends Component
             $payload = app(PropertySettingsService::class)->fetchExchangeRate($this->setting());
         } catch (Throwable $exception) {
             ErrorLogService::recordHandled($exception, 'Could not fetch exchange rate');
-            $this->dispatch('rw-m-toast', message: __('Could not fetch exchange rate. Please try again, or enter the rate yourself.'));
+            $this->dispatch('rw-m-toast', kind: 'error', message: __('Could not fetch exchange rate. Please try again, or enter the rate yourself.'));
 
             return;
         }
@@ -375,7 +375,7 @@ class PropertySettings extends Component
         abort_unless($property !== null, 404);
 
         if (! SubscriptionService::canMutate(auth()->user())) {
-            $this->dispatch('rw-m-toast', message: __('Write actions are disabled until payment is completed.'));
+            $this->dispatch('rw-m-toast', kind: 'warning', message: __('Write actions are disabled until payment is completed.'));
 
             return null;
         }

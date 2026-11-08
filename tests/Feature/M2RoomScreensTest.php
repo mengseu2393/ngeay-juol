@@ -309,6 +309,7 @@ class M2RoomScreensTest extends M2TestCase
             ->assertSee(__('Mark room as available'))
             ->assertDontSee(__('Add tenant'))
             ->call('markAvailable')
+            ->assertDispatched('rw-m-toast', message: __('Room is available for a new tenant.'))
             ->assertSee(__('Add tenant'));
 
         $this->assertSame(UnitStatus::Available, $unit->fresh()->status);

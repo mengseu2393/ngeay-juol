@@ -74,7 +74,8 @@ class M2AddTenantTest extends M2TestCase
             ->call('submit')
             ->assertHasNoErrors()
             ->assertSet('step', 'done')
-            ->assertSeeHtml('id="m2-add-tenant-done"');
+            ->assertSeeHtml('id="m2-add-tenant-done"')
+            ->assertSeeHtml('data-m2-feedback="big"');
 
         $rental = Rental::query()->where('unit_id', $unit->id)->where('status', RentalStatus::Active)->sole();
         $this->assertSame('Dara Sok', $rental->occupant_name);

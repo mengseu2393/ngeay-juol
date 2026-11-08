@@ -53,7 +53,7 @@ class M2BillPaymentTest extends M2TestCase
             ->set('payNote', ' ABA transfer ')
             ->call('submitPay')
             ->assertHasNoErrors()
-            ->assertDispatched('rw-m-toast', message: __('Invoice fully paid.'))
+            ->assertDispatched('rw-m-toast', kind: 'money', message: __('Invoice fully paid.'))
             ->assertSet('payingInvoiceId', null)
             ->assertDontSeeHtml('id="m2-bill-pay"')
             ->assertDontSeeHtml('id="m2-bill-pay-form"');

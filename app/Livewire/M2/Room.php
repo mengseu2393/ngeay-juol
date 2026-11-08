@@ -46,6 +46,8 @@ class Room extends Component
 
         $unit->update(['status' => UnitStatus::Available]);
         $this->unit = $unit;
+
+        $this->dispatch('rw-m-toast', message: __('Room is available for a new tenant.'));
     }
 
     public function render()

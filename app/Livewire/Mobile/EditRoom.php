@@ -145,7 +145,7 @@ class EditRoom extends Component
             app(RoomDetailsService::class)->delete($this->unit);
         } catch (\DomainException $e) {
             $this->dispatch('rw-m-sheet-close', name: 'room-delete');
-            $this->dispatch('rw-m-toast', message: $e->getMessage());
+            $this->dispatch('rw-m-toast', kind: 'error', message: $e->getMessage());
 
             return;
         }
@@ -195,7 +195,7 @@ class EditRoom extends Component
             return true;
         }
 
-        $this->dispatch('rw-m-toast', message: __('Write actions are disabled until payment is completed.'));
+        $this->dispatch('rw-m-toast', kind: 'warning', message: __('Write actions are disabled until payment is completed.'));
 
         return false;
     }

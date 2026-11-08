@@ -126,7 +126,8 @@ class Bill extends Component
         $invoice->refresh();
 
         $this->payingInvoiceId = null;
-        $this->dispatch('rw-m-toast', message: (float) $invoice->balance > 0.004
+        // kind 'money': /m2 plays the "cha-ching" with the big check (public/js/m2-feedback.js).
+        $this->dispatch('rw-m-toast', kind: 'money', message: (float) $invoice->balance > 0.004
             ? __('Payment saved. Balance: :balance', ['balance' => Money::formatForRecord($invoice->balance, $invoice)])
             : __('Invoice fully paid.'));
     }

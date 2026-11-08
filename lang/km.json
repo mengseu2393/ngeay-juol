@@ -1897,5 +1897,12 @@
     "Today": "ថ្ងៃនេះ",
     "Whole house": "ផ្ទះទាំងមូល",
     "Show password": "បង្ហាញពាក្យសម្ងាត់",
-    "Hide password": "លាក់ពាក្យសម្ងាត់"
+    "Hide password": "លាក់ពាក្យសម្ងាត់",
+    "Could not save. Check your connection and try again.": "មិនអាចរក្សាទុកបានទេ។ សូមពិនិត្យអ៊ីនធឺណិត ហើយព្យាយាមម្ដងទៀត។",
+    "All set! Your rentals are ready.": "រួចរាល់ហើយ! ការជួលរបស់អ្នករៀបចំរួចរាល់។",
+    "Sounds": "សំឡេង",
+    "A short sound when something is saved or fails": "សំឡេងខ្លីៗ ពេលរក្សាទុកបាន ឬបរាជ័យ",
+    "Vibration": "ញ័រ",
+    "A short buzz when something is saved or fails": "ញ័រខ្លីៗ ពេលរក្សាទុកបាន ឬបរាជ័យ",
+    "Room is available for a new tenant.": "បន្ទប់អាចជួលបានសម្រាប់អ្នកជួលថ្មីហើយ។"
 }

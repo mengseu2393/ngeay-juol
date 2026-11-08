@@ -87,7 +87,7 @@ class AddProperty extends Component
         abort_unless(PropertySetupService::canAdd(Auth::user()), 403);
 
         if (! SubscriptionService::canMutate(Auth::user())) {
-            $this->dispatch('rw-m-toast', message: __('Write actions are disabled until payment is completed.'));
+            $this->dispatch('rw-m-toast', kind: 'warning', message: __('Write actions are disabled until payment is completed.'));
 
             return;
         }

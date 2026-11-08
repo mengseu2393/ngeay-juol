@@ -785,11 +785,75 @@ label.m2a-row { cursor: pointer; }
 .m2a-row .m2-err { display: block; font-size: 12px; }
 .m2a-bar > a { text-decoration: none; }
 .m2-notice.is-bad { background: var(--m2-bad-soft); color: var(--m2-bad); }
-/* toast */
-.m2-toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); z-index: 60;
-    max-width: min(92vw, 420px); padding: 12px 18px; border-radius: 14px; background: #0f2a1f; color: #f2fbf6; font-size: 14px; line-height: 1.4;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .18); cursor: pointer; }
-html.dark .m2-toast { background: #e8f5ee; color: #0b241a; }
+/* ══ Feedback (public/js/m2-feedback.js): toast, big check, shake, button ✓ ══ */
+.m2-toast {
+    --m2-toast-ms: 3200ms;
+    position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 70;
+    width: max-content; max-width: min(92vw, 420px); display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px 14px 12px; border-radius: 16px; overflow: hidden; cursor: pointer;
+    background: #0f2a1f; color: #f2fbf6; font-size: 14px; line-height: 1.4; font-weight: 500;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
+    transform: translate(-50%, -140%); opacity: 0;
+}
+.m2-toast.is-in { animation: m2-toast-in .45s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+.m2-toast.is-out { animation: m2-toast-out .25s ease-in forwards; }
+.m2-toast.is-ok { background: #0b7a55; color: #ffffff; }
+.m2-toast.is-bad { background: #b42318; color: #ffffff; }
+.m2-toast.is-warn { background: #a85d00; color: #ffffff; }
+html.dark .m2-toast.is-ok { background: #34c38f; color: #052016; }
+html.dark .m2-toast.is-bad { background: #ff8a80; color: #2a0906; }
+html.dark .m2-toast.is-warn { background: #f2b25a; color: #2a1a03; }
+.m2-toast-ico { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .22); }
+.m2-toast-ico svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.m2-toast.is-in .m2-toast-ico { animation: m2-pop .4s .12s cubic-bezier(.2, 1.6, .4, 1) both; }
+.m2-toast-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: currentColor; opacity: .35; transform-origin: left; }
+.m2-toast.is-in .m2-toast-bar { animation: m2-countdown var(--m2-toast-ms) linear forwards; }
+@keyframes m2-toast-in { from { transform: translate(-50%, -140%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+@keyframes m2-toast-out { from { transform: translate(-50%, 0); opacity: 1; } to { transform: translate(-50%, -60%); opacity: 0; } }
+@keyframes m2-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes m2-pop { from { transform: scale(.3); } to { transform: scale(1); } }
+
+/* big moments (payment, invoice, tenant, setup done): a check that draws itself */
+.m2-burst { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; pointer-events: none;
+    background: rgba(11, 122, 85, .12); animation: m2-burst-bg 1.1s ease forwards; }
+.m2-burst-disc { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; background: #0b7a55;
+    box-shadow: 0 0 0 0 rgba(11, 122, 85, .45); animation: m2-burst-disc 1.1s cubic-bezier(.2, 1.3, .4, 1) forwards; }
+.m2-burst.is-money .m2-burst-disc { background: linear-gradient(135deg, #0b7a55, #34c38f); }
+.m2-burst-disc svg { width: 72px; height: 72px; fill: none; stroke: #ffffff; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.m2-burst-disc circle { stroke: rgba(255, 255, 255, .4); stroke-dasharray: 151; stroke-dashoffset: 151; animation: m2-draw .5s .1s ease-out forwards; }
+.m2-burst-disc path { stroke-dasharray: 40; stroke-dashoffset: 40; animation: m2-draw .35s .35s ease-out forwards; }
+@keyframes m2-burst-bg { 0% { opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes m2-burst-disc { 0% { transform: scale(.4); box-shadow: 0 0 0 0 rgba(11, 122, 85, .45); } 35% { transform: scale(1.06); } 50% { transform: scale(1); box-shadow: 0 0 0 26px rgba(11, 122, 85, 0); } 80% { transform: scale(1); opacity: 1; } 100% { transform: scale(.9); opacity: 0; } }
+@keyframes m2-draw { to { stroke-dashoffset: 0; } }
+
+/* a failed save: the form shakes, the first wrong field pulses red */
+.m2-shake { animation: m2-shake .45s cubic-bezier(.36, .07, .19, .97); }
+@keyframes m2-shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-7px); } 40%, 60% { transform: translateX(7px); } }
+.m2-pulse-bad { border-color: var(--m2-bad) !important; animation: m2-pulse-bad .9s ease-out; }
+@keyframes m2-pulse-bad { from { box-shadow: 0 0 0 0 rgba(180, 35, 24, .45); } to { box-shadow: 0 0 0 10px rgba(180, 35, 24, 0); } }
+
+/* buttons: dip when pressed; the pressed one shows ✓ for a moment after a save that worked */
+.m2-btn { transition: transform .08s ease, filter .15s; position: relative; }
+.m2-btn:active { transform: scale(.97); }
+.m2-btn.is-done { color: transparent !important; }
+.m2-btn.is-done::after { content: ""; position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; color: var(--m2-brand-ink);
+    background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.2 4.2L19 7'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.2 4.2L19 7'/%3E%3C/svg%3E") center / contain no-repeat;
+    animation: m2-pop .35s cubic-bezier(.2, 1.6, .4, 1); }
+
+/* "reduce motion" on the phone: no bounce, shake or pop — things just fade */
+@media (prefers-reduced-motion: reduce) {
+    .m2-toast.is-in { animation: m2-fade-in .2s forwards; transform: translate(-50%, 0); }
+    .m2-toast.is-out { animation: m2-fade-out .2s forwards; transform: translate(-50%, 0); }
+    .m2-toast.is-in .m2-toast-ico, .m2-btn.is-done::after { animation: none; }
+    .m2-shake, .m2-pulse-bad { animation: none; }
+    .m2-burst { animation: m2-burst-bg .7s ease forwards; }
+    .m2-burst-disc, .m2-burst-disc circle, .m2-burst-disc path { animation: none; stroke-dashoffset: 0; }
+    .m2-btn:active { transform: none; }
+}
+@keyframes m2-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m2-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
 /* radio segments (Billing type): the label is the segment */
 .m2-seg > label {
     flex: 1 1 0; min-width: max-content; min-height: 36px; padding: 0 8px; border-radius: 11px;

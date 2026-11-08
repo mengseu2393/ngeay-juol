@@ -8,7 +8,7 @@
 
     <main class="m2-wrap m2a-main m2a-stack">
         @if ($step === 'done' && $result)
-            <div class="m2a-card" id="m2-add-tenant-done" style="text-align:center">
+            <div class="m2a-card" id="m2-add-tenant-done" style="text-align:center" data-m2-feedback="big" data-m2-feedback-message="{{ __('Tenancy created') }}">
                 <x-m2.icon name="check" style="margin:0 auto;width:48px;height:48px" />
                 <b>{{ __('Tenancy created') }}</b>
                 <p class="m2-muted" style="margin:0">{{ $result['occupant_name'] }}</p>

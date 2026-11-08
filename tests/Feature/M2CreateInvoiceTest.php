@@ -69,7 +69,9 @@ class M2CreateInvoiceTest extends M2TestCase
             ->call('createInvoices')
             ->assertSet('step', 'result')
             ->assertSet('resultSummary.created', 1)
-            ->assertSeeHtml('id="m2-invoice-open-slip"');
+            ->assertSeeHtml('id="m2-invoice-open-slip"')
+            // a made invoice is a big moment: the result card triggers the full-screen check
+            ->assertSeeHtml('data-m2-feedback="big"');
 
         $invoice = Invoice::where('rental_id', $mine->id)->sole();
         $component->assertSee(route('m2.slip', $invoice), false);

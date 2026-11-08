@@ -29,7 +29,7 @@
                 <input type="file" id="m2-profile-photo" accept="image/*" x-on:change="pick($event)" style="position:absolute;width:1px;height:1px;opacity:0">
             </label>
             <p class="m2-err" x-show="failed" x-cloak id="m2-profile-photo-failed">{{ __('The photo could not be uploaded. Try another one.') }}</p>
-            @error('avatarPhoto') <p class="m2-err">{{ $message }}</p> @enderror
+            @error('avatarPhoto') <p class="m2-err" data-m2-feedback="error" data-m2-feedback-message="{{ $message }}">{{ $message }}</p> @enderror
         </section>
 
         @if ($infoSaved)<div class="m2-notice is-ok" role="status" id="m2-profile-info-saved">{{ __('Profile updated.') }}</div>@endif

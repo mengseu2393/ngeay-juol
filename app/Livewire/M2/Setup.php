@@ -19,7 +19,28 @@ use Livewire\Component;
 #[Layout('m2.layout')]
 class Setup extends Component
 {
-    use RunsLandlordSetup;
+    use RunsLandlordSetup {
+        next as private nextStep;
+        finish as private finishSetup;
+    }
+
+    /** Each saved step answers with a quiet success (sound, buzz, ✓ on Next — no toast). */
+    public function next(): void
+    {
+        $this->nextStep();
+
+        $this->dispatch('m2-feedback', kind: 'success');
+    }
+
+    /** Done: Home greets the landlord with the big check. */
+    public function finish()
+    {
+        $response = $this->finishSetup();
+
+        session()->flash('m2-toast', ['message' => __('All set! Your rentals are ready.'), 'kind' => 'big']);
+
+        return $response;
+    }
 
     protected function setupDoneUrl(): string
     {
