@@ -91,6 +91,21 @@ whether R2 accepts the `x-amz-acl` header Livewire signs into that upload is unt
 
 The local server is unchanged: without `MEDIA_DISK` photos stay on the `public` disk.
 
+## Function size (the 250 MB trap)
+
+Vercel caps a function at 250 MB **unzipped**, and over the cap it does not fail the build: the
+deploy shows Ready, then every request dies with `500 FUNCTION_INVOCATION_FAILED` and the runtime
+log says `Cannot find module '/var/task/launcher.launcher'` (files at the end of the bundle, the
+runtime's own launcher among them, are dropped). The vercel-php function ships the whole repo plus
+`vendor/` **with dev packages**, and runs `composer install --no-scripts`, so composer hooks
+(e.g. the AWS SDK's `removeUnusedServices`) do not run there.
+
+Adding `league/flysystem-aws-s3-v3` (the full AWS SDK, ~61 MB) tipped it over. `excludeFiles` in
+`vercel.json` therefore leaves out the AWS SDK's data for every service except S3 (and the few it
+can touch), Faker and Pint. Compare a new deploy's function size in Deployment → Resources
+(64 MB compressed worked; 72.8 MB did not) before adding another large package. Don't switch to
+`COMPOSER_NO_DEV`: `phpoffice/phpspreadsheet` is in require-dev but the utility export uses it.
+
 ## Deploy
 
 1. Create the database, then from your machine point `.env` at it and run

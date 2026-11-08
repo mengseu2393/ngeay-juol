@@ -9,7 +9,7 @@
         "api/index.php": {
             "runtime": "vercel-php@0.7.4",
             "maxDuration": 30,
-            "excludeFiles": "{.git/**,node_modules/**,tests/**,storage/**,docs/**,graphify-out/**,ai-tasks/**,dol-ngai/**}"
+            "excludeFiles": "{.git/**,node_modules/**,tests/**,storage/**,docs/**,graphify-out/**,ai-tasks/**,dol-ngai/**,vendor/fakerphp/**,vendor/laravel/pint/**,vendor/aws/aws-sdk-php/src/data/!(s3|kms|sts|sso|sso-oidc|signin)/**}"
         }
     },
     "routes": [
