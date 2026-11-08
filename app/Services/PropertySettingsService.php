@@ -23,6 +23,9 @@ class PropertySettingsService
         'first_month_billing_mode' => FirstMonthBillingMode::FullMonth->value,
         'proration_cutoff_day' => 15,
         'require_first_month_upfront' => false,
+        // On for new properties: the first invoice appears when a tenant moves in. Set here, not as
+        // the column default, so settings rows that already exist keep their choice.
+        'create_invoice_on_move_in' => true,
         'upfront_deposit_months' => 0,
         'monthly_billing_enabled' => false,
         'invoice_due_days' => 7,

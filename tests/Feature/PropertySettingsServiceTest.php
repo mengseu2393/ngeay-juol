@@ -34,6 +34,16 @@ class PropertySettingsServiceTest extends MobileTestCase
         $this->assertFalse($setting->fresh()->monthly_billing_enabled);
     }
 
+    /** Owners expected the first invoice to appear at move-in without finding the switch: it starts ON. */
+    public function test_auto_create_invoice_on_move_in_starts_on_for_a_new_property(): void
+    {
+        $landlord = $this->landlord();
+        $property = $this->property($landlord);
+        $this->actingAs($landlord);
+
+        $this->assertTrue((bool) app(PropertySettingsService::class)->forProperty($property->id)->create_invoice_on_move_in);
+    }
+
     /** A new preset rebuilds the structured move-in rules; saving it again changes nothing. */
     public function test_a_new_move_in_preset_rebuilds_the_rules(): void
     {

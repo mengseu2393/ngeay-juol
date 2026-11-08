@@ -384,7 +384,7 @@ class PropertySettings extends Page implements HasForms
                         Forms\Components\Toggle::make('create_invoice_on_move_in')
                             ->label(__('Auto-create invoice on move-in'))
                             ->helperText(__('Automatically generate the first rent invoice when a new tenant is created.'))
-                            ->default(false)
+                            ->default(true)
                             ->inline(false),
 
                         Forms\Components\Select::make('upfront_deposit_months')
