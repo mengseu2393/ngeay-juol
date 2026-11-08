@@ -37,6 +37,20 @@ class LandlordRegistrationTest extends TestCase
             ->assertSee(route('register'), false);
     }
 
+    /** The owner couldn't check what they typed on a phone: both password fields (and sign-in) get a show / hide eye. */
+    public function test_password_fields_have_a_show_hide_toggle(): void
+    {
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertSee('data-rw-password-toggle="password"', false)
+            ->assertSee('data-rw-password-toggle="password_confirmation"', false)
+            ->assertSee(__('Show password'));
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('data-rw-password-toggle="password"', false);
+    }
+
     public function test_registering_with_a_phone_creates_a_ready_landlord_and_opens_the_setup_wizard(): void
     {
         $response = $this->post(route('register'), $this->payload([

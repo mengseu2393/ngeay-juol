@@ -837,3 +837,9 @@ html.dark .m2-toast { background: #e8f5ee; color: #0b241a; }
 .m2a-mh b { font-weight: 600; }
 .m2a-main > .m2a-mh:first-child { margin-top: 4px; }
 .m2a-mh + .m2a-list { margin-bottom: 4px; }
+
+/* Password with a show / hide eye (x-m2.password) */
+.m2-pw { position: relative; }
+.m2-pw .m2-input { padding-right: 48px; }
+.m2-pw-eye { position: absolute; top: 0; right: 0; bottom: 0; width: 48px; display: grid; place-items: center; border: 0; background: transparent; color: var(--m2-muted); cursor: pointer; }
+.m2-pw-eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

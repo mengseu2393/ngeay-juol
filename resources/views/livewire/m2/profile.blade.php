@@ -103,17 +103,17 @@
         <form wire:submit="savePassword" class="m2a-card" id="m2-profile-password">
             <div>
                 <label for="m2-profile-current-password" class="m2-label">{{ __('Current password') }}</label>
-                <input type="password" id="m2-profile-current-password" wire:model="current_password" class="m2-input" autocomplete="current-password">
+                <x-m2.password id="m2-profile-current-password" wire:model="current_password" autocomplete="current-password" />
                 @error('current_password') <p class="m2-err">{{ $message }}</p> @enderror
             </div>
             <div>
                 <label for="m2-profile-new-password" class="m2-label">{{ __('New password') }}</label>
-                <input type="password" id="m2-profile-new-password" wire:model="password" class="m2-input" autocomplete="new-password">
+                <x-m2.password id="m2-profile-new-password" wire:model="password" autocomplete="new-password" />
                 @error('password') <p class="m2-err">{{ $message }}</p> @enderror
             </div>
             <div>
                 <label for="m2-profile-password-confirmation" class="m2-label">{{ __('Confirm new password') }}</label>
-                <input type="password" id="m2-profile-password-confirmation" wire:model="password_confirmation" class="m2-input" autocomplete="new-password">
+                <x-m2.password id="m2-profile-password-confirmation" wire:model="password_confirmation" autocomplete="new-password" />
             </div>
             <button type="submit" class="m2-btn" wire:loading.attr="disabled" wire:target="savePassword" id="m2-profile-save-password">
                 <span wire:loading.remove wire:target="savePassword">{{ __('Update password') }}</span>

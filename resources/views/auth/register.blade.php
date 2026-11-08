@@ -109,13 +109,19 @@
 
                     <div>
                         <label for="password" class="{{ $label }}">{{ __('Password') }}</label>
-                        <input id="password" name="password" type="password" required autocomplete="new-password" class="{{ $input }}">
+                        <div class="relative">
+                            <input id="password" name="password" type="password" required autocomplete="new-password" class="{{ $input }} pr-12">
+                            <x-rw-password-toggle for="password" />
+                        </div>
                         @error('password') <p class="{{ $error }}">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
                         <label for="password_confirmation" class="{{ $label }}">{{ __('Confirm password') }}</label>
-                        <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password" class="{{ $input }}">
+                        <div class="relative">
+                            <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password" class="{{ $input }} pr-12">
+                            <x-rw-password-toggle for="password_confirmation" />
+                        </div>
                     </div>
 
                     <button type="submit" class="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-base shadow-lg shadow-emerald-500/10 active:scale-[0.99] transition-all cursor-pointer">
