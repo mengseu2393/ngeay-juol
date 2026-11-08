@@ -130,9 +130,7 @@ class AddProperty extends Component
                     'village' => $this->village,
                 ],
                 $this->rates,
-                $this->withRooms
-                    ? ['floors' => (int) $this->floors, 'per_floor' => (int) $this->perFloor, 'price' => $this->roomPrice]
-                    : null,
+                $this->roomsToCreate(),
             );
         } catch (ValidationException $e) {
             // The plan's property / room limit (keyed `subscription`).
@@ -144,6 +142,14 @@ class AddProperty extends Component
         ActiveProperty::set($property->id);
 
         $this->redirect($this->createdUrl(), navigate: false);
+    }
+
+    /** The rooms create() makes: floors × rooms per floor at one price, or none. */
+    protected function roomsToCreate(): ?array
+    {
+        return $this->withRooms
+            ? ['floors' => (int) $this->floors, 'per_floor' => (int) $this->perFloor, 'price' => $this->roomPrice]
+            : null;
     }
 
     /** Where the new property opens: its rooms when some were made, otherwise its settings. */

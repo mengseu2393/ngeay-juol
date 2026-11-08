@@ -226,12 +226,13 @@ class PropertySetupService
     /**
      * Everything at once (the /m screen): the property, its currency, the
      * default utilities at the given prices, and — when $rooms is given — a
-     * floors × rooms-per-floor grid at one price. All or nothing: a plan limit
-     * hit by the rooms leaves no half-made property behind.
+     * floors × rooms-per-floor grid at one price, or a ready room list (generated,
+     * then edited on screen). All or nothing: a plan limit hit by the rooms
+     * leaves no half-made property behind.
      *
      * @param  array{name: string, property_type: int|string, currency: string}  $details
      * @param  array<string, mixed>  $utilityRates  default utility name (e.g. "Electricity") => price; blank stays 0
-     * @param  ?array{floors: int, per_floor: int, price: mixed}  $rooms
+     * @param  ?array{floors?: int, per_floor?: int, price?: mixed, grid?: list<array{number: string, floor?: ?string, price: mixed}>}  $rooms
      */
     public function create(array $details, array $utilityRates = [], ?array $rooms = null): Property
     {
@@ -247,7 +248,7 @@ class PropertySetupService
             }
 
             if ($rooms !== null) {
-                $this->saveRooms($property, static::roomGrid((int) $rooms['floors'], (int) $rooms['per_floor'], $rooms['price']));
+                $this->saveRooms($property, array_values($rooms['grid'] ?? static::roomGrid((int) $rooms['floors'], (int) $rooms['per_floor'], $rooms['price'])));
             }
 
             return $property;

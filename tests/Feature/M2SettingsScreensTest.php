@@ -228,6 +228,59 @@ class M2SettingsScreensTest extends M2TestCase
         $this->assertSame(__('Property added'), session('m2-toast'));
     }
 
+    /**
+     * The owner: "Generate rooms should work the same as register". Like the setup wizard, Add property
+     * now generates the rooms into a list first, where any room's number or price can be changed and
+     * rooms added or removed — and exactly that list is saved.
+     */
+    public function test_add_property_generates_rooms_that_can_be_edited_before_saving(): void
+    {
+        $landlord = $this->landlord();
+        $this->signIn($landlord, $this->property($landlord, 'Existing'));
+
+        Livewire::test(AddProperty::class)
+            ->set('name', 'Garden Rooms')
+            ->set('floors', '2')
+            ->set('perFloor', '2')
+            ->set('roomPrice', '60')
+            ->call('generateRooms')
+            ->assertSet('grid', fn ($grid) => array_column($grid, 'number') === ['101', '102', '201', '202'])
+            ->assertSeeHtml('id="m2-new-room-list"')
+            ->set('grid.1.price', '75')
+            ->set('grid.3.number', 'B-1')
+            ->call('removeRoom', 2)
+            ->call('addRoom')
+            ->set('grid.3.number', 'Shop')
+            ->set('grid.3.price', '200')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('m2.home'));
+
+        $new = Property::where('name', 'Garden Rooms')->firstOrFail();
+        $this->assertEquals(
+            ['101' => 60.0, '102' => 75.0, 'B-1' => 60.0, 'Shop' => 200.0],
+            Unit::where('property_id', $new->id)->pluck('rent_amount', 'room_number')->map(fn ($p) => (float) $p)->sortKeys()->all(),
+        );
+    }
+
+    public function test_add_property_rejects_a_room_number_used_twice(): void
+    {
+        $landlord = $this->landlord();
+        $this->signIn($landlord, $this->property($landlord, 'Existing'));
+
+        Livewire::test(AddProperty::class)
+            ->set('name', 'Twin Rooms')
+            ->set('floors', '1')
+            ->set('perFloor', '2')
+            ->set('roomPrice', '60')
+            ->call('generateRooms')
+            ->set('grid.1.number', '101')
+            ->call('save')
+            ->assertHasErrors(['grid.0.number']);
+
+        $this->assertDatabaseMissing('properties', ['name' => 'Twin Rooms']);
+    }
+
     public function test_add_property_without_rooms_opens_its_settings(): void
     {
         $landlord = $this->landlord();

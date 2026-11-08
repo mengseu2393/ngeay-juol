@@ -103,26 +103,18 @@
                 </label>
             </div>
 
-            <div class="m2a-card" x-show="$wire.withRooms" x-cloak id="m2-new-rooms"
-                 x-data="{ get total() { const n = (parseInt($wire.floors, 10) || 0) * (parseInt($wire.perFloor, 10) || 0); return n > 0 ? @js(__(':count rooms')).replace(':count', n) : '—'; } }">
-                <div class="m2a-two">
-                    <div>
-                        <label for="m2-new-floors" class="m2-label">{{ __('Floors') }}</label>
-                        <input type="number" id="m2-new-floors" wire:model="floors" class="m2-input" inputmode="numeric" min="1" max="50" autocomplete="off">
-                        @error('floors') <p class="m2-err">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label for="m2-new-per-floor" class="m2-label">{{ __('Rooms per floor') }}</label>
-                        <input type="number" id="m2-new-per-floor" wire:model="perFloor" class="m2-input" inputmode="numeric" min="1" max="100" autocomplete="off">
-                        @error('perFloor') <p class="m2-err">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-                <div>
-                    <label for="m2-new-room-price" class="m2-label">{{ __('Price per room') }} ({{ Money::symbol($currency) }})</label>
-                    <input type="text" id="m2-new-room-price" wire:model="roomPrice" class="m2-input" inputmode="decimal" autocomplete="off" placeholder="0">
-                    @error('roomPrice') <p class="m2-err">{{ $message }}</p> @enderror
-                </div>
-                <div class="m2a-kv is-total" style="border-radius:12px"><span>{{ __('Rooms') }}</span><b x-text="total" id="m2-new-room-total"></b></div>
+            {{-- Rooms, like the setup wizard: generate, then change any room before saving. --}}
+            <div class="m2a-stack" x-show="$wire.withRooms" x-cloak id="m2-new-rooms">
+                @include('livewire.m2.partials.room-grid', [
+                    'key' => 'm2-new',
+                    'floors' => 'floors',
+                    'perFloor' => 'perFloor',
+                    'price' => 'roomPrice',
+                    'gridModel' => 'grid',
+                    'grid' => $grid,
+                    'symbol' => Money::symbol($currency),
+                    'pid' => null,
+                ])
             </div>
 
             <button type="submit" class="m2-btn" wire:loading.attr="disabled" wire:target="save" @disabled($limitMessage) id="m2-add-property-save">
