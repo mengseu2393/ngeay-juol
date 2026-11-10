@@ -168,6 +168,13 @@ class Rental extends Model implements HasMedia
                             $dueDate->addMonth();
                         }
 
+                        // A tenancy entered late (start date in the past) would otherwise get
+                        // a due date before its own issue date — overdue the moment it's made.
+                        // Give it the property's normal due window from today instead.
+                        if ($dueDate->isBefore(today())) {
+                            $dueDate = today()->addDays((int) ($setting->invoice_due_days ?: 7));
+                        }
+
                         app(InvoiceBuilderService::class)->create([
                             'rental' => $rental,
                             'period_start' => $periodStart,

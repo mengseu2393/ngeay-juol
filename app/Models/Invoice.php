@@ -6,6 +6,8 @@ use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Concerns\BelongsToLandlord;
 use App\Notifications\InvoiceGeneratedNotification;
+use App\Support\Money;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -92,12 +94,12 @@ class Invoice extends Model
     public function recordPayment(array $attributes): Payment
     {
         return DB::transaction(function () use ($attributes) {
-            $currency = \App\Support\Money::normalize($attributes['currency'] ?? ($this->property?->settings?->currency ?? 'USD'));
+            $currency = Money::normalize($attributes['currency'] ?? ($this->property?->settings?->currency ?? 'USD'));
             $amount = (float) $attributes['amount'];
-            
+
             // conversion rate is the invoice's saved rate
             $rate = (float) ($this->usd_khr_rate ?: ($this->property?->settings?->usd_khr_exchange_rate ?: 4000));
-            
+
             $amountUsd = 0.0;
             $amountKhr = 0.0;
             if ($currency === 'USD') {
@@ -131,7 +133,7 @@ class Invoice extends Model
         $this->paid_usd = (string) $this->payments()->sum('amount_usd');
         $this->paid_khr = (string) $this->payments()->sum('amount_khr');
 
-        $reportingCurrency = \App\Support\Money::normalize($this->property?->settings?->currency ?? 'USD');
+        $reportingCurrency = Money::normalize($this->property?->settings?->currency ?? 'USD');
         if ($reportingCurrency === 'KHR') {
             $this->amount_paid = $this->paid_khr;
         } else {
@@ -150,7 +152,7 @@ class Invoice extends Model
         $this->native_usd_total = (string) $this->lines()->where('currency', 'USD')->sum('amount');
         $this->native_khr_total = (string) $this->lines()->where('currency', 'KHR')->sum('amount');
 
-        $reportingCurrency = \App\Support\Money::normalize($this->property?->settings?->currency ?? 'USD');
+        $reportingCurrency = Money::normalize($this->property?->settings?->currency ?? 'USD');
         if ($reportingCurrency === 'KHR') {
             $this->amount_due = $this->total_khr;
         } else {
@@ -183,6 +185,11 @@ class Invoice extends Model
                 return InvoiceStatus::Draft;
             }
 
+            // Nothing owed (e.g. a $0 rent) means nothing to collect — settled, never overdue.
+            if ($totalUsd <= 0.0 && $totalKhr <= 0.0) {
+                return InvoiceStatus::Paid;
+            }
+
             return ($this->due_date && $this->due_date->isPast())
                 ? InvoiceStatus::Overdue
                 : InvoiceStatus::Pending;
@@ -208,7 +215,7 @@ class Invoice extends Model
         $paidUsd = $this->paid_usd;
         if ($totalUsd === null) {
             $rate = (float) ($this->usd_khr_rate ?: ($this->property?->settings?->usd_khr_exchange_rate ?: 4000));
-            $reportingCurrency = \App\Support\Money::normalize($this->property?->settings?->currency ?? 'USD');
+            $reportingCurrency = Money::normalize($this->property?->settings?->currency ?? 'USD');
             if ($reportingCurrency === 'USD') {
                 $totalUsd = (float) $this->amount_due;
             } else {
@@ -217,13 +224,14 @@ class Invoice extends Model
         }
         if ($paidUsd === null) {
             $rate = (float) ($this->usd_khr_rate ?: ($this->property?->settings?->usd_khr_exchange_rate ?: 4000));
-            $reportingCurrency = \App\Support\Money::normalize($this->property?->settings?->currency ?? 'USD');
+            $reportingCurrency = Money::normalize($this->property?->settings?->currency ?? 'USD');
             if ($reportingCurrency === 'USD') {
                 $paidUsd = (float) $this->amount_paid;
             } else {
                 $paidUsd = $rate > 0 ? round((float) $this->amount_paid / $rate, 2) : 0.0;
             }
         }
+
         return round(max(0.0, (float) $totalUsd - (float) $paidUsd), 2);
     }
 
@@ -233,7 +241,7 @@ class Invoice extends Model
         $paidKhr = $this->paid_khr;
         if ($totalKhr === null) {
             $rate = (float) ($this->usd_khr_rate ?: ($this->property?->settings?->usd_khr_exchange_rate ?: 4000));
-            $reportingCurrency = \App\Support\Money::normalize($this->property?->settings?->currency ?? 'USD');
+            $reportingCurrency = Money::normalize($this->property?->settings?->currency ?? 'USD');
             if ($reportingCurrency === 'KHR') {
                 $totalKhr = (float) $this->amount_due;
             } else {
@@ -242,13 +250,14 @@ class Invoice extends Model
         }
         if ($paidKhr === null) {
             $rate = (float) ($this->usd_khr_rate ?: ($this->property?->settings?->usd_khr_exchange_rate ?: 4000));
-            $reportingCurrency = \App\Support\Money::normalize($this->property?->settings?->currency ?? 'USD');
+            $reportingCurrency = Money::normalize($this->property?->settings?->currency ?? 'USD');
             if ($reportingCurrency === 'KHR') {
                 $paidKhr = (float) $this->amount_paid;
             } else {
                 $paidKhr = round((float) $this->amount_paid * $rate, 0);
             }
         }
+
         return round(max(0.0, (float) $totalKhr - (float) $paidKhr), 0);
     }
 
@@ -264,7 +273,7 @@ class Invoice extends Model
      */
     public static function isPlausibleDate(mixed $date): bool
     {
-        return $date instanceof \Carbon\CarbonInterface
+        return $date instanceof CarbonInterface
             && $date->year >= 2000
             && $date->year <= 2100;
     }
